@@ -1,47 +1,67 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from '../projects/types'
+import { hasWarrantyData } from '../../../utils/projectWarranty'
 
 interface ProjectTimelineStepperProps {
+  geometryStatus?: 'SUBMITTED' | 'REJECTED' | 'CONFIRMED' | null
   project: HubProject
   basePath: string
+  isSupervisor?: boolean
   onNavigate: (path: string) => void
 }
 
 export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
+  geometryStatus,
   project,
   basePath,
+  isSupervisor = false,
   onNavigate
 }) => {
-  const isAlignmentDone = project.length_km > 0
-  const isSurveyDone = project.open_defects > 0 || isAlignmentDone
-  const isRepairDone = project.repair_packages > 0
+  const warrantyReady = hasWarrantyData(project)
+  const isAlignmentDone = geometryStatus === 'CONFIRMED' || geometryStatus === undefined && project.server_facts?.geometryState === 'CONFIRMED'
+  const isClosed = project.status === 'CLOSED'
+  const isSuspended = project.status === 'RESTRICTED'
+  const isOperating = isAlignmentDone && !isClosed && !isSuspended
+
+  // Xác định giai đoạn hiện tại (1 - 4)
+  const isEarlyClosedWithoutAlignment = isClosed && !isAlignmentDone
+  const currentStageNum = isClosed ? 4 : isSuspended ? 3 : isAlignmentDone ? 3 : 2
+  const currentStageLabel = isClosed
+    ? (isEarlyClosedWithoutAlignment ? 'Đã đóng hồ sơ trước hạn (Chưa nạp tuyến)' : 'Giai đoạn: 04/04 • Đã đóng dự án')
+    : isSuspended
+    ? 'Giai đoạn: 03/04 • Tạm dừng vận hành'
+    : isAlignmentDone
+    ? 'Giai đoạn: 03/04 • Đang vận hành bảo hành'
+    : 'Giai đoạn: 02/04 • Thiết lập tim tuyến'
 
   return (
     <div className="relative bg-white border border-[#E2E5E9] rounded-[20px] p-6 shadow-2xs overflow-hidden flex flex-col gap-4 font-body">
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C9A227] to-slate-200" />
+      
+      {/* Header card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-2 border-b border-[#EDEFF2]">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#C9A227] ring-4 ring-[#C9A227]/20" />
             <h2 className="text-base font-bold text-slate-900 font-headline">
-              Tiến trình bàn giao &amp; Vòng đời bảo hành
+              Vòng đời quản lý dự án bảo hành
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Luân chuyển trách nhiệm giữa Giám sát và Chỉ huy trưởng (PM).
+            Quy trình chuẩn hóa 4 giai đoạn từ bàn giao tiếp nhận đến kết thúc nghĩa vụ bảo hành.
           </p>
         </div>
-        <span className="font-mono text-xs px-3.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">
-          {isAlignmentDone ? 'Giai đoạn: 03/05' : 'Giai đoạn: 01/05'}
+        <span className="font-mono text-xs px-3.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200 shrink-0">
+          {currentStageLabel}
         </span>
       </div>
 
-      {/* Vertical Stepper */}
+      {/* Vertical Stepper: 4 Giai đoạn chuẩn */}
       <div className="relative pl-6 sm:pl-8 flex flex-col gap-4 pt-2">
         <div className="absolute left-3 sm:left-4 top-3 bottom-4 w-0.5 bg-[#E2E5E9] -translate-x-1/2" />
 
-        {/* Step 1: Khởi tạo dự án (SUP - DA01, BR-01) - Đã hoàn thành */}
+        {/* GIAI ĐOẠN 1: Khởi tạo dự án & Bàn giao tuyến */}
         <div className="relative flex items-start gap-4">
           <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-emerald-50 text-[#047857] flex items-center justify-center ring-4 ring-white shadow-2xs border border-emerald-200">
             <Icon name="check" size={14} />
@@ -49,130 +69,207 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
           <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-900 font-bold">
-                Bước 1: Khởi tạo dự án &amp; Phân quyền PM điều hành (DA01, BR-01)
+                Giai đoạn 1: Tiếp nhận bàn giao &amp; Khởi tạo dự án
               </span>
               <span className="font-mono text-[11px] text-slate-500">
-                {project.handover_date || 'Ngày bàn giao'}
+                {project.handover_date || 'Bàn giao khởi tạo'}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Giám sát đã khởi tạo hồ sơ quản lý và bàn giao quyền quản trị tuyến cho <strong className="text-slate-900">{project.pm_name}</strong> ({project.pm_email}).
+              Giám sát trưởng đã lập hồ sơ quản lý công trình và bàn giao quyền điều phối tuyến cho Chỉ huy trưởng{' '}
+              <strong className="text-slate-900">{project.pm_name}</strong> {project.pm_email ? ` (${project.pm_email})` : ''}.
             </p>
           </div>
         </div>
 
-        {/* Step 2: Thiết lập tim tuyến & bề rộng (PM - WF-02, FR-06) */}
+        {/* GIAI ĐOẠN 2: Thiết lập & Phê duyệt tim tuyến */}
         <div className="relative flex items-start gap-4">
           <div
             className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
               isAlignmentDone
                 ? 'bg-emerald-50 text-[#047857] border-emerald-200'
+                : isClosed
+                ? 'bg-slate-100 text-slate-400 border-slate-300'
                 : 'bg-amber-50 text-[#C9A227] border-amber-200 animate-pulse'
             }`}
           >
-            <Icon name={isAlignmentDone ? 'check' : 'play_arrow'} size={14} />
+            <Icon name={isAlignmentDone ? 'check' : isClosed ? 'remove' : 'play_arrow'} size={14} />
           </div>
           <div
             className={`border rounded-xl p-3.5 flex-1 shadow-2xs ${
-              isAlignmentDone ? 'bg-slate-50 border-[#E2E5E9]' : 'bg-amber-50/40 border-amber-200'
+              isAlignmentDone
+                ? 'bg-slate-50 border-[#E2E5E9]'
+                : isClosed
+                ? 'bg-slate-50/70 border-slate-200'
+                : 'bg-amber-50/40 border-amber-200'
             }`}
           >
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-900 font-bold">
-                Bước 2: Thiết lập tim tuyến &amp; bề rộng mặt đường (PM - WF-02)
+                Giai đoạn 2: Thiết lập &amp; Phê duyệt tim tuyến (Baseline trắc địa)
               </span>
-              <span className="font-mono text-[11px] text-[#8C6D1F] font-semibold">
-                {isAlignmentDone ? 'Đã duyệt tuyến' : 'Đang chờ PM'}
+              <span className={`font-mono text-[11px] font-semibold ${
+                isAlignmentDone
+                  ? 'text-emerald-700'
+                  : isClosed
+                  ? 'text-slate-500'
+                  : 'text-[#8C6D1F]'
+              }`}>
+                {isAlignmentDone
+                  ? 'Hình học đã xác nhận từ server'
+                  : isClosed
+                  ? 'Đã đóng trước khi thiết lập tuyến'
+                  : 'Đang chờ PM nạp tuyến'}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              {isAlignmentDone ? (
-                <>Đã thiết lập tim tuyến chiều dài <strong className="text-slate-900">{project.length_km} km</strong>, hệ quy chiếu WGS84 EPSG:4326.</>
+              {geometryStatus === 'CONFIRMED' ? 'Hồ sơ hình học đã được Giám sát xác nhận từ máy chủ. Phân đoạn do PM quản lý và công bố.' : geometryStatus === 'REJECTED' ? 'Hồ sơ đã từ chối — PM sửa cùng bản nháp và trình lại.' : geometryStatus === 'SUBMITTED' ? 'Hồ sơ đã trình — chờ Giám sát xác nhận hình học. Phân đoạn do PM quản lý và công bố.' : isAlignmentDone ? (
+                <>
+                  Đã chuẩn hóa tim tuyến trục chính dài <strong className="text-slate-900">{project.length_km} km</strong>, hệ quy chiếu WGS84 EPSG:4326. Giám sát đã ký duyệt khóa mốc lý trình bất biến.
+                </>
+              ) : isClosed ? (
+                <>
+                  Dự án đã được Giám sát thực hiện thủ tục đóng kết thúc bảo hành trước hạn khi chưa phát sinh hồ sơ tim tuyến trắc địa.
+                </>
               ) : (
-                <>PM cần nhập chuỗi tọa độ tim tuyến GPX/KML và bề rộng theo từng đoạn để phân đoạn mặt đường.</>
+                <>PM nhập và lưu hồ sơ tuyến; Giám sát xác nhận hình học. Phân đoạn do PM quản lý và công bố.</>
               )}
             </p>
-            {!isAlignmentDone && (
+            {!isAlignmentDone && !isClosed && geometryStatus !== 'SUBMITTED' && (
               <div className="mt-2.5">
-                <button
-                  type="button"
-                  onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <Icon name="alt_route" size={14} />
-                  <span>Vào thiết lập tim tuyến ngay</span>
-                </button>
+                {!isSupervisor ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
+                    className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Icon name="alt_route" size={14} />
+                    <span>Vào thiết lập tim tuyến ngay</span>
+                  </button>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 text-xs text-amber-800 bg-amber-100/70 border border-amber-200 px-3 py-1.5 rounded-lg font-medium">
+                    <Icon name="schedule" size={14} />
+                    <span>Trách nhiệm: Chỉ huy trưởng PM đang tiến hành nạp hồ sơ tim tuyến</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Step 3: Khảo sát Drone AI */}
+        {/* GIAI ĐOẠN 3: Vận hành theo dõi & Khắc phục bảo hành */}
         <div className="relative flex items-start gap-4">
           <div
             className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
-              isSurveyDone
+              isClosed
+                ? (isAlignmentDone ? 'bg-emerald-50 text-[#047857] border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-300')
+                : isSuspended
+                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                : isOperating
+                ? 'bg-amber-500 text-white border-amber-300 ring-amber-200/50'
+                : 'bg-slate-100 text-slate-400 border-slate-200'
+            }`}
+          >
+            {isClosed ? (
+              isAlignmentDone ? <Icon name="check" size={14} /> : <Icon name="remove" size={14} />
+            ) : isSuspended ? (
+              <Icon name="pause" size={14} />
+            ) : isOperating ? (
+              <span className="text-[11px] font-bold">3</span>
+            ) : (
+              <Icon name="lock" size={14} />
+            )}
+          </div>
+          <div
+            className={`border rounded-xl p-3.5 flex-1 shadow-2xs ${
+              isSuspended
+                ? 'bg-amber-50/50 border-amber-300'
+                : isOperating
+                ? 'bg-amber-50/30 border-amber-200/80'
+                : isClosed
+                ? 'bg-slate-50 border-[#E2E5E9]'
+                : 'bg-slate-50 border-[#E2E5E9] opacity-75'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+              <span className="text-xs text-slate-900 font-bold flex items-center gap-1.5">
+                <span>Giai đoạn 3: Vận hành theo dõi &amp; Khắc phục hư hỏng</span>
+                {isOperating && (
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                )}
+                {isSuspended && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900">
+                    TẠM DỪNG
+                  </span>
+                )}
+              </span>
+              <span className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                isClosed
+                  ? (isAlignmentDone ? 'text-emerald-800 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200')
+                  : isSuspended
+                  ? 'text-amber-800 bg-amber-100/80 border-amber-200'
+                  : 'text-amber-800 bg-amber-100/80 border-amber-200'
+              }`}>
+                {isClosed
+                  ? (isAlignmentDone ? 'Đã hoàn thành nghĩa vụ' : 'Không phát sinh chu trình vận hành')
+                  : isSuspended
+                  ? 'Chu trình tạm ngưng vận hành'
+                  : warrantyReady ? `Chu trình lặp • Còn ${project.days_remaining} ngày` : 'Chưa cập nhật'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-2.5">
+              {isClosed && !isAlignmentDone ? (
+                <>Dự án kết thúc sớm và đóng băng hồ sơ lưu trữ trước khi bước vào chu trình theo dõi định kỳ và khảo sát bay Drone.</>
+              ) : isSuspended ? (
+                <>Dự án đang tạm dừng vận hành. Các hoạt động tạo yêu cầu bay Drone và lập gói sửa chữa mới đang tạm ngưng theo lệnh điều hành.</>
+              ) : (
+                <>Chu trình tuần hoàn trong suốt thời hạn bảo hành: Khảo sát Drone AI phát hiện nứt vỡ, PM gom gói sửa chữa kỹ thuật và Giám sát nghiệm thu hiện trường đạt 100%.</>
+              )}
+            </p>
+
+          </div>
+        </div>
+
+        {/* GIAI ĐOẠN 4: Nghiệm thu đóng dự án & Lưu trữ hồ sơ số */}
+        <div className="relative flex items-start gap-4">
+          <div
+            className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
+              isClosed
                 ? 'bg-emerald-50 text-[#047857] border-emerald-200'
                 : 'bg-slate-100 text-slate-400 border-slate-200'
             }`}
           >
-            <Icon name={isSurveyDone ? 'check' : 'lock'} size={14} />
+            <Icon name={isClosed ? 'check' : 'lock'} size={14} />
           </div>
-          <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs opacity-90">
-            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-              <span className="text-xs text-slate-800 font-semibold">
-                Bước 3: Khảo sát không ảnh Drone AI &amp; Thẩm định lỗi
-              </span>
-              <span className="font-mono text-[11px] text-slate-400">
-                {isSurveyDone ? 'Đã kích hoạt' : 'Chờ hoàn thành Bước 2'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Drone bay chụp ảnh hiện trường, AI phát hiện nứt vỡ, PM thẩm định khung nhận diện &amp; so sánh đa kỳ.
-            </p>
-          </div>
-        </div>
-
-        {/* Step 4: Gom đợt & Lập phương án */}
-        <div className="relative flex items-start gap-4">
           <div
-            className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
-              isRepairDone
-                ? 'bg-emerald-50 text-[#047857] border-emerald-200'
-                : 'bg-slate-100 text-slate-400 border-slate-200'
+            className={`border rounded-xl p-3.5 flex-1 shadow-2xs ${
+              isClosed ? 'bg-emerald-50/40 border-emerald-200' : 'bg-slate-50 border-[#E2E5E9] opacity-75'
             }`}
           >
-            <Icon name={isRepairDone ? 'check' : 'lock'} size={14} />
-          </div>
-          <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs opacity-80">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-              <span className="text-xs text-slate-800 font-semibold">
-                Bước 4: Gom đợt sửa chữa &amp; Trình duyệt phương án kỹ thuật (WF-07)
+              <span className="text-xs text-slate-900 font-bold">
+                Giai đoạn 4: Nghiệm thu đóng dự án &amp; Lưu trữ hồ sơ số
               </span>
-              <span className="font-mono text-[11px] text-slate-400">
-                {isRepairDone ? `${project.repair_packages} đợt` : 'Chờ kích hoạt'}
+              <span className="font-mono text-[11px] text-slate-500 font-semibold">
+                {isClosed ? (isEarlyClosedWithoutAlignment ? 'Đã đóng trước hạn' : 'Đã đóng dự án') : 'Hết hạn bảo hành & Sạch 100% lỗi'}
               </span>
             </div>
-            <p className="text-xs text-slate-500">
-              Gom khiếm khuyết cùng lý trình, tính khối lượng cào bóc m², trám nứt m, trình Giám sát phê duyệt.
-            </p>
-          </div>
-        </div>
-
-        {/* Step 5: Nghiệm thu & Đóng bảo hành */}
-        <div className="relative flex items-start gap-4">
-          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center ring-4 ring-white shadow-2xs border border-slate-200">
-            <Icon name="lock" size={14} />
-          </div>
-          <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs opacity-75">
-            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-              <span className="text-xs text-slate-800 font-semibold">
-                Bước 5: Nghiệm thu Trước/Sau &amp; Ký số đóng đợt (WF-10)
-              </span>
-              <span className="font-mono text-[11px] text-slate-400">Giai đoạn cuối</span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Giám sát đối soát ảnh trước/sau sửa chữa, kiểm tra đạt 100% và ký số giải ngân tiền bảo hành.
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {isClosed ? (
+                <>
+                  Dự án đã chính thức đóng kết thúc bảo hành vào ngày{' '}
+                  <strong>
+                    {project.closed_at
+                      ? new Date(project.closed_at).toLocaleDateString('vi-VN')
+                      : 'vừa qua'}
+                  </strong>{' '}
+                  bởi <strong>{project.closed_by || 'Giám sát viên'}</strong>. Toàn bộ hồ sơ trắc địa, nhật ký bay và nghiệm thu được chuyển sang kho số lưu trữ 5 năm.
+                </>
+              ) : (
+                <>
+                  Khi hết hạn bảo hành công trình và không còn bất kỳ khiếm khuyết nào tồn đọng (0 lỗi), Giám sát trưởng cùng Chủ đầu tư kiểm tra tổng thể lần cuối, ký số biên bản đóng dự án và chuyển sang chế độ lưu trữ số.
+                </>
+              )}
             </p>
           </div>
         </div>

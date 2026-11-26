@@ -1,3 +1,4 @@
+import { pavementNumber } from './alignmentPavementHelpers'
 import React, { useState } from 'react'
 import {
   Layers,
@@ -5,8 +6,6 @@ import {
   Grid,
   Plus,
   Minus,
-  Ruler,
-  Maximize2,
   ChevronDown,
   ChevronUp,
   MapPin,
@@ -18,6 +17,7 @@ import {
 import { SegmentItem } from './types'
 import { AlignmentMapLegend } from './AlignmentMapLegend'
 import { calculateCoordsLengthKm } from './alignmentGeometryHelpers'
+import { summarizePavementPreview, type PavementPreview } from './alignmentPavementDisplay'
 
 export interface AlignmentMapProps {
   mapContainerRef: React.RefObject<HTMLDivElement | null>
@@ -33,11 +33,13 @@ export interface AlignmentMapProps {
   selectedSegmentId: string | null
   segments: SegmentItem[]
   importedLengthKm: number
-  slabLengthM: number
-  slabThicknessCm: number
-  contractionSpacingM: number
-  expansionSpacingM: number
-  expansionGapMm: number
+  slabLengthM: number | string
+  slabThicknessCm: number | string
+  pavementStatus?: string
+  pavementPreview?: PavementPreview
+  contractionSpacingM: number | string
+  expansionSpacingM: number | string
+  expansionGapMm: number | string
   // Props cho tuyến nhánh và phân đoạn kích hoạt
   branches?: any[]
   selectedTargetType?: string
@@ -66,8 +68,8 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
   selectedSegmentId,
   segments,
   importedLengthKm,
-  slabLengthM,
-  slabThicknessCm,
+  pavementPreview,
+  pavementStatus,
   contractionSpacingM,
   expansionSpacingM,
   expansionGapMm,
@@ -136,14 +138,14 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
           {/* Live Cursor Readout */}
           <div className="pointer-events-auto hidden lg:flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full font-mono text-xs text-white shadow-lg border border-slate-700/60">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>{cursorPos.lat}° N, {cursorPos.lng}° E</span>
+            <span>{Number.isFinite(cursorPos.lat) && Number.isFinite(cursorPos.lng) ? `${cursorPos.lat}° N, ${cursorPos.lng}° E` : 'Chưa có vị trí con trỏ'}</span>
             <span className="text-slate-500">|</span>
             <span className="text-brand-gold font-semibold">H: {cursorPos.elevation}</span>
             <span className="text-slate-500">|</span>
             <span className="text-amber-300 font-bold">{cursorPos.station}</span>
           </div>
 
-          {/* GIS Map Tools (Bộ nút điều khiển duy nhất) */}
+          {/* GIS Map Tools */}
           <div className="pointer-events-auto flex items-center gap-0.5 bg-slate-900/90 backdrop-blur-md p-1 rounded-lg shadow-lg text-white border border-slate-700/60">
             <button
               onClick={() => mapRef.current?.zoomIn()}
@@ -158,22 +160,6 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
               title="Thu nhỏ"
             >
               <Minus className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={onToggleRuler}
-              className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer ${
-                rulerActive ? 'bg-brand-gold text-white' : 'hover:bg-slate-700'
-              }`}
-              title="Đo khoảng cách (Ruler)"
-            >
-              <Ruler className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={onSelectAllRoute}
-              className="w-7 h-7 rounded hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-              title="Xem toàn tuyến / Vừa khung hình"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -256,136 +242,45 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
         {/* MAPLIBRE GL JS CONTAINER */}
         <div ref={mapContainerRef} className="absolute inset-0 z-10 w-full h-full" />
 
-        {/* MAP FLOATING BOTTOM OVERLAYS */}
+        {/* MAP FLOATING BOTTOM OVERLAYS: Luôn luôn hiển thị 2 bảng chú thích và thông số mặt cắt */}
         <div className="relative z-30 p-3 flex flex-col md:flex-row items-end justify-between gap-3 pointer-events-none">
-          {/* Bottom Left: Engineering Cross-Section & Slabs HUD */}
-          <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-md p-3 rounded-xl text-white shadow-2xl flex flex-col gap-2 max-w-sm md:max-w-md w-full border border-slate-700/80 text-xs transition-all">
-            {(() => {
-              const isAll = selectedSegmentId === 'ALL' || !selectedSegmentId
-              let targetItem: any = null
-              let branchNamePrefix = ''
-
-              // 1. Nếu đang ở ngữ cảnh Tuyến Nhánh (selectedTargetType !== 'MAINLINE')
-              if (currentBranch && selectedTargetType === currentBranch.id) {
-                const branchSegs = currentBranch.segments || []
-                const matchedSeg = !isAll ? branchSegs.find((s: any) => s.id === selectedSegmentId) : null
-                if (matchedSeg) {
-                  targetItem = {
-                    ...matchedSeg,
-                    name: `${currentBranch.name} - ${matchedSeg.code}`,
-                    roadWidthM: matchedSeg.roadWidthM || currentBranch.roadWidthM || 8.0,
-                    isBranch: true,
-                    branchCode: currentBranch.code
-                  }
-                  branchNamePrefix = `[${currentBranch.code}] `
-                } else if (!isAll && branchSegs.length > 0) {
-                  const firstSeg = branchSegs[0]
-                  targetItem = {
-                    ...firstSeg,
-                    name: `${currentBranch.name} - ${firstSeg.code}`,
-                    roadWidthM: firstSeg.roadWidthM || currentBranch.roadWidthM || 8.0,
-                    isBranch: true,
-                    branchCode: currentBranch.code
-                  }
-                  branchNamePrefix = `[${currentBranch.code}] `
-                } else {
-                  targetItem = {
-                    id: currentBranch.id,
-                    code: currentBranch.code,
-                    name: currentBranch.name,
-                    roadWidthM: currentBranch.roadWidthM || 8.0,
-                    lengthKm: currentBranch.lengthKm || 1.85,
-                    surfaceMaterial: currentBranch.surfaceMaterial || 'Mặt BTN C12.5',
-                    isBranch: true,
-                    branchCode: currentBranch.code
-                  }
-                  branchNamePrefix = `[${currentBranch.code}] `
+            {/* Bottom Left: Engineering Cross-Section & Slabs HUD */}
+            <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-md p-3 rounded-xl text-white shadow-2xl flex flex-col gap-2 max-w-sm md:max-w-md w-full border border-slate-700/80 text-xs transition-all">
+              {(() => {
+                const isAll = selectedSegmentId === 'ALL' || !selectedSegmentId
+                const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0
+                const metric = (value: number | string | undefined | null, unit: string, digits?: number) => {
+                  const number = pavementNumber(value ?? undefined)
+                  return positive(number) ? `${digits === undefined ? number : number.toFixed(digits)}${unit}` : 'Chưa có dữ liệu'
                 }
-              }
-
-              // 2. Nếu đang ở Trục Chính hoặc chưa tìm thấy
-              if (!targetItem) {
-                targetItem = !isAll ? segments.find((s) => s.id === selectedSegmentId) : null
-              }
-
-              // 3. Tìm trong các tuyến nhánh khác nếu có
-              if (!targetItem && !isAll && branches && branches.length > 0) {
-                for (const b of branches) {
-                  if (b.id === selectedSegmentId) {
-                    targetItem = {
-                      id: b.id,
-                      code: b.code,
-                      name: b.name,
-                      roadWidthM: b.roadWidthM || 8.0,
-                      lengthKm: b.lengthKm || 1.85,
-                      surfaceMaterial: b.surfaceMaterial || 'Mặt BTN C12.5',
-                      isBranch: true
-                    }
-                    branchNamePrefix = `[${b.code}] `
-                    break
-                  }
-                  if (b.segments && Array.isArray(b.segments)) {
-                    const foundSeg = b.segments.find((s: any) => s.id === selectedSegmentId)
-                    if (foundSeg) {
-                      targetItem = {
-                        ...foundSeg,
-                        name: `${b.name} - ${foundSeg.code}`,
-                        roadWidthM: foundSeg.roadWidthM || b.roadWidthM || 8.0,
-                        isBranch: true,
-                        branchCode: b.code
-                      }
-                      branchNamePrefix = `[${b.code}] `
-                      break
+                const selectedBranch = currentBranch && selectedTargetType === currentBranch.id ? currentBranch : null
+                let currSeg: any = null
+                let branch: any = selectedBranch
+                if (!isAll) {
+                  currSeg = (selectedBranch ? selectedBranch.segments || [] : segments).find((s: any) => s.id === selectedSegmentId) || null
+                  if (!currSeg && !selectedBranch) {
+                    for (const candidate of branches) {
+                      if (candidate.id === selectedSegmentId) { currSeg = candidate; branch = candidate; break }
+                      const found = candidate.segments?.find((s: any) => s.id === selectedSegmentId)
+                      if (found) { currSeg = found; branch = candidate; break }
                     }
                   }
                 }
-              }
-
-              // 3. Nếu đang ở ngữ cảnh tuyến nhánh và chưa chọn phân đoạn cụ thể
-              if (!targetItem && currentBranch && selectedTargetType === currentBranch.id) {
-                if (isAll) {
-                  targetItem = {
-                    code: `${currentBranch.code} - Toàn tuyến nhánh`,
-                    roadWidthM: currentBranch.roadWidthM || 8.0,
-                    lengthKm: currentBranch.lengthKm || 1.85,
-                    isBranch: true
-                  }
-                  branchNamePrefix = `[${currentBranch.code}] `
-                } else {
-                  targetItem = currentBranch.segments?.[0] || {
-                    code: currentBranch.code,
-                    roadWidthM: currentBranch.roadWidthM || 8.0,
-                    lengthKm: currentBranch.lengthKm || 1.85,
-                    isBranch: true
-                  }
-                  branchNamePrefix = `[${currentBranch.code}] `
-                }
-              }
-
-              // Fallback nếu trục chính
-              const currSeg = targetItem || (isAll ? null : (segments[0] || null))
-
-              const totalRouteKm = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 25.0)
-              const avgRoadWidth = segments.length > 0
-                ? segments.reduce((acc, s) => acc + (s.roadWidthM || 8.0) * s.lengthKm, 0) / Math.max(0.001, totalRouteKm)
-                : 8.0
-              const currW = isAll ? avgRoadWidth : (currSeg?.roadWidthM || 8.0)
-              const halfW = (currW / 2).toFixed(1)
-              const slabLen = Math.max(1.0, slabLengthM || 5.0)
-              const targetLenKm = isAll ? totalRouteKm : (currSeg?.lengthKm || 1.0)
-              const targetLenM = targetLenKm * 1000
-              const estSlabs = Math.floor(targetLenM / slabLen) * 2
-
-              const contractionSpacing = Math.max(1.0, contractionSpacingM || 5.0)
-              const expansionSpacing = Math.max(5.0, expansionSpacingM || 50.0)
-              const estContraction = Math.floor(targetLenM / contractionSpacing)
-              const estExpansion = Math.floor(targetLenM / expansionSpacing)
-
-              const displayTitle = isAll
-                ? (currentBranch && selectedTargetType === currentBranch.id ? `[${currentBranch.code}] Toàn tuyến nhánh` : 'Toàn tuyến trục chính')
-                : currSeg
-                ? `${branchNamePrefix}${currSeg.code}`
-                : 'Toàn tuyến'
+                const routeSegments = selectedBranch ? selectedBranch.segments || [] : segments
+                const completeLengths = routeSegments.length > 0 && routeSegments.every((s: any) => positive(s.lengthKm))
+                const totalRouteKm = completeLengths ? routeSegments.reduce((sum: number, s: any) => sum + s.lengthKm, 0)
+                  : routeSegments.length === 0 ? (selectedBranch ? selectedBranch.lengthKm : importedLengthKm) : null
+                const completeWidths = completeLengths && routeSegments.every((s: any) => positive(s.roadWidthM))
+                const avgRoadWidth = completeWidths
+                  ? routeSegments.reduce((sum: number, s: any) => sum + s.roadWidthM * s.lengthKm, 0) / totalRouteKm
+                  : routeSegments.length === 0 && selectedBranch ? selectedBranch.roadWidthM : null
+                const currW = isAll ? avgRoadWidth : currSeg?.roadWidthM
+                const halfWidth = positive(currW) ? currW / 2 : null
+                const summary = summarizePavementPreview(pavementPreview, isAll ? undefined : currSeg?.id || null, !!branch)
+                const countText = (count: number | null, missing: string[], unit: string) => count === null ? missing.join('; ') : `${count.toLocaleString('vi-VN')} ${unit} thực`
+                const displayTitle = isAll
+                  ? (selectedBranch ? `[${selectedBranch.code}] Toàn tuyến nhánh` : 'Toàn tuyến trục chính')
+                  : currSeg ? `${branch ? `[${branch.code}] ` : ''}${currSeg.code}` : 'Chưa chọn được phân đoạn'
 
               return (
                 <>
@@ -396,11 +291,11 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                       <span className="font-bold text-slate-100 text-xs tracking-wide uppercase flex items-center gap-1.5">
                         <span>Mặt Cắt Ngang & Thông Số</span>
                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${
-                          currSeg?.isBranch
+                          !!branch
                             ? 'bg-amber-950/80 border-amber-600/70 text-amber-300'
                             : 'bg-sky-950/80 border-sky-600/70 text-sky-300'
                         }`}>
-                          {currSeg?.isBranch ? 'Tuyến Nhánh' : 'Trục Chính'}
+                          {!!branch ? 'Tuyến Nhánh' : 'Trục Chính'}
                         </span>
                       </span>
                     </div>
@@ -432,66 +327,67 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                           <span className="text-slate-400 font-medium">
                             {isAll ? 'Bề rộng mặt đường TB (W):' : 'Bề rộng mặt đường (W):'}
                           </span>
-                          <span className="font-mono font-bold text-amber-400 text-xs">{currW.toFixed(1)} mét</span>
+                          <span className="font-mono font-bold text-amber-400 text-xs">{metric(currW, ' mét', 1)}</span>
                         </div>
 
                         {/* Sơ đồ mặt cắt đồ họa trực quan */}
                         <div className="relative mt-1 pt-4 pb-2 px-2 bg-slate-950 rounded border border-slate-800/80 flex flex-col items-center">
                           <div className="absolute top-1 inset-x-2 flex items-center justify-between text-[9px] font-mono text-emerald-400">
                             <span>|←</span>
-                            <span className="font-bold">W = {currW.toFixed(1)}m</span>
+                            <span className="font-bold">W = {metric(currW, 'm', 1)}</span>
                             <span>→|</span>
                           </div>
 
                           <div className="w-full h-5 rounded flex items-center overflow-hidden border border-slate-600 bg-slate-800 text-[10px] font-mono font-bold">
-                            <div className="flex-1 h-full bg-sky-950/80 border-r border-dashed border-white flex items-center justify-center text-sky-300">
-                              Làn Trái ({halfW}m)
+                            <div className="flex-1 h-full bg-cyan-950/80 border-r border-dashed border-white flex items-center justify-center text-cyan-300">
+                              Nửa Trái ({metric(halfWidth, 'm', 1)})
                             </div>
-                            <div className="flex-1 h-full bg-amber-950/80 flex items-center justify-center text-amber-300">
-                              Làn Phải ({halfW}m)
+                            <div className="flex-1 h-full bg-rose-950/80 flex items-center justify-center text-rose-300">
+                              Nửa Phải ({metric(halfWidth, 'm', 1)})
                             </div>
                           </div>
 
                           <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold mt-1.5 pt-1 border-t border-slate-800/80">
-                            <span className="text-sky-400 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
-                              Mép Trái: -{halfW}m
+                            <span className="text-cyan-400 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
+                              Mép Trái: {metric(halfWidth, 'm', 1)}
                             </span>
-                            <span className="text-slate-400 text-[9px]">CL (0.0m)</span>
-                            <span className="text-amber-400 flex items-center gap-1">
-                              Mép Phải: +{halfW}m
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                            <span className="text-slate-400 text-[9px]">{positive(currW) ? 'CL (0.0m)' : 'CL'}</span>
+                            <span className="text-rose-400 flex items-center gap-1">
+                              Mép Phải: {metric(halfWidth, 'm', 1)}
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block" />
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* 2. THÔNG SỐ TẤM BÊ TÔNG & KHE CO / KHE GIÃN NỞ */}
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <span className="text-[10px] text-sky-300">{pavementStatus || 'Preview — chưa lưu/chưa xác nhận · Theo chiều Km tăng'}</span>
+                      <div className="grid grid-cols-1 gap-2 text-[11px]">
                         <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
                           <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                            <span>Tấm BTXM</span>
+                            <span>Tấm BTXM (T)</span>
                           </span>
                           <span className="font-mono font-bold text-white text-xs">
-                            {slabLengthM.toFixed(1)}m × {halfW}m × {slabThicknessCm}cm
+                            {summary.dimensions}
                           </span>
                           <span className="text-[10px] text-slate-400">
-                            {isAll ? 'Toàn tuyến: ' : 'Đoạn này: '}~<strong className="text-slate-200">{estSlabs.toLocaleString()} tấm</strong>
+                            {isAll ? 'Toàn tuyến: ' : 'Đoạn này: '}<strong className="text-slate-200">{countText(summary.slabCount, summary.slabMissing, 'tấm')}</strong>
                           </span>
                         </div>
 
                         <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
                           <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                            <span>Khe co & khe giãn</span>
+                            <span className="text-red-400">Khe co (KC) — nét đứt đỏ</span>
                           </span>
-                          <span className="font-mono font-bold text-amber-400 text-[11px] flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-                            Giãn: {expansionGapMm}mm (mỗi {expansionSpacingM}m)
+                          <span className="font-mono text-red-300">
+                            Cự ly: {metric(contractionSpacingM, 'm')}
                           </span>
-                          <span className="font-mono text-sky-400 text-[10px] flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]" />
-                            Co: {contractionSpacingM}m
-                          </span>
+                          <strong className="text-slate-200">{countText(summary.contractionCount, summary.contractionMissing, 'khe co')}</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
+                          <span className="text-[10px] text-orange-400 font-semibold">Khe giãn (KG) — dải cam</span>
+                          <span className="font-mono text-orange-300">Cự ly: {metric(expansionSpacingM, 'm')} · Độ hở: {metric(expansionGapMm, 'mm')}</span>
+                          <strong className="text-slate-200">{countText(summary.expansionCount, summary.expansionMissing, 'khe giãn')}</strong>
                         </div>
                       </div>
                     </div>
@@ -505,6 +401,6 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
           <AlignmentMapLegend />
         </div>
       </div>
-    </div>
+  </div>
   )
 }

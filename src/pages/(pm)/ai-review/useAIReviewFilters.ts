@@ -26,7 +26,7 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       setSourceFilter('DRONE_AI')
     } else if (sourceParam === 'citizen') {
       setSourceFilter('CITIZEN')
-    } else if (sourceParam === 'patrol') {
+    } else if (sourceParam === 'patrol' || sourceParam === 'field') {
       setSourceFilter('PATROL')
     }
   }, [sourceParam])
@@ -39,14 +39,19 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
     setActiveTab('ALL')
   }
 
+  const visibleCases = cases
+
   // Filtered cases
   const filteredCases = useMemo(() => {
-    return cases.filter((c) => {
+    return visibleCases.filter((c) => {
       // 1. Tab filter
       if (activeTab === 'PENDING' && c.status !== 'PENDING') return false
       if (activeTab === 'MERGED' && c.status !== 'MERGED') return false
-      if (activeTab === 'NEED_SURVEY' && c.status !== 'NEED_SURVEY') return false
+      if (activeTab === 'NEED_SURVEY' && c.status !== 'NEED_SURVEY' && c.status !== 'AWAITING_EVIDENCE') return false
       if (activeTab === 'CRITICAL' && c.severity !== 'CRITICAL') return false
+
+      if (projectFilter === 'UNASSIGNED' && c.project_id) return false
+      if (projectFilter === 'ASSIGNED' && !c.project_id) return false
 
       // 3. Dropdown filters: Nguồn tiếp nhận
       if (sourceFilter !== 'ALL' && c.source !== sourceFilter) return false
@@ -56,12 +61,12 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       if (lineTypeFilter === 'BRANCH_LINE' && !c.stationing.includes('Nhánh')) return false
 
       // 5. Dự án & Ưu tiên
-      if (projectFilter !== 'ALL' && c.project_name !== projectFilter) return false
+      if (!['ALL', 'UNASSIGNED', 'ASSIGNED'].includes(projectFilter) && c.project_name !== projectFilter && c.project_id !== projectFilter) return false
       if (priorityFilter !== 'ALL' && c.severity !== priorityFilter) return false
 
       // 6. Search Query
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
+        const q = searchQuery.trim().toLowerCase()
         return (
           c.code.toLowerCase().includes(q) ||
           c.defect_title.toLowerCase().includes(q) ||
@@ -74,21 +79,22 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       }
       return true
     })
-  }, [cases, viewSourceMode, activeTab, sourceFilter, lineTypeFilter, projectFilter, priorityFilter, searchQuery])
+  }, [visibleCases, viewSourceMode, activeTab, sourceFilter, lineTypeFilter, projectFilter, priorityFilter, searchQuery])
 
   // Count stats
-  const pendingCount = cases.filter((c) => c.status === 'PENDING').length
-  const criticalCount = cases.filter((c) => c.severity === 'CRITICAL').length
-  const mergedCount = cases.filter((c) => c.status === 'MERGED').length
-  const surveyCount = cases.filter((c) => c.status === 'NEED_SURVEY').length
+  const pendingCount = visibleCases.filter((c) => c.status === 'PENDING').length
+  const criticalCount = visibleCases.filter((c) => c.severity === 'CRITICAL').length
+  const mergedCount = visibleCases.filter((c) => c.status === 'MERGED').length
+  const surveyCount = visibleCases.filter((c) => (c.status === 'NEED_SURVEY' || c.status === 'AWAITING_EVIDENCE')).length
 
-  const citizenCount = cases.filter((c) => c.source === 'CITIZEN' || c.source === 'PATROL').length
-  const unassignedCitizenCount = cases.filter(
+  const citizenCount = visibleCases.filter((c) => c.source === 'CITIZEN' || c.source === 'PATROL').length
+  const unassignedCitizenCount = visibleCases.filter(
     (c) => (c.source === 'CITIZEN' || c.source === 'PATROL') && (!c.project_id || c.project_id === '')
   ).length
-  const droneAICount = cases.filter((c) => c.source === 'DRONE_AI').length
+  const droneAICount = visibleCases.filter((c) => c.source === 'DRONE_AI').length
 
   return {
+    visibleCases,
     viewSourceMode,
     handleSetViewSourceMode,
     activeTab,

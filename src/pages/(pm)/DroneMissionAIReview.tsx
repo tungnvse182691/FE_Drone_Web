@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -10,18 +10,21 @@ import { useDroneMissionReview } from './drone-review/useDroneMissionReview'
 import { MissionHeader } from './drone-review/MissionHeader'
 import { MissionViewer } from './drone-review/MissionViewer'
 import { MissionTriageList } from './drone-review/MissionTriageList'
-import { MissionModals } from './drone-review/MissionModals'
 
 export const DroneMissionAIReview: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  // Ngữ cảnh khi mở từ "Mở kết quả" của lần chạy AI vừa tạo: ?run=<runId>&dataset=<datasetId>.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const runId = searchParams.get('run') || ''
+  const datasetId = searchParams.get('dataset') || ''
+  const detParam = searchParams.get('det') || ''
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const [currentSurvey, setCurrentSurvey] = useState<SurveyMissionItem | null>(null)
   const [isLoadingSurvey, setIsLoadingSurvey] = useState<boolean>(true)
-  const [isSimulating, setIsSimulating] = useState<boolean>(false)
 
   const {
     isAiOverlayVisible,
@@ -35,15 +38,9 @@ export const DroneMissionAIReview: React.FC = () => {
     totalFrames,
     isCanvasFullscreen,
     setIsCanvasFullscreen,
-    kmFilter,
-    setKmFilter,
+    statusFilter,
+    setStatusFilter,
     selectedDetectionId,
-    coveragePercentage,
-    hasBlindspot,
-    isReFlightModalOpen,
-    setIsReFlightModalOpen,
-    pilotNote,
-    setPilotNote,
     toastMessage,
     setToastMessage,
     showToast,
@@ -58,25 +55,29 @@ export const DroneMissionAIReview: React.FC = () => {
     setViewerMode,
     corridorMapContainerRef,
     isBaselineLocked,
-    canLockBaseline,
-    isBaselineModalOpen,
-    setIsBaselineModalOpen,
     isLockedSuccess,
     lockedBaselineRange,
-    handleConfirmBaseline,
     handleSelectDetection,
     handleApproveDetection,
     handleRejectDetection,
-    handleSubmitReFlight,
-    handleLockBaseline,
-    selectedItem
-  } = useDroneMissionReview(id || 'srv-01')
+    selectedItem,
+    detectionsError,
+    selectionError,
+    retryDetection
+  } = useDroneMissionReview(id || '', currentSurvey, {
+    runId: runId || undefined,
+    datasetId: datasetId || undefined,
+    detectionId: detParam || undefined,
+    // Giữ detectionId (cùng run/dataset) trên URL để F5/điều hướng lại đúng phát hiện đang xem.
+    onSelect: (detectionId) => setSearchParams((prev) => { const n = new URLSearchParams(prev); n.set('det', detectionId); return n }, { replace: true })
+  })
 
   // Tải dữ liệu đợt bay từ Mock API Service
   useEffect(() => {
     let isMounted = true
     const loadSurveyData = async () => {
       if (!id) {
+        setCurrentSurvey(null) // đổi sang route không có :id thì bỏ đợt bay cũ, không hiển thị nhầm
         setIsLoadingSurvey(false)
         return
       }
@@ -99,23 +100,6 @@ export const DroneMissionAIReview: React.FC = () => {
       isMounted = false
     }
   }, [id])
-
-  // Xử lý mô phỏng bay xong ngay trên trang chi tiết nếu trạng thái là SCHEDULED
-  const handleSimulateFlight = async () => {
-    if (!currentSurvey) return
-    try {
-      setIsSimulating(true)
-      const updated = await surveyService.simulateDroneFlightCompletion(currentSurvey.id)
-      if (updated) {
-        setCurrentSurvey(updated)
-        showToast(`Đã mô phỏng chuyến bay [${updated.code}] hoàn tất và xuất dữ liệu phân tích AI thành công!`)
-      }
-    } catch (err) {
-      console.error('Lỗi khi mô phỏng bay:', err)
-    } finally {
-      setIsSimulating(false)
-    }
-  }
 
   // Trường hợp đang tải
   if (isLoadingSurvey) {
@@ -168,7 +152,7 @@ export const DroneMissionAIReview: React.FC = () => {
             <div className="text-xs text-amber-900 leading-relaxed">
               <p className="font-bold mb-1">Chuyến bay đang ở trạng thái Chuẩn bị / Lên lịch bay:</p>
               <p>
-                Drone chưa cất cánh khảo sát thực địa nên hệ thống chưa nhận được gói ảnh RGB phân giải cao và mô hình AI Road-YOLOv9 chưa kích hoạt trích xuất bounding box. Vui lòng bấm nút <strong>&quot;Mô phỏng bay xong & Chạy AI&quot;</strong> bên dưới để hoàn tất thu thập dữ liệu và chuyển sang màn hình thẩm định AI.
+                Máy chủ chưa có lần chạy AI nào gắn với nhiệm vụ của đợt này (nhiệm vụ chưa nộp bản dữ liệu, hoặc chưa tạo lần chạy AI). Phát hiện AI chỉ xuất hiện sau khi có bản nộp bộ dữ liệu và PM tạo lần chạy AI ở chi tiết nhiệm vụ khảo sát.
               </p>
             </div>
           </div>
@@ -204,24 +188,6 @@ export const DroneMissionAIReview: React.FC = () => {
               <span>Quay lại danh sách khảo sát</span>
             </button>
 
-            <button
-              type="button"
-              disabled={isSimulating}
-              onClick={handleSimulateFlight}
-              className="px-5 py-2.5 text-xs font-bold rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] active:scale-95 text-white shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSimulating ? (
-                <>
-                  <Icon name="sync" size={16} className="animate-spin" />
-                  <span>Đang xử lý chuyến bay và nạp AI...</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="play_arrow" size={16} />
-                  <span>Mô phỏng bay xong & Chạy AI</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
@@ -231,6 +197,20 @@ export const DroneMissionAIReview: React.FC = () => {
   // TRƯỜNG HỢP: ĐÃ BAY VÀ SẴN SÀNG THẨM ĐỊNH AI CANVAS
   return (
     <div className="space-y-4">
+      {!id && <div role="alert" className="rg-alert rg-alert-warn"><p className="flex-1 min-w-0">Chưa chọn đợt khảo sát: đường dẫn thiếu mã nhiệm vụ. Mở từ danh sách khảo sát để xem phát hiện AI của đúng đợt.</p></div>}
+      {runId && (
+        <div role="note" data-testid="ai-run-scope-banner" className="rg-alert bg-brand-surfaceAlt border-brand-border text-slate-700">
+          <Icon name="smart_toy" size={16} className="text-brand-navy shrink-0" />
+          <p className="flex-1 min-w-0 text-xs">
+            Đang xem kết quả của <strong>lần chạy AI</strong> <span className="font-mono">{runId.slice(0, 8)}</span>
+            {datasetId ? <> trên <strong>bản nộp</strong> <span className="font-mono">{datasetId.slice(0, 8)}</span></> : null}.
+            Đây không phải mã job xử lý. Các thao tác thẩm định giữ nguyên.
+          </p>
+          <button type="button" onClick={() => setSearchParams({}, { replace: true })} className="text-xs font-semibold underline cursor-pointer whitespace-nowrap">Xem tất cả lần chạy của nhiệm vụ</button>
+        </div>
+      )}
+      {detectionsError && <div role="alert" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">Không tải được danh sách phát hiện AI: {detectionsError}</p></div>}
+      {selectionError && <div role="alert" data-testid="ai-detection-not-found" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">{selectionError}</p></div>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
@@ -242,42 +222,26 @@ export const DroneMissionAIReview: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Yêu Cầu Bay Bổ Sung & Xác Nhận Khóa Baseline */}
-      <MissionModals
-        isReFlightModalOpen={isReFlightModalOpen}
-        setIsReFlightModalOpen={setIsReFlightModalOpen}
-        pilotNote={pilotNote}
-        setPilotNote={setPilotNote}
-        onSubmitReFlight={handleSubmitReFlight}
-        selectedItem={selectedItem}
-        currentSurveyCode={currentSurvey?.code}
-        currentSurveyRange={currentSurvey ? `${currentSurvey.start_km} → ${currentSurvey.end_km}` : 'Km 1024 - 1030'}
-        coveragePercentage={coveragePercentage}
-        isBaselineModalOpen={isBaselineModalOpen}
-        setIsBaselineModalOpen={setIsBaselineModalOpen}
-        onConfirmBaseline={handleConfirmBaseline}
-        onOpenReFlightFromBaseline={() => {
-          setIsBaselineModalOpen(false)
-          setIsReFlightModalOpen(true)
-        }}
-        reviewedCount={reviewedCount}
-        totalCount={totalCount}
-      />
-
       {/* Breadcrumb, Topbar, Data Quality Assessment, AI Job Progress */}
       <MissionHeader
         basePath={basePath}
-        missionCode={currentSurvey?.code || '#MS-2026-0924'}
-        missionTitle={currentSurvey?.title || 'Khảo sát Drone: Đợt bay quét QL1A (Đoạn Km 1024 - 1030)'}
+        missionCode={currentSurvey?.code || '#MS-2026-0000'}
+        missionTitle={currentSurvey?.title || 'Nhiệm vụ bay khảo sát trắc địa'}
+        missionStatus={currentSurvey?.status}
         setCurrentFrame={setCurrentFrame}
         showToast={showToast}
-        coveragePercentage={coveragePercentage}
-        hasBlindspot={hasBlindspot}
         isBaselineLocked={isBaselineLocked}
         lockedBaselineRange={lockedBaselineRange}
         pendingCount={pendingCount}
-        onOpenReFlightModal={() => setIsReFlightModalOpen(true)}
-        onLockBaseline={handleLockBaseline}
+        detailHref={currentSurvey?.task_ids?.[0] ? `${basePath}/surveys?surveyRecordId=${currentSurvey.task_ids[0]}&surveyRecordKind=TASK` : undefined}
+        droneModel={currentSurvey?.drone_model}
+        totalPhotos={currentSurvey?.total_photos}
+        aiDetectionsCount={detections.length}
+        reviewedCount={reviewedCount}
+        totalCount={totalCount}
+        approvedCount={approvedCount}
+        rejectedCount={rejectedCount}
+        reviewProgressPercent={reviewProgressPercent}
       />
 
       {/* Interactive AI Review Workspace (60/40 Split) */}
@@ -310,10 +274,11 @@ export const DroneMissionAIReview: React.FC = () => {
           detections={detections}
           selectedDetectionId={selectedDetectionId}
           onSelectDetection={handleSelectDetection}
+          onRetryDetection={retryDetection}
           onApproveDetection={handleApproveDetection}
           onRejectDetection={handleRejectDetection}
-          kmFilter={kmFilter}
-          setKmFilter={setKmFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
           totalCount={totalCount}
           approvedCount={approvedCount}
           rejectedCount={rejectedCount}
@@ -321,6 +286,8 @@ export const DroneMissionAIReview: React.FC = () => {
           reviewedCount={reviewedCount}
           reviewProgressPercent={reviewProgressPercent}
           showToast={showToast}
+          surveyRange={currentSurvey ? `${currentSurvey.start_km} → ${currentSurvey.end_km}` : undefined}
+          isBaselineLocked={isBaselineLocked || currentSurvey?.status === 'BASELINE_LOCKED'}
         />
       </div>
     </div>

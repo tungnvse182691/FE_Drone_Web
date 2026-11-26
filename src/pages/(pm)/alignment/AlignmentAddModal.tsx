@@ -70,8 +70,8 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
               <input
                 type="number"
                 step="0.001"
-                value={newSegForm.startKm}
-                onChange={(e) => onChangeNewSegForm({ ...newSegForm, startKm: parseFloat(e.target.value) || 0 })}
+                value={Number.isFinite(newSegForm.startKm) ? newSegForm.startKm : ''}
+                onChange={(e) => onChangeNewSegForm({ ...newSegForm, startKm: parseFloat(e.target.value) })}
                 className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 required
               />
@@ -83,44 +83,11 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
               <input
                 type="number"
                 step="0.001"
-                value={newSegForm.endKm}
-                onChange={(e) => onChangeNewSegForm({ ...newSegForm, endKm: parseFloat(e.target.value) || 0 })}
+                value={Number.isFinite(newSegForm.endKm) ? newSegForm.endKm : ''}
+                onChange={(e) => onChangeNewSegForm({ ...newSegForm, endKm: parseFloat(e.target.value) })}
                 className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 required
               />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Số làn xe
-              </label>
-              <select
-                value={newSegForm.laneCount}
-                onChange={(e) => onChangeNewSegForm({ ...newSegForm, laneCount: parseInt(e.target.value) || 4 })}
-                className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              >
-                <option value={2}>2 làn xe</option>
-                <option value={4}>4 làn xe (Tiêu chuẩn)</option>
-                <option value={6}>6 làn xe (Cao tốc)</option>
-                <option value={8}>8 làn xe</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Vật liệu mặt đường
-              </label>
-              <select
-                value={newSegForm.surfaceMaterial}
-                onChange={(e) => onChangeNewSegForm({ ...newSegForm, surfaceMaterial: e.target.value })}
-                className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              >
-                <option value="Mặt BTN C12.5">Mặt BTN C12.5</option>
-                <option value="Mặt BTN C19">Mặt BTN C19</option>
-                <option value="Mặt BTN Polymer">Mặt BTN Polymer</option>
-                <option value="BTXM Dày 26cm">BTXM Dày 26cm</option>
-              </select>
             </div>
           </div>
 
@@ -132,7 +99,7 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
                 <span>Bề rộng mặt đường (RoadWidthProfile - mét)</span>
               </label>
               <span className="text-[11px] font-mono font-bold text-[#8F7212]">
-                ±{((newSegForm.roadWidthM || 8.0) / 2).toFixed(1)}m mỗi bên tim
+                {Number.isFinite(newSegForm.roadWidthM) && newSegForm.roadWidthM > 0 ? `±${(newSegForm.roadWidthM / 2).toFixed(1)}m mỗi bên tim` : 'Chưa có dữ liệu'}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -142,11 +109,11 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
                   step="0.5"
                   min="2"
                   max="60"
-                  value={newSegForm.roadWidthM || 8.0}
+                  value={Number.isFinite(newSegForm.roadWidthM) ? newSegForm.roadWidthM : ''} placeholder="Chưa có dữ liệu"
                   onChange={(e) =>
                     onChangeNewSegForm({
                       ...newSegForm,
-                      roadWidthM: parseFloat(e.target.value) || 3.0
+                      roadWidthM: parseFloat(e.target.value)
                     })
                   }
                   className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
@@ -164,7 +131,7 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
                     type="button"
                     onClick={() => onChangeNewSegForm({ ...newSegForm, roadWidthM: w })}
                     className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer transition-all ${
-                      (newSegForm.roadWidthM || 8.0) === w
+                      newSegForm.roadWidthM === w
                         ? 'bg-brand-gold text-white shadow-2xs'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                     }`}

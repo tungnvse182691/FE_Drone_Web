@@ -1,13 +1,19 @@
+import { displayKm } from '../../../utils/projectDistanceDisplay'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from '../projects/types'
+import type { GeometrySubmission } from '../../../api/services/geometrySubmissionService'
 
 interface ProjectOverviewHeaderProps {
+  submission?: GeometrySubmission | null
+  submissionLoading?: boolean
+  submissionError?: string
+  submissionReady?: boolean
+  onRetrySubmission?: () => void
   project: HubProject
   basePath: string
   isSupervisor: boolean
   onNavigate: (path: string) => void
-  onUpdateInfo: () => void
   onCloseProject?: () => void
   mainlineLengthKm?: number
   branchesLengthKm?: number
@@ -15,17 +21,19 @@ interface ProjectOverviewHeaderProps {
 }
 
 export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
+  submission, submissionLoading = false, submissionError = '', submissionReady = false, onRetrySubmission,
   project,
   basePath,
   isSupervisor,
   onNavigate,
-  onUpdateInfo,
   onCloseProject,
   mainlineLengthKm = 0,
   branchesLengthKm = 0,
   branchesCount = 0
 }) => {
   const hasPendingProposals = project.repair_packages > 0
+  const submissionManaged = submissionReady || submissionLoading || !!submissionError || !!submission
+  const dossierPath = `${basePath}/projects/${project.id}/alignment` + (submission?.status === 'CONFIRMED' ? `?${new URLSearchParams({draftId: submission.draftId, roadSectionId: submission.roadSectionId!, routeVersionId: submission.confirmedRouteVersionId!})}` : '')
 
   return (
     <div className="flex flex-col gap-3 font-body">
@@ -66,6 +74,8 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                 project.status === 'CLOSED'
                   ? 'bg-slate-100 text-slate-800 border border-slate-300'
+                  : project.status === 'RESTRICTED'
+                  ? 'bg-amber-100/90 text-amber-900 border border-amber-300'
                   : project.status === 'NEAR_EXPIRY'
                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                   : project.status === 'PENDING_ALIGNMENT'
@@ -77,6 +87,8 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
                 className={`w-2 h-2 rounded-full ${
                   project.status === 'CLOSED'
                     ? 'bg-slate-600'
+                    : project.status === 'RESTRICTED'
+                    ? 'bg-amber-600'
                     : project.status === 'NEAR_EXPIRY'
                     ? 'bg-rose-600 animate-ping'
                     : project.status === 'PENDING_ALIGNMENT'
@@ -84,7 +96,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
                     : 'bg-emerald-600'
                 }`}
               ></span>
-              {project.status_label}
+              {project.status === 'RESTRICTED' ? 'Tạm dừng vận hành' : project.status_label}
             </span>
           </div>
 
@@ -96,20 +108,25 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
 
             {/* Chi tiết Tuyến chính & Tuyến phụ Badge */}
             <div className="flex items-center gap-1 font-mono text-[11px] bg-amber-50/90 text-amber-950 border border-amber-200/90 px-2 py-0.5 rounded shadow-2xs">
-              <span className="font-semibold">Trục chính: {mainlineLengthKm > 0 ? `${mainlineLengthKm}km` : (project.length_km > 0 ? `${project.length_km}km` : '0km')}</span>
-              {branchesCount > 0 ? (
+              <span className="font-semibold">Trục chính: {Number.isFinite(mainlineLengthKm) ? displayKm(mainlineLengthKm!) : 'Chưa có phân loại tuyến'}</span>
+              {Number.isFinite(branchesCount) && branchesCount > 0 ? (
                 <span className="text-amber-800 font-bold">
-                  • {branchesCount} tuyến phụ ({branchesLengthKm}km)
+                  • {branchesCount} tuyến phụ ({displayKm(branchesLengthKm!)})
                 </span>
               ) : (
-                <span className="text-slate-500 font-normal">• 0 tuyến phụ</span>
+                <span className="text-slate-500 font-normal">{Number.isFinite(branchesCount) ? '• 0 tuyến phụ' : '• Chưa có phân loại nhánh'}</span>
               )}
             </div>
 
             <span className="text-slate-300">•</span>
-            <div className="flex items-center gap-1">
-              <Icon name="location_on" size={16} className="text-slate-400" />
-              <span>Khu vực: {project.region} ({project.location_detail})</span>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
+              <Icon name="location_on" size={15} className="text-brand-gold shrink-0" />
+              <span>
+                Địa bàn:{' '}
+                <strong className={project.region || project.location_detail ? 'text-slate-900 font-bold' : 'text-slate-400 font-normal italic'}>
+                  {project.region || project.location_detail || 'Chưa thiết lập địa bàn'}
+                </strong>
+              </span>
             </div>
             <span className="text-slate-300">•</span>
             <div className="flex items-center gap-1">
@@ -119,6 +136,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
           </div>
         </div>
 
+        {/* Action Buttons: Đóng dự án (Duy nhất Supervisor) */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           {isSupervisor && project.status !== 'CLOSED' && onCloseProject && (
             <button
@@ -127,18 +145,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
             >
               <Icon name="lock" size={16} />
-              <span>Đóng dự án (DA12)</span>
-            </button>
-          )}
-
-          {project.status !== 'CLOSED' && (
-            <button
-              onClick={onUpdateInfo}
-              type="button"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-200 cursor-pointer"
-            >
-              <Icon name="settings" size={16} className="text-slate-500" />
-              <span>Cập nhật thông tin</span>
+              <span>Đóng dự án</span>
             </button>
           )}
         </div>
@@ -154,10 +161,10 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold text-slate-900">
-                  Hồ sơ công trình đã đóng bảo hành (DA12) • Trạng thái chỉ đọc
+                  Hồ sơ công trình đã đóng bảo hành • Trạng thái chỉ đọc
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 uppercase tracking-wide">
-                  LƯU TRỮ HỒ SƠ (QT13)
+                  LƯU TRỮ HỒ SƠ
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
@@ -168,7 +175,28 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </div>
           </div>
           <div className="text-xs text-slate-600 font-mono shrink-0 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-            Hạn lưu trữ: <span className="font-semibold text-slate-900">{project.retention_until || 'Tối thiểu 5 năm (QT13)'}</span>
+            Hạn lưu trữ: <span className="font-semibold text-slate-900">{project.retention_until || 'Tối thiểu 5 năm'}</span>
+          </div>
+        </div>
+      ) : project.status === 'RESTRICTED' ? (
+        <div className="bg-amber-50/80 border border-amber-300 rounded-xl p-4 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200">
+              <Icon name="pause_circle" size={22} />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-slate-900">
+                  Dự án đang trong trạng thái tạm dừng vận hành
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/80 text-amber-900 uppercase tracking-wide">
+                  TẠM NGƯNG
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Các hoạt động tạo yêu cầu bay Drone và lập đợt sửa chữa tạm thời bị hạn chế theo quyết định điều hành của Giám sát / Chủ đầu tư.
+              </p>
+            </div>
           </div>
         </div>
       ) : hasPendingProposals ? (
@@ -180,7 +208,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold text-slate-900">
-                  Đang chờ Giám sát duyệt: {project.repair_packages} Đề xuất phương án kỹ thuật sửa chữa (WF-07)
+                  Đang chờ Giám sát duyệt: {project.repair_packages} Đề xuất phương án kỹ thuật sửa chữa
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 uppercase tracking-wide">
                   SLA CẢNH BÁO
@@ -198,12 +226,12 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
               type="button"
               className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer"
             >
-              <span>{isSupervisor ? 'Mở nhanh WF-07 để duyệt' : 'Xem các đề xuất đã trình (WF-07)'}</span>
+              <span>{isSupervisor ? 'Thẩm duyệt phương án sửa chữa' : 'Xem các đề xuất đã trình'}</span>
               <Icon name="arrow_forward" size={16} />
             </button>
           </div>
         </div>
-      ) : project.length_km === 0 ? (
+      ) : !submissionManaged && project.length_km === 0 ? (
         <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-lg bg-amber-100 text-[#D97706] flex items-center justify-center shrink-0">
@@ -211,24 +239,32 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-slate-900">
-                Bước tiếp theo: Thiết lập tim tuyến &amp; bề rộng mặt đường (PM - WF-02)
+                Bước tiếp theo: Thiết lập tim tuyến &amp; bề rộng mặt đường
               </span>
               <p className="text-xs text-slate-600 mt-0.5">
-                Dự án vừa được khởi tạo bởi Giám sát (DA01). Kỹ sư PM <strong className="text-slate-900">{project.pm_name}</strong> cần nhập chuỗi tọa độ tim tuyến WGS84 và bề rộng để kích hoạt không gian trắc địa.
+                Dự án vừa được khởi tạo bởi Giám sát. Kỹ sư PM <strong className="text-slate-900">{project.pm_name}</strong> cần nhập chuỗi tọa độ tim tuyến WGS84 và bề rộng để kích hoạt không gian trắc địa.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
-            type="button"
-            className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
-          >
-            <span>Thiết lập tim tuyến (WF-02)</span>
-            <Icon name="arrow_forward" size={16} />
-          </button>
+          {!isSupervisor ? (
+            <button
+              onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
+              type="button"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#B38E1E] text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
+            >
+              <Icon name="alt_route" size={16} />
+              <span>Thiết lập tim tuyến</span>
+              <Icon name="arrow_forward" size={16} />
+            </button>
+          ) : (
+            <div className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-100 text-[#92400E] border border-amber-200 text-xs font-semibold shrink-0">
+              <Icon name="schedule" size={16} />
+              <span>Trách nhiệm: Chờ PM nạp tim tuyến</span>
+            </div>
+          )}
         </div>
-      ) : project.kml_status === 'Chờ duyệt tim tuyến' || project.status === 'PENDING_ALIGNMENT' ? (
+      ) : !submissionManaged && (project.kml_status === 'Chờ duyệt tim tuyến' || project.status === 'PENDING_ALIGNMENT') ? (
         <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
@@ -237,14 +273,14 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold text-slate-900">
-                  Hồ sơ tim tuyến &amp; Phân đoạn lý trình đang chờ thẩm duyệt (WF-02)
+                  Hồ sơ tim tuyến &amp; Phân đoạn lý trình đang chờ thẩm duyệt
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wide">
                   CHỜ DUYỆT
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
-                PM <strong className="text-slate-900">{project.pm_name}</strong> đã nạp tim tuyến (Tổng L = {project.length_km} km) và trình duyệt sang Giám sát.
+                PM <strong className="text-slate-900">{project.pm_name}</strong> đã nạp tim tuyến (Tổng L = {displayKm(project.length_km!)}) và trình duyệt sang Giám sát.
               </p>
             </div>
           </div>
@@ -259,6 +295,12 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
           </button>
         </div>
       ) : null}
+      {submissionManaged && <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+        <p role="status">{submissionLoading ? 'Đang đọc hồ sơ tuyến từ máy chủ…' : submissionError || (submission?.status === 'CONFIRMED' ? 'Hình học đã xác nhận; phân đoạn do PM quản lý và công bố.' : submission?.status === 'REJECTED' ? `Đã từ chối — lượt ${submission.currentReview?.number}: ${submission.currentReview?.rejectionReason}` : submission?.status === 'SUBMITTED' ? 'Đã trình — chờ Giám sát xác nhận hình học.' : project.server_facts?.routes.length ? 'Chưa có hồ sơ trình; tim tuyến hiện hành vẫn được đọc từ server.' : 'Chưa có hồ sơ trình')}</p>
+        {submissionError && <button type="button" onClick={onRetrySubmission} className="px-3 py-2 rounded-lg border border-slate-200">Thử lại hồ sơ tuyến</button>}
+        {submission && !submissionLoading && !submissionError && <button type="button" onClick={() => onNavigate(dossierPath)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#C9A227] hover:bg-[#B38E1E] text-white text-xs font-bold transition shadow-2xs cursor-pointer">Xem hồ sơ tuyến</button>}
+        {!submission && submissionReady && !isSupervisor && <button type="button" onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)} className="px-3 py-2 rounded-lg border border-[#C9A227] bg-[#C9A227] hover:bg-[#B38E1E] text-white font-semibold">Thiết lập tim tuyến</button>}
+      </div>}
     </div>
   )
 }

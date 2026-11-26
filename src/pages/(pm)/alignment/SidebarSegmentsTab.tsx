@@ -1,3 +1,4 @@
+import { displayStatus } from './alignmentLabels'
 import React from 'react'
 import {
   SplitSquareVertical,
@@ -5,12 +6,17 @@ import {
   GitBranch,
   Plus,
   Trash2,
-  Upload
+  Upload,
+  Lock
 } from 'lucide-react'
 import { SegmentItem, BranchItem } from './types'
 import { SidebarSegmentCard } from './SidebarSegmentCard'
 
 export interface SidebarSegmentsTabProps {
+  routeLabel?: string
+  draftContentSaved?: boolean
+  segmentPlanning?: boolean
+  segmentSetStatus?: string
   segments: SegmentItem[]
   selectedSegmentId: string | null
   onSelectSegment: (seg: SegmentItem) => void
@@ -24,7 +30,7 @@ export interface SidebarSegmentsTabProps {
   currentCoords?: [number, number][]
   currentKmPoints: number[]
   importedLengthKm: number
-  slabLengthM: number
+  slabLengthM: number | string
   onOpenSplitModal: (seg: SegmentItem) => void
   onEditSegment: (seg: SegmentItem) => void
   onDeleteSegment: (id: string) => void
@@ -39,10 +45,15 @@ export interface SidebarSegmentsTabProps {
   onClearMainline?: () => void
   onOpenImportModal?: () => void
   mainlineLengthKm?: number
+  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'
+  isSupervisor?: boolean
 }
 
 export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
   segments,
+  routeLabel,
+  draftContentSaved = false,
+  segmentPlanning = false, segmentSetStatus,
   selectedSegmentId,
   onSelectSegment,
   splitDistance,
@@ -68,13 +79,20 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
   onClearAllSegments,
   onClearMainline,
   onOpenImportModal,
-  mainlineLengthKm
+  mainlineLengthKm,
+  alignmentStatus = 'DRAFT',
+  isSupervisor = false
 }) => {
   const isAllSelected = selectedSegmentId === 'ALL'
   const isMain = selectedTargetType === 'MAINLINE'
-  const totalLen = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 25.0)
+  const totalLen = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 0.0)
   const displayMainlineKm = mainlineLengthKm || importedLengthKm || 0.0
   const mainlineLenText = displayMainlineKm >= 1 ? `${displayMainlineKm.toFixed(1)} km` : `${(displayMainlineKm * 1000).toFixed(0)}m`
+
+  const isConfirmed = alignmentStatus === 'CONFIRMED'
+  const isPending = alignmentStatus === 'PENDING_APPROVAL'
+  const isLocked = isConfirmed || isPending || alignmentStatus === 'SUBMITTED'
+  const canEdit = !isLocked && !isSupervisor && ['DRAFT','REJECTED'].includes(alignmentStatus)
 
   return (
     <>
@@ -86,7 +104,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
             <span>Đối tượng Tuyến</span>
           </span>
           <div className="flex items-center gap-1.5">
-            {selectedTargetType !== 'MAINLINE' && onDeleteBranch && (
+            {canEdit && selectedTargetType !== 'MAINLINE' && onDeleteBranch && (
               <button
                 type="button"
                 onClick={() => {
@@ -102,7 +120,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                 <span>Xóa nhánh này</span>
               </button>
             )}
-            {selectedTargetType === 'MAINLINE' && onClearMainline && currentCoords.length > 0 && (
+            {canEdit && selectedTargetType === 'MAINLINE' && onClearMainline && currentCoords.length > 0 && (
               <button
                 type="button"
                 onClick={() => {
@@ -117,7 +135,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                 <span>Xóa tuyến chính</span>
               </button>
             )}
-            {onOpenAddBranchModal && (
+            {canEdit && onOpenAddBranchModal && (
               <button
                 type="button"
                 onClick={onOpenAddBranchModal}
@@ -136,11 +154,11 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           className="w-full h-8.5 px-2.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
         >
           <option value="MAINLINE">
-            Trục chính {currentCoords.length === 0 ? '(Chưa có tim tuyến)' : `(${mainlineLenText})`}
+            {routeLabel || 'Trục chính'} {currentCoords.length === 0 ? '(Chưa có tim tuyến)' : `(${mainlineLenText})`}
           </option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.name} ({b.lengthKm.toFixed(2)} km - rẽ tại {b.branchStationText})
+              {b.name} ({Number.isFinite(b.lengthKm) ? b.lengthKm.toFixed(2) : 'Chưa có dữ liệu'} km - rẽ tại {b.branchStationText})
             </option>
           ))}
         </select>
@@ -158,66 +176,88 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="relative flex items-center">
-            <input
-              type="number"
-              step="0.05"
-              min="0.01"
-              max="50"
-              value={splitDistance}
-              onChange={(e) => onSetSplitDistance(parseFloat(e.target.value) || 0.1)}
-              className="w-full h-8.5 pl-3 pr-14 bg-white border border-slate-300 rounded-lg font-mono text-xs font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              placeholder="Nhập km..."
-            />
-            <span className="absolute right-2.5 text-[11px] text-slate-500 font-medium pointer-events-none">
-              km/đoạn
+        {isLocked && !segmentPlanning ? (
+          <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg flex items-center gap-2 text-xs text-emerald-900 font-medium">
+            <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              {isConfirmed
+                ? 'Hình học đã xác nhận; segment set có trạng thái riêng từ máy chủ.'
+                : alignmentStatus === 'SUBMITTED' ? 'Đã trình — chờ Giám sát xác nhận; nội dung tuyến chỉ đọc.' : 'Hồ sơ tim tuyến đang chờ Giám sát phê duyệt (PENDING_APPROVAL).'}
             </span>
           </div>
+        ) : isSupervisor ? (
+          <div className="p-3 bg-slate-100 border border-slate-200 rounded-lg flex items-center gap-2 text-xs text-slate-700 font-medium">
+            <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+            <span>
+              {currentCoords.length === 0
+                ? 'Chế độ Giám sát: Đang chờ Chỉ huy trưởng PM nạp tệp tim tuyến và chia phân đoạn.'
+                : 'Chế độ Giám sát: Hồ sơ tim tuyến đang ở bản nháp do PM quản lý. Giám sát sẽ thẩm duyệt khi PM gửi trình duyệt.'}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative flex items-center">
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0.01"
+                  max="50"
+                  value={Number.isFinite(splitDistance) ? splitDistance : ''}
+                  onChange={(e) => onSetSplitDistance(parseFloat(e.target.value))}
+                  className="w-full h-8.5 pl-3 pr-14 bg-white border border-slate-300 rounded-lg font-mono text-xs font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  placeholder="Nhập km..."
+                />
+                <span className="absolute right-2.5 text-[11px] text-slate-500 font-medium pointer-events-none">
+                  km/đoạn
+                </span>
+              </div>
 
-          <select
-            value={splitSortOrder}
-            onChange={(e) => onSetSplitSortOrder(e.target.value as any)}
-            className="h-8.5 px-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
-          >
-            <option value="asc">Km tăng dần</option>
-            <option value="desc">Km giảm dần</option>
-          </select>
-        </div>
+              <select
+                value={splitSortOrder}
+                onChange={(e) => onSetSplitSortOrder(e.target.value as any)}
+                className="h-8.5 px-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+              >
+                <option value="asc">Km tăng dần</option>
+                <option value="desc">Km giảm dần</option>
+              </select>
+            </div>
 
-        {/* Nút chọn nhanh cự ly mẫu */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-          <span className="text-[10px] text-slate-400 font-semibold shrink-0">Mẫu:</span>
-          {[0.2, 0.25, 0.5, 1.0, 2.5, 5.0].map((kmVal) => (
-            <button
-              key={kmVal}
-              type="button"
-              onClick={() => {
-                onSetSplitDistance(kmVal)
-                setTimeout(() => onApplyAutoSplit(), 50)
-              }}
-              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer shrink-0 ${
-                splitDistance === kmVal
-                  ? 'bg-brand-gold text-white shadow-2xs'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:border-brand-gold'
-              }`}
-            >
-              {kmVal >= 1 ? `${kmVal}km` : `${kmVal * 1000}m`}
-            </button>
-          ))}
-        </div>
+            {/* Nút chọn nhanh cự ly mẫu */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+              <span className="text-[10px] text-slate-400 font-semibold shrink-0">Mẫu:</span>
+              {[0.2, 0.25, 0.5, 1.0, 2.5, 5.0].map((kmVal) => (
+                <button
+                  key={kmVal}
+                  type="button"
+                  onClick={() => {
+                    onSetSplitDistance(kmVal)
+                    setTimeout(() => onApplyAutoSplit(), 50)
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer shrink-0 ${
+                    splitDistance === kmVal
+                      ? 'bg-brand-gold text-white shadow-2xs'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:border-brand-gold'
+                  }`}
+                >
+                  {kmVal >= 1 ? `${kmVal}km` : `${kmVal * 1000}m`}
+                </button>
+              ))}
+            </div>
 
-        {/* Chỉ giữ nút Áp dụng chia đoạn (đã xóa nút Thêm đoạn mới đơn lẻ theo yêu cầu) */}
-        <div>
-          <button
-            type="button"
-            onClick={onApplyAutoSplit}
-            className="w-full h-8.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Áp dụng chia đoạn tự động</span>
-          </button>
-        </div>
+            {/* Chỉ giữ nút Áp dụng chia đoạn */}
+            <div>
+              <button
+                type="button"
+                onClick={onApplyAutoSplit}
+                className="w-full h-8.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Áp dụng chia đoạn tự động</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* DANH SÁCH PHÂN ĐOẠN: MỤC TOÀN TUYẾN Ở TRÊN CÙNG, BÊN DƯỚI LÀ CÁC PHÂN ĐOẠN CHI TIẾT */}
@@ -226,17 +266,25 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
         {(() => {
           const isMain = selectedTargetType === 'MAINLINE'
           const curBranch = !isMain ? branches.find((b) => b.id === selectedTargetType) : null
-          const hasCoords = isMain ? currentCoords.length > 0 : true
+          const hasCoords = isMain ? currentCoords.length > 0 || segments.length > 0 || importedLengthKm > 0 : true
           const title = isMain
             ? hasCoords
-              ? `Toàn tuyến chính (${mainlineLenText})`
+              ? `Toàn tuyến chính: ${routeLabel || 'Chưa có tên tuyến'} (${mainlineLenText})`
               : `Toàn tuyến chính (Chưa có tim tuyến)`
             : `Toàn tuyến nhánh: ${curBranch?.name || 'Tuyến nhánh'}`
           const subTitle = isMain
             ? !hasCoords
-              ? `Chưa có dữ liệu tim đường • Bấm "Nhập Tuyến / Tọa độ (WF-02)" để nạp`
+              ? `Chưa có dữ liệu tim đường • Bấm "Nhập Tuyến / Tọa độ" để nạp`
+              : segmentSetStatus
+              ? segmentSetStatus === 'PREVIEW' ? 'Xem trước • Chưa lưu phân đoạn' : `Bộ phân đoạn ${displayStatus(segmentSetStatus)} • Thứ tự và phạm vi từ máy chủ`
+              : isConfirmed
+              ? 'Hình học đã xác nhận • Các khoảng bề rộng chỉ là dữ liệu kỹ thuật'
+              : alignmentStatus === 'SUBMITTED'
+              ? 'Hồ sơ đã trình • Nội dung chỉ đọc; chờ Giám sát xác nhận'
+              : draftContentSaved
+              ? 'Tọa độ và thông số đã lưu; chưa được Giám sát xác nhận'
               : segments.length > 0
-              ? `Toàn bộ ${segments.length} phân đoạn liên tục • Chuẩn trắc địa WGS84`
+              ? `Bản chỉnh ${segments.length} phân đoạn • Chờ xác minh máy chủ`
               : `Chưa phân đoạn • Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động"`
             : `Tổng chiều dài ${(curBranch?.lengthKm || 0).toFixed(2)} km • ${segments.length} phân đoạn • Rẽ tại ${curBranch?.branchStationText || ''}`
 
@@ -265,16 +313,20 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
                       CHƯA CÓ TIM TUYẾN
                     </span>
+                  ) : isMain && isConfirmed ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {segmentSetStatus ? `Bộ phân đoạn ${displayStatus(segmentSetStatus)}` : 'HÌNH HỌC ĐÃ XÁC NHẬN'}
+                    </span>
                   ) : segments.length > 0 ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      HỢP LỆ
+                      {alignmentStatus === 'SUBMITTED' ? 'HỒ SƠ ĐÃ TRÌNH' : draftContentSaved ? 'BẢN NHÁP ĐÃ LƯU' : 'BẢN CHỈNH'}
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
                       CHƯA CHIA ĐOẠN
                     </span>
                   )}
-                  {!isMain && curBranch && onDeleteBranch && (
+                  {!isMain && curBranch && onDeleteBranch && canEdit && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -309,7 +361,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
         {/* TIÊU ĐỀ PHÂN ĐOẠN CHI TIẾT */}
         <div className="flex items-center justify-between px-1 pt-1 pb-0.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
           <span>Phân đoạn chi tiết ({segments.length})</span>
-          {segments.length > 0 && onClearAllSegments ? (
+          {canEdit && segments.length > 0 && onClearAllSegments ? (
             <button
               type="button"
               onClick={() => {
@@ -323,7 +375,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
             </button>
           ) : (
             <span className="text-[10px] lowercase text-slate-400 font-normal">
-              {segments.length > 0 ? 'Bấm chọn để xem từng đoạn' : 'Trống'}
+              {segments.length > 0 ? (segmentPlanning ? 'Chỉnh mốc phân đoạn; hình học đã khóa' : isLocked ? 'Chỉ đọc' : 'Bấm chọn để xem từng đoạn') : 'Trống'}
             </span>
           )}
         </div>
@@ -335,9 +387,11 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
               Dự án mới chưa có tim tuyến &amp; phân đoạn
             </span>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              Dự án này chưa được thiết lập tim tuyến đường. Bạn có thể bấm nút <strong className="text-amber-800">"Nhập Tuyến / Tọa độ (WF-02)"</strong> để tải lên tệp KML / GeoJSON / CSV hoặc dán chuỗi tọa độ.
+              {isSupervisor
+                ? 'Dự án này chưa được PM nạp dữ liệu tim tuyến. Khi PM nạp tọa độ và bấm "Trình duyệt tim tuyến", hồ sơ sẽ xuất hiện để Giám sát thẩm duyệt.'
+                : 'Dự án này chưa được thiết lập tim tuyến đường. Bạn có thể bấm nút "Nhập Tuyến / Tọa độ" để tải lên tệp KML / GeoJSON / CSV hoặc dán chuỗi tọa độ.'}
             </p>
-            {onOpenImportModal && (
+            {!isSupervisor && onOpenImportModal && (
               <button
                 type="button"
                 onClick={onOpenImportModal}
@@ -368,6 +422,8 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
               onEdit={() => onEditSegment(seg)}
               onOpenSplit={() => onOpenSplitModal(seg)}
               onDelete={() => onDeleteSegment(seg.id)}
+              allowSplit={segmentPlanning}
+              isReadOnly={isLocked || isSupervisor}
             />
           ))
         )}

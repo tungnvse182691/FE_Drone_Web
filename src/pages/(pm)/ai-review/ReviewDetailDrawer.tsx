@@ -1,4 +1,7 @@
+import { useCaseReportMedia, reportSourceLabelForCase } from './useCaseReportMedia'
+import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
 import React from 'react'
+import { DrawerReportDetails } from './DrawerReportDetails'
 import type { TriageCase } from './types'
 import { DrawerHeader } from './DrawerHeader'
 import { DrawerDecisionBanners } from './DrawerDecisionBanners'
@@ -10,16 +13,15 @@ import { DrawerDecisionForm } from './DrawerDecisionForm'
 import { DrawerFooter } from './DrawerFooter'
 
 export interface ReviewDetailDrawerProps {
+  onDefectRecorded?: (message: string) => void
+  evidenceRequest?: CaseEvidenceRequestState
   selectedCase: TriageCase
   setSelectedCaseId: (id: string) => void
   cases: TriageCase[]
-  detailViewMode: 'PHOTO' | 'GIS_MAP'
-  setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP') => void
-  drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
-  currentSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  setCurrentSeverity: (s: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
-  currentUrgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
-  setCurrentUrgency: (u: 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
+  currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  setCurrentSeverity: (s: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
+  currentUrgency: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  setCurrentUrgency: (u: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
   currentArea: number
   setCurrentArea: (a: number) => void
   currentDepth: number
@@ -36,7 +38,6 @@ export interface ReviewDetailDrawerProps {
   onNavigateFastTrack: (c: TriageCase) => void
   onUnlinkReport: (childId: string) => void
   onOpenTriageProject: (c: TriageCase) => void
-  onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void
   onOpenMergeModal: (c: TriageCase) => void
   onToggleClusterItem: (code: string) => void
@@ -45,12 +46,11 @@ export interface ReviewDetailDrawerProps {
 }
 
 export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
+  onDefectRecorded,
   selectedCase,
+  evidenceRequest,
   setSelectedCaseId,
   cases,
-  detailViewMode,
-  setDetailViewMode,
-  drawerMapContainerRef,
   currentSeverity,
   setCurrentSeverity,
   currentUrgency,
@@ -71,7 +71,6 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   onNavigateFastTrack,
   onUnlinkReport,
   onOpenTriageProject,
-  onOpenGISModal,
   onOpenPhotoZoomModal,
   onOpenMergeModal,
   onToggleClusterItem,
@@ -79,18 +78,21 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   onCloseTab,
 }) => {
   const handleClose = onClose || onCloseTab
+  const media = useCaseReportMedia()
+  const sourceLabel = reportSourceLabelForCase(selectedCase.id, media, selectedCase.source_label)
 
   return (
-    <div className="w-full bg-white flex flex-col h-full max-h-[90vh] overflow-hidden rounded-2xl">
+    <div className="w-full bg-white flex flex-col h-full max-h-[95vh] overflow-hidden rounded-2xl">
       {/* Modal Header */}
       <DrawerHeader
+        sourceLabel={sourceLabel}
         selectedCase={selectedCase}
         onOpenPhotoZoomModal={onOpenPhotoZoomModal}
         handleClose={handleClose}
       />
 
       {/* Modal Body - Scrollable */}
-      <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+      <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT COLUMN: Ảnh, Bản đồ, Người phản ánh, Nhóm gộp trùng */}
           <div className="lg:col-span-7 space-y-4">
@@ -102,13 +104,11 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               isSupervisor={isSupervisor}
             />
 
+            <DrawerReportDetails key={selectedCase.id} caseId={selectedCase.id} caseStatus={selectedCase.case_status} onSplit={isSupervisor ? undefined : async reportId => { await onUnlinkReport(reportId) }} />
             <DrawerMediaViewer
+              sourceLabel={sourceLabel}
               selectedCase={selectedCase}
-              detailViewMode={detailViewMode}
-              setDetailViewMode={setDetailViewMode}
-              drawerMapContainerRef={drawerMapContainerRef}
               onOpenPhotoZoomModal={onOpenPhotoZoomModal}
-              onOpenGISModal={onOpenGISModal}
             />
 
             <DrawerClusterDeduplication
@@ -119,6 +119,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
             />
 
             <DrawerReporterInfo
+              sourceLabel={sourceLabel}
               selectedCase={selectedCase}
               onOpenTriageProject={onOpenTriageProject}
               isSupervisor={isSupervisor}
@@ -135,6 +136,9 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
           {/* RIGHT COLUMN: Biểu mẫu quyết định kỹ thuật & hành động thẩm định */}
           <div className="lg:col-span-5 space-y-4 bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80">
             <DrawerDecisionForm
+              onDefectRecorded={onDefectRecorded}
+              sourceLabel={sourceLabel}
+              evidenceRequest={evidenceRequest}
               selectedCase={selectedCase}
               currentSeverity={currentSeverity}
               setCurrentSeverity={setCurrentSeverity}

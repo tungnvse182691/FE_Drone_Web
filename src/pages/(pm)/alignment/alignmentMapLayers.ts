@@ -1,4 +1,5 @@
 import * as maplibregl from 'maplibre-gl'
+import { hasMapBaseStyle } from '../../../utils/maplibre'
 import { SegmentItem } from './types'
 import {
   buildSegmentsSurfaceGeoJSON,
@@ -6,9 +7,11 @@ import {
   buildPlanningCorridorGeoJSON,
   buildSlabsAndJointsGeoJSON,
   buildBranchesSurfaceGeoJSON,
-  buildBranchesGeoJSON
+  buildBranchesGeoJSON,
+  SlabsCustomConfig
 } from './data'
 import { setupSlabsAndJointsLayers } from './alignmentSlabLayers'
+import type { PavementPreview } from './alignmentPavementDisplay'
 
 export function setupAlignmentSourcesAndLayers(
   map: maplibregl.Map,
@@ -16,14 +19,19 @@ export function setupAlignmentSourcesAndLayers(
   currentCoords: [number, number][],
   currentKmPoints: number[],
   selectedSegmentId: string | null,
-  branches: any[] = []
+  branches: any[] = [],
+  customCfg?: SlabsCustomConfig,
+  pavementPreview?: PavementPreview
 ) {
-  if (!map || !map.isStyleLoaded()) return
+  if (!hasMapBaseStyle(map)) return
 
   // 0. Thêm GeoJSON Source cho bề mặt dải mặt đường (Polygon)
   if (!map.getSource('segments-surface-source')) {
     map.addSource('segments-surface-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildSegmentsSurfaceGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId)
     })
   }
@@ -32,6 +40,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('segments-source')) {
     map.addSource('segments-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildSegmentsGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId)
     })
   }
@@ -40,22 +51,28 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('planning-corridor-source')) {
     map.addSource('planning-corridor-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildPlanningCorridorGeoJSON(currentCoords)
     })
   }
 
   // 2b. Thêm GeoJSON Sources cho Lưới tấm bê tông (Slabs), Khe co giãn, Khe giãn nở & Nhãn 2 mép đường (Cả chính lẫn nhánh)
-  const { slabsGeoJSON, jointsGeoJSON, edgesGeoJSON } = buildSlabsAndJointsGeoJSON(
+  const { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON } = pavementPreview || buildSlabsAndJointsGeoJSON(
     segments,
     currentCoords,
     currentKmPoints,
-    undefined,
+    customCfg,
     branches
   )
 
   if (!map.getSource('slabs-source')) {
     map.addSource('slabs-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: slabsGeoJSON
     })
   }
@@ -63,13 +80,22 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('joints-source')) {
     map.addSource('joints-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: jointsGeoJSON
     })
   }
 
+  if (!map.getSource('slabs-labels-source')) map.addSource('slabs-labels-source', { type: 'geojson', data: slabLabelsGeoJSON, maxzoom: 24, tolerance: 0 })
+  if (!map.getSource('joints-labels-source')) map.addSource('joints-labels-source', { type: 'geojson', data: jointLabelsGeoJSON, maxzoom: 24, tolerance: 0 })
+
   if (!map.getSource('edges-source')) {
     map.addSource('edges-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: edgesGeoJSON
     })
   }
@@ -100,8 +126,8 @@ export function setupAlignmentSourcesAndLayers(
         'fill-opacity': [
           'case',
           ['boolean', ['get', 'isSelected'], false],
-          0.85,
-          0.50
+          0.32,
+          0.18
         ]
       }
     })
@@ -112,20 +138,13 @@ export function setupAlignmentSourcesAndLayers(
     map.addLayer({
       id: 'segments-surface-outline',
       type: 'line',
-      source: 'segments-surface-source',
+      source: 'edges-source',
+      filter: ['==', ['get', 'isDimensionLine'], true],
+      minzoom: 13,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color': [
-          'case',
-          ['boolean', ['get', 'isSelected'], false],
-          '#FFFFFF',
-          '#C9A227'
-        ],
-        'line-width': [
-          'case',
-          ['boolean', ['get', 'isSelected'], false],
-          2.8,
-          1.5
-        ],
+        'line-color': '#0F172A',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 13, 3, 16, 4.5, 20, 6],
         'line-opacity': 0.95
       }
     })
@@ -141,8 +160,8 @@ export function setupAlignmentSourcesAndLayers(
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
         'line-color': '#0F172A',
-        'line-width': 5.0,
-        'line-opacity': 0.85
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3.5, 16, 5, 20, 6.5],
+        'line-opacity': 0.95
       }
     })
   }
@@ -155,8 +174,8 @@ export function setupAlignmentSourcesAndLayers(
       filter: ['==', ['get', 'isLine'], true],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color': '#FFFFFF',
-        'line-width': 2.4,
+        'line-color': '#C9A227',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 16, 2.2, 20, 3],
         'line-dasharray': [3, 2]
       }
     })
@@ -191,6 +210,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('branches-surface-source')) {
     map.addSource('branches-surface-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildBranchesSurfaceGeoJSON(branches, currentCoords, currentKmPoints, selectedSegmentId)
     })
   }
@@ -224,6 +246,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('branches-source')) {
     map.addSource('branches-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildBranchesGeoJSON(branches, currentCoords, currentKmPoints)
     })
   }
@@ -281,6 +306,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('pick-coords-source')) {
     map.addSource('pick-coords-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: { type: 'FeatureCollection', features: [] }
     })
   }

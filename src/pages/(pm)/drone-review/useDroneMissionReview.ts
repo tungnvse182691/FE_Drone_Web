@@ -1,42 +1,53 @@
 import { useState, useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
+import { fetchProjectGeo, geoErrorMessage, type ProjectGeo } from '../../../api/services/defectGeoService'
 import { AIDetectionItem } from './types'
-import { INITIAL_DETECTIONS } from './mockData'
 import { surveyService } from '../../../api/services'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
-const CORRIDOR_COORDS: [number, number][] = [
-  [108.194, 16.049], [108.197, 16.052], [108.2, 16.0545],
-  [108.203, 16.057], [108.206, 16.06], [108.209, 16.063], [108.212, 16.0665]
-]
+import type { SurveyMissionItem } from '../../../api/services'
 
-const MARKER_COORDS: [number, number][] = [
-  [108.196, 16.051], [108.1985, 16.0532], [108.201, 16.0551], [108.2032, 16.0571],
-  [108.2052, 16.0592], [108.2072, 16.0612], [108.2091, 16.0631], [108.2112, 16.0655]
-]
-
-export function useDroneMissionReview(surveyId: string = 'srv-01') {
+export function useDroneMissionReview(
+  surveyId: string = '',
+  currentSurvey?: SurveyMissionItem | null,
+  // Ngữ cảnh từ "Mở kết quả" (lần chạy AI + bản nộp): chỉ đọc phát hiện của đúng lần chạy đó.
+  runScope?: { runId?: string; datasetId?: string; detectionId?: string; onSelect?: (detectionId: string) => void }
+) {
+  const scopeRunId = runScope?.runId || ''
+  const scopeDatasetId = runScope?.datasetId || ''
   const [isAiOverlayVisible, setIsAiOverlayVisible] = useState<boolean>(true)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
-  const [currentFrame, setCurrentFrame] = useState<number>(1420)
+  const [currentFrame, setCurrentFrame] = useState<number>(1)
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0)
-  const totalFrames = 1920
+  const totalFrames = 100
+  const detectionGuard = useSubmitGuard()
+  const reFlightGuard = useSubmitGuard()
+  const baselineGuard = useSubmitGuard()
 
   const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false)
-  const [kmFilter, setKmFilter] = useState<'ALL' | 'KM_1024_1026' | 'KM_1026_1028' | 'KM_1028_1030'>('ALL')
-  const [selectedDetectionId, setSelectedDetectionId] = useState<string>('DET-01')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
+  // detectionId yêu cầu từ URL (?det=): chỉ đọc lúc mở; khớp theo detectionId, không có thì báo rõ — không chọn bản ghi đầu.
+  const wantedDetectionId = useRef((runScope?.detectionId || '').toLowerCase())
+  const [selectedDetectionId, setSelectedDetectionId] = useState<string>('')
+  const [selectionError, setSelectionError] = useState<string>('')
 
-  const [coveragePercentage, setCoveragePercentage] = useState<number>(87)
-  const [hasBlindspot, setHasBlindspot] = useState<boolean>(true)
+  const isPersistentLocked =
+    currentSurvey?.status === 'BASELINE_LOCKED'
 
-  const [isReFlightModalOpen, setIsReFlightModalOpen] = useState<boolean>(false)
-  const [pilotNote, setPilotNote] = useState<string>(
-    'Bay quét bù dải phân cách giữa tại lý trình Km 1027+100 bằng góc nghiêng 45° Oblique.'
+  const [isLockedSuccess, setIsLockedSuccess] = useState<boolean>(isPersistentLocked)
+  const [lockedBaselineRange, setLockedBaselineRange] = useState<string | null>(
+    isPersistentLocked && currentSurvey ? (currentSurvey.start_km + ' → ' + currentSurvey.end_km) : null
   )
 
-  const [isBaselineModalOpen, setIsBaselineModalOpen] = useState<boolean>(false)
-  const [isLockedSuccess, setIsLockedSuccess] = useState<boolean>(false)
-  const [lockedBaselineRange, setLockedBaselineRange] = useState<string | null>(null)
+  useEffect(() => {
+    if (isPersistentLocked) {
+      setIsLockedSuccess(true)
+      if (currentSurvey) {
+        setLockedBaselineRange(currentSurvey.start_km + ' → ' + currentSurvey.end_km)
+      }
+    }
+  }, [currentSurvey, isPersistentLocked])
 
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const showToast = (msg: string) => {
@@ -44,21 +55,38 @@ export function useDroneMissionReview(surveyId: string = 'srv-01') {
     setTimeout(() => setToastMessage(null), 3800)
   }
 
-  const [detections, setDetections] = useState<AIDetectionItem[]>(INITIAL_DETECTIONS)
-  const [isLoadingDetections, setIsLoadingDetections] = useState<boolean>(true)
+  const [detections, setDetections] = useState<AIDetectionItem[]>([])
+  const [isLoadingDetections, setIsLoadingDetections] = useState<boolean>(!!surveyId)
+  const [detectionsError, setDetectionsError] = useState<string>('')
 
   // Tải danh sách detections từ Mock API Service (surveyService)
   useEffect(() => {
     let isMounted = true
     const fetchDetections = async () => {
+      if (!surveyId) { setDetections([]); setDetectionsError(''); setIsLoadingDetections(false); return }
       try {
-        setIsLoadingDetections(true)
-        const data = await surveyService.getSurveyDetections(surveyId)
+        setIsLoadingDetections(true); setDetectionsError('')
+        const data = await surveyService.getSurveyDetections(surveyId, undefined, undefined, scopeRunId ? { runId: scopeRunId, datasetId: scopeDatasetId || undefined } : undefined)
         if (isMounted) {
           setDetections(data)
+          const wanted = wantedDetectionId.current
+          if (wanted && !data.some((d) => d.id.toLowerCase() === wanted)) {
+            setSelectionError(`Không tìm thấy phát hiện AI có ID ${wanted} trong ${scopeRunId ? 'lần chạy AI đã chọn' : 'nhiệm vụ này'}. Không hiển thị phát hiện khác thay thế.`)
+            setSelectedDetectionId('')
+          } else {
+            setSelectionError('')
+            if (data.length > 0) {
+              setSelectedDetectionId((prev) => {
+                const target = prev || wanted
+                const matched = target ? data.find((d) => d.id.toLowerCase() === target.toLowerCase()) : undefined
+                return matched ? matched.id : data[0].id
+              })
+            }
+          }
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách phát hiện AI:', err)
+        if (isMounted) { setDetections([]); setDetectionsError(err instanceof Error ? err.message : 'Không tải được danh sách phát hiện AI từ máy chủ.') }
       } finally {
         if (isMounted) {
           setIsLoadingDetections(false)
@@ -69,7 +97,7 @@ export function useDroneMissionReview(surveyId: string = 'srv-01') {
     return () => {
       isMounted = false
     }
-  }, [surveyId])
+  }, [surveyId, scopeRunId, scopeDatasetId])
 
   const totalCount = detections.length
   const approvedCount = detections.filter((d) => d.status === 'APPROVED').length
@@ -99,41 +127,85 @@ export function useDroneMissionReview(surveyId: string = 'srv-01') {
 }, [isPlaying, playbackSpeed])
 
 const isBaselineLocked = isLockedSuccess
-const canLockBaseline = pendingCount === 0
 
 const handleSelectDetection = (item: AIDetectionItem) => {
   setSelectedDetectionId(item.id)
-    const frameMap: Record<string, number> = {
-      'DET-01': 1420,
-      'DET-02': 1480,
-      'DET-03': 1540,
-      'DET-04': 1590,
-      'DET-05': 1680,
-      'DET-06': 1720,
-      'DET-07': 1810,
-      'DET-08': 1880,
-    }
+    setSelectionError('')
+    wantedDetectionId.current = item.id.toLowerCase()
+    runScope?.onSelect?.(item.id)
+    const frameMap: Record<string, number> = {}
     if (frameMap[item.id]) {
       setCurrentFrame(frameMap[item.id])
     }
     showToast(`Đã trích xuất khung hình ${item.code} tại lý trình ${item.stationing}`)
   }
 
+  // Hình học hành lang lấy từ BE (geometry-package theo routeVersionId/segmentSetId của phát hiện)
+  const effProjectId = currentSurvey?.project_id || detections[0]?.projectId
+  const geoRouteVersionId = detections.find((d) => d.routeVersionId)?.routeVersionId
+  const geoSegmentSetId = detections.find((d) => d.segmentSetId)?.segmentSetId
+  const [geo, setGeo] = useState<{ status: 'loading' | 'ready' | 'empty' | 'error'; data: ProjectGeo | null; error?: string }>({
+    status: 'loading',
+    data: null
+  })
+
   useEffect(() => {
-    if (viewerMode !== 'GIS_MAP' || !corridorMapContainerRef.current) return
+    if (viewerMode !== 'GIS_MAP' || isLoadingDetections) return
+    let alive = true
+    setGeo({ status: 'loading', data: null })
+    fetchProjectGeo(effProjectId, geoRouteVersionId, geoSegmentSetId)
+      .then((data) => alive && setGeo(data ? { status: 'ready', data } : { status: 'empty', data: null }))
+      .catch((err) => {
+        if (!alive) return
+        setGeo({ status: 'error', data: null, error: geoErrorMessage(err) })
+        showToast(`Lỗi máy chủ khi tải hình học tuyến: ${geoErrorMessage(err)}`)
+      })
+    return () => {
+      alive = false
+    }
+  }, [viewerMode, isLoadingDetections, effProjectId, geoRouteVersionId, geoSegmentSetId])
+
+  useEffect(() => {
+    const container = corridorMapContainerRef.current
+    if (viewerMode !== 'GIS_MAP' || !container) return
 
     if (corridorMapInstanceRef.current) {
       corridorMapInstanceRef.current.remove()
       corridorMapInstanceRef.current = null
     }
 
+    const corridorCoords = geo.data?.corridor
+    if (!corridorCoords) {
+      const msg = document.createElement('div')
+      msg.className = 'w-full h-full flex items-center justify-center text-slate-300 text-xs px-6 text-center'
+      msg.textContent =
+        geo.status === 'loading'
+          ? 'Đang tải hình học tuyến từ máy chủ...'
+          : geo.status === 'error'
+          ? `Lỗi máy chủ: ${geo.error}`
+          : 'Máy chủ chưa cung cấp tọa độ'
+      container.appendChild(msg)
+      return () => {
+        msg.remove()
+      }
+    }
+
+    const located = detections.filter((d) => d.segmentId && geo.data?.segments[d.segmentId])
+    const note = document.createElement('div')
+    note.className =
+      'absolute bottom-3 left-3 z-10 bg-black/80 text-slate-200 text-[10px] px-2.5 py-1.5 rounded-lg pointer-events-none'
+    if (located.length < detections.length) {
+      note.textContent = `${detections.length - located.length}/${detections.length} phát hiện: máy chủ chưa cung cấp tọa độ`
+      container.appendChild(note)
+    }
+
     const map = new maplibregl.Map({
-      container: corridorMapContainerRef.current,
+      container,
       style: getMapLibreStyle('SATELLITE'),
-      center: [108.2025, 16.056],
-      zoom: 14.5,
+      center: corridorCoords[Math.floor(corridorCoords.length / 2)],
+      zoom: 16,
       minZoom: 10,
-      maxZoom: 20,
+      maxZoom: 22,
       pitch: 35,
       bearing: -20
     })
@@ -145,7 +217,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
         type: 'geojson',
         data: {
           type: 'Feature',
-          geometry: { type: 'LineString', coordinates: CORRIDOR_COORDS },
+          geometry: { type: 'LineString', coordinates: corridorCoords },
           properties: {}
         }
       })
@@ -166,25 +238,33 @@ const handleSelectDetection = (item: AIDetectionItem) => {
         paint: { 'line-color': '#C9A227', 'line-width': 5 }
       })
 
-      detections.forEach((det, idx) => {
-        const pt = MARKER_COORDS[idx] || [108.2025, 16.056]
+      located.forEach((det) => {
+        const pt = geo.data!.segments[det.segmentId as string].mid
         const isCurrent = det.id === selectedDetectionId
+        const size = isCurrent ? 24 : 18
+        const dotColor = det.severityLevel?.includes('Khẩn cấp')
+          ? '#DC2626'
+          : det.severityLevel?.includes('Nghiêm trọng')
+          ? '#D97706'
+          : '#2563EB'
+
         const el = document.createElement('div')
         el.className = 'cursor-pointer'
         el.innerHTML = `
-          <div style="display:flex; flex-direction:column; align-items:center;">
-            <div style="background:${isCurrent ? '#C9A227' : '#1E293B'}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.4); margin-bottom:2px; white-space:nowrap; border:1px solid #fff;">
+          <div style="position:relative; width:${size}px; height:${size}px; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:${isCurrent ? '#C9A227' : '#1E293B'}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.4); white-space:nowrap; border:1px solid #fff; pointer-events:none; z-index:10;">
               ${det.code || det.id} (${det.stationing})
             </div>
-            <div style="width:${isCurrent ? '20px' : '14px'}; height:${isCurrent ? '20px' : '14px'}; background:${det.severityLevel?.includes('Khẩn cấp') ? '#DC2626' : det.severityLevel?.includes('Nghiêm trọng') ? '#D97706' : '#2563EB'}; border:2px solid #fff; border-radius:50%; box-shadow:${isCurrent ? '0 0 10px #C9A227' : 'none'};"></div>
+            ${isCurrent ? `<div style="position:absolute; width:${size + 14}px; height:${size + 14}px; border-radius:50%; background:rgba(201,162,39,0.3); border:1.5px solid #C9A227; animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : ''}
+            <div style="position:relative; width:${size}px; height:${size}px; background:${dotColor}; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 8px rgba(0,0,0,0.6); z-index:2;"></div>
           </div>
         `
         el.onclick = () => {
           handleSelectDetection(det)
-          map.flyTo({ center: pt, zoom: 17, speed: 1.2 })
+          map.flyTo({ center: pt, zoom: 17.5, speed: 1.2 })
         }
 
-        new maplibregl.Marker({ element: el })
+        new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat(pt)
           .setPopup(
             new maplibregl.Popup({ offset: 25 }).setHTML(`
@@ -202,92 +282,74 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     corridorMapInstanceRef.current = map
 
     return () => {
+      note.remove()
       if (corridorMapInstanceRef.current) {
         corridorMapInstanceRef.current.remove()
         corridorMapInstanceRef.current = null
       }
     }
-  }, [viewerMode, selectedDetectionId, detections])
+  }, [viewerMode, selectedDetectionId, detections, geo])
 
-  const handleApproveDetection = async (detId: string, reason?: string) => {
-    const defectCodeGenerated = `DEF-2026-0${Math.floor(100 + Math.random() * 900)}`
-    const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
-      status: 'APPROVED',
-      defectCode: defectCodeGenerated,
-      metrics: {
-        reviewer: 'KS. Đỗ Quốc Hoàng',
-        dismissReason: undefined
-      }
-    })
-    if (updated) {
-      setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
-      showToast(`Đã phê duyệt ${detId}! Hệ thống đã tự động khởi tạo Hồ sơ khiếm khuyết mã ${defectCodeGenerated}.`)
+  // Quyết định ứng viên AI = POST /projects/{p}/candidate-decisions (PM). BE không có thao tác "mở lại": muốn đổi thì ghi quyết định mới (supersedes) — ở màn chi tiết khiếm khuyết.
+  const decide = async (detId: string, decision: 'KEEP_NEW' | 'REJECT', reason: string, typeCode?: 'POTHOLE' | 'CRACK', severityLevel?: string) => {
+    const det = detections.find((d) => d.id === detId)
+    const projectId = det?.projectId || currentSurvey?.project_id
+    if (!det || !projectId) throw new Error('Không xác định được dự án của phát hiện AI.')
+    if (det.stateUnknown) throw new Error('Chưa xác định được trạng thái thẩm định của phát hiện này (không đọc được từ máy chủ). Bấm Thử lại trước khi ghi quyết định để tránh tạo trùng.')
+    const payload: Parameters<typeof surveyService.decideCandidate>[1] = { sourceKind: 'AI_DETECTION', sourceId: det.id, decision, reason, runId: det.runId, segmentId: det.segmentId ?? null }
+    if (decision === 'KEEP_NEW') {
+      const SEV: Record<string, 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'> = { 'Khẩn cấp': 'CRITICAL', 'Nghiêm trọng': 'HIGH', 'Trung bình': 'MEDIUM', 'Nhẹ': 'LOW' }
+      const severity = SEV[severityLevel || '']
+      if (!severity) throw new Error('Chọn mức độ nghiêm trọng hợp lệ trước khi giữ phát hiện.')
+      payload.defectTypeCode = typeCode || det.rawTypeCode
+      payload.severity = severity
     }
+    return surveyService.decideCandidate(projectId, payload)
+  }
+
+  const handleApproveDetection = async (
+    detId: string,
+    reason?: string,
+    customTypeCode?: 'POTHOLE' | 'CRACK',
+    customSeverityLevel?: string
+  ) => {
+    if (!detectionGuard.acquire()) return
+    try {
+      const targetDet = detections.find((d) => d.id === detId)
+      const d = await decide(detId, 'KEEP_NEW', (reason || 'PM xác nhận phát hiện AI là khiếm khuyết').trim(), customTypeCode, customSeverityLevel || targetDet?.severityLevel)
+      setDetections((prev) => prev.map((x) => (x.id === detId ? { ...x, status: 'APPROVED', decisionKind: d.decision } : x)))
+      showToast('Đã lưu quyết định KEEP_NEW trên máy chủ.')
+    } catch (err: any) {
+      showToast(`Lỗi máy chủ: ${err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi khi lưu quyết định thẩm định AI'}`)
+    } finally { detectionGuard.release() }
   }
 
   const handleRejectDetection = async (detId: string, reason?: string) => {
-    const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
-      status: 'REJECTED',
-      metrics: {
-        dismissReason: reason || 'Xác minh thực tế: Nhiễu bóng đổ và phản xạ ánh sáng.'
-      }
-    })
-    if (updated) {
-      setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
-      showToast(`Đã đánh dấu ${detId} là Báo sai (False Positive). Dữ liệu này được gửi ngược về huấn luyện Road-YOLOv9.`)
-    }
+    if (!detectionGuard.acquire()) return
+    try {
+      const d = await decide(detId, 'REJECT', (reason || 'PM từ chối phát hiện AI').trim())
+      setDetections((prev) => prev.map((x) => (x.id === detId ? { ...x, status: 'REJECTED', decisionKind: d.decision } : x)))
+      showToast('Đã lưu quyết định REJECT trên máy chủ.')
+    } catch (err: any) {
+      showToast(`Lỗi máy chủ: ${err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi khi bác bỏ phát hiện AI'}`)
+    } finally { detectionGuard.release() }
   }
 
-  const handleSubmitReFlight = async (pilot?: string) => {
-    const pilotLabel = pilot || 'Lê Hoàng Long'
-    const res = await surveyService.requestReFlight(surveyId, { note: `${pilotNote} (Giao cho: ${pilotLabel})`, targetKm: 'Km 1027+100' })
-    if (res.success) {
-      setCoveragePercentage(res.newCoverage)
-      setHasBlindspot(false)
-      setIsReFlightModalOpen(false)
-      showToast(`Đã giao lệnh bay bổ sung cho [${pilotLabel}]! Dữ liệu quét bù đã nạp bổ sung, độ phủ đạt 98% (ĐẠT). PM có thể bấm "Khóa Baseline đoạn đường" để chốt dữ liệu gốc.`)
-    }
+  // Thử lại đọc trạng thái của đúng một phát hiện (GET candidate → decision → defect); không gọi lại KEEP_NEW.
+  const retryDetection = async (item: AIDetectionItem) => {
+    try {
+      const fresh = await surveyService.refreshDetection(item)
+      setDetections((prev) => prev.map((x) => (x.id === item.id ? fresh : x)))
+      showToast(fresh.stateUnknown ? 'Vẫn chưa đọc được trạng thái thẩm định từ máy chủ.' : 'Đã đọc lại trạng thái thẩm định từ máy chủ.')
+    } catch (err) { showToast(`Lỗi máy chủ: ${err instanceof Error ? err.message : 'không đọc lại được phát hiện AI'}`) }
   }
 
-  const handleLockBaseline = async () => {
-    if (pendingCount > 0) {
-      showToast(`Chưa thể khóa Baseline: Cần hoàn tất thẩm định ${pendingCount} mục còn lại trong danh sách!`)
-      return
-    }
-
-    // Nếu độ phủ chưa đạt 95% (đang 87% do điểm mù Km 1027+100), mở Modal lựa chọn theo BR-40 / DA10
-    if (coveragePercentage < 95) {
-      setIsBaselineModalOpen(true)
-      return
-    }
-
-    // Nếu độ phủ đã đạt >= 95%, khóa toàn tuyến
-    const success = await surveyService.lockBaseline(surveyId)
-    if (success) {
-      setIsLockedSuccess(true)
-      setLockedBaselineRange('Km 1024+000 - Km 1030+000 (Toàn tuyến)')
-      showToast('Đoạn đường Km 1024 - Km 1030 đã chính thức KHÓA BASELINE THÀNH CÔNG! Bản đồ hoàn công số đã được kích hoạt.')
-    }
-  }
-
-  const handleConfirmBaseline = async (isPartial: boolean) => {
-    const success = await surveyService.lockBaseline(surveyId)
-    if (success) {
-      setIsLockedSuccess(true)
-      setIsBaselineModalOpen(false)
-      if (isPartial) {
-        setLockedBaselineRange('Km 1024+000 - Km 1027+000 (Phân đoạn đạt chuẩn)')
-        showToast('Đã xác nhận và KHÓA BASELINE THÀNH CÔNG phân đoạn Km 1024 - Km 1027 (Quy tắc BR-40 / DA10)! Giữ phần đạt, lập nhiệm vụ bay bù điểm mù sau.')
-      } else {
-        setLockedBaselineRange('Km 1024+000 - Km 1030+000 (Toàn tuyến)')
-        showToast('Đã KHÓA BASELINE THÀNH CÔNG toàn tuyến Km 1024 - Km 1030! Hồ sơ gốc bàn giao đã được đóng băng số.')
-      }
-    }
-  }
-
-  const selectedItem = detections.find((d) => d.id === selectedDetectionId) || detections[0]
+  const selectedItem = detections.find((d) => d.id === selectedDetectionId)
 
   return {
+    detectionsError,
+    selectionError,
+    retryDetection,
     isAiOverlayVisible,
     setIsAiOverlayVisible,
     isPlaying,
@@ -299,15 +361,9 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     totalFrames,
     isCanvasFullscreen,
     setIsCanvasFullscreen,
-    kmFilter,
-    setKmFilter,
+    statusFilter,
+    setStatusFilter,
     selectedDetectionId,
-    coveragePercentage,
-    hasBlindspot,
-    isReFlightModalOpen,
-    setIsReFlightModalOpen,
-    pilotNote,
-    setPilotNote,
     toastMessage,
     setToastMessage,
     showToast,
@@ -322,17 +378,11 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     setViewerMode,
     corridorMapContainerRef,
     isBaselineLocked,
-    canLockBaseline,
-    isBaselineModalOpen,
-    setIsBaselineModalOpen,
     isLockedSuccess,
     lockedBaselineRange,
-    handleConfirmBaseline,
     handleSelectDetection,
     handleApproveDetection,
     handleRejectDetection,
-    handleSubmitReFlight,
-    handleLockBaseline,
     selectedItem
   }
 }

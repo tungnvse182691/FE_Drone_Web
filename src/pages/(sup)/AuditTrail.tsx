@@ -1,321 +1,120 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { AuditEvent } from '../../types/domain'
-import { auditService, AUDIT_PROJECT_OPTIONS } from '../../api/services'
-import { TimeFilter, ExportFormat, ImageModalData } from './audit-trail/types'
-import { AuditTrailHeader } from './audit-trail/AuditTrailHeader'
-import { AuditTrailMetrics } from './audit-trail/AuditTrailMetrics'
-import { AuditTrailFilters } from './audit-trail/AuditTrailFilters'
-import { AuditTrailTable } from './audit-trail/AuditTrailTable'
-import { AuditTrailInspector } from './audit-trail/AuditTrailInspector'
-import { AuditTrailModals } from './audit-trail/AuditTrailModals'
+import { projectService } from '../../api/services/projectService'
+import { projectReportingService, type TimelineItem } from '../../api/services/projectReportingService'
+import { exportError } from '../../api/services/projectExportService'
+import { Empty, Feedback, KV, Loading, PanelButton, PanelShell, Pill, SectionTitle } from '../../components/ui/PanelKit'
 
-// Bộ lọc thời gian chuẩn theo mốc thời gian hệ thống
-const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
-  if (filter === 'all') return true
-  const eventTime = new Date(occurredAtStr).getTime()
-  // Mốc thời gian hệ thống hiện hành: 10/10/2026 12:00:00 UTC
-  const now = new Date('2026-10-10T12:00:00Z').getTime()
-  const diffHours = (now - eventTime) / (1000 * 60 * 60)
-  if (filter === '24h') return diffHours <= 24 && diffHours >= 0
-  if (filter === '7d') return diffHours <= 7 * 24 && diffHours >= 0
-  if (filter === '30d') return diffHours <= 30 * 24 && diffHours >= 0
-  return true
-}
+type Win = '24h' | '7d' | '30d' | 'all'
+interface Row extends TimelineItem { projectId: string; projectName: string }
 
+/**
+ * Nhật ký hoạt động = GET /projects/{p}/reports/timeline (ReportingTimelinePageDto: eventId, occurredAt, actorDisplay, action, summary, source{type,id,version}).
+ * BE không có API nhật ký kiểm toán riêng, không trả vai trò/lý do/trạng thái trước-sau/ảnh và không có API xuất riêng → màn chỉ hiển thị các trường BE trả.
+ */
 export const AuditTrail: React.FC = () => {
-  const { user } = useAuthStore()
-  const isSupervisor = user?.role === RoleCode.SUPERVISOR
-  const isPM = user?.role === RoleCode.PROJECT_MANAGER
+  const user = useAuthStore((s) => s.user)
+  const authEpoch = useAuthStore((s) => s.authEpoch)
+  const scopeLabel = user?.role === RoleCode.SUPERVISOR ? 'Toàn bộ dự án' : 'Dự án thuộc phạm vi PM'
+  const [projects, setProjects] = useState<Array<{ id: string; name: string; code: string }>>([])
+  const [projectId, setProjectId] = useState('all')
+  const [win, setWin] = useState<Win>('30d')
+  const [keyword, setKeyword] = useState('')
+  const [rows, setRows] = useState<Row[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [notes, setNotes] = useState<string[]>([])
+  const [selectedId, setSelectedId] = useState('')
+  const [reload, setReload] = useState(0)
 
-  // Dữ liệu dòng sự kiện hoạt động bất đồng bộ từ auditService (In-Memory Mock API, zero localStorage)
-  const [events, setEvents] = useState<AuditEvent[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [selectedEventId, setSelectedEventId] = useState<string>('')
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
+  useEffect(() => { projectService.fetchProjects().then((p) => setProjects(p.map((x) => ({ id: x.id, name: x.name, code: x.code })))).catch((e) => setError(exportError(e))) }, [authEpoch])
 
-  // Phân định phạm vi dự án (Mặc định: Tất cả dự án phụ trách)
-  const [selectedProject, setSelectedProject] = useState<string>('all')
-
-  // Bộ lọc tiêu chí nghiệp vụ
-  const [selectedActorRole, setSelectedActorRole] = useState<string>('all')
-  const [selectedActionType, setSelectedActionType] = useState<string>('all')
-  const [selectedEntityType, setSelectedEntityType] = useState<string>('all')
-  const [searchKeyword, setSearchKeyword] = useState<string>('')
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d')
-
-  // Trạng thái sao chép và Modal
-  const [copiedEventId, setCopiedEventId] = useState<boolean>(false)
-  const [showExportModal, setShowExportModal] = useState<boolean>(false)
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('PDF')
-  const [exportSuccess, setExportSuccess] = useState<boolean>(false)
-
-  // Xem ảnh phóng to (Lightbox)
-  const [activeImageModal, setActiveImageModal] = useState<ImageModalData | null>(null)
-
-  // Trạng thái mở ngăn kéo (Drawer) xem chi tiết sự kiện
-  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false)
-
-  // Đóng Drawer khi nhấn phím Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsInspectorOpen(false)
-      }
-    }
-    if (isInspectorOpen) {
-      window.addEventListener('keydown', handleKeyDown)
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isInspectorOpen])
-
-  // Tải dữ liệu bất đồng bộ từ auditService
-  useEffect(() => {
-    let mounted = true
-    const loadEvents = async () => {
-      try {
-        setLoading(true)
-        const data = await auditService.getAuditEvents({
-          projectId: selectedProject
-        })
-        if (mounted) {
-          setEvents(data)
-          if (data.length > 0) {
-            setSelectedEventId((prev) => prev || data[0].id)
-          }
-        }
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-    loadEvents()
-    return () => {
-      mounted = false
-    }
-  }, [selectedProject])
-
-  // Lọc dữ liệu theo vai trò, dự án, mốc thời gian và từ khóa
-  const filteredEvents = useMemo(() => {
-    return events.filter((ev) => {
-      // 1. Lọc theo dự án đã chọn
-      if (selectedProject !== 'all' && ev.project_id !== selectedProject) {
-        return false
-      }
-
-      // 2. Lọc theo khoảng thời gian thực tế
-      if (!matchTimeFilter(ev.occurred_at, timeFilter)) {
-        return false
-      }
-
-      // 3. Lọc theo vai trò tác nhân
-      if (selectedActorRole !== 'all' && ev.actor_role !== selectedActorRole) {
-        return false
-      }
-
-      // 4. Lọc theo loại hành động nghiệp vụ
-      if (selectedActionType !== 'all' && ev.action_type !== selectedActionType) {
-        return false
-      }
-
-      // 5. Lọc theo loại thực thể tác động
-      if (selectedEntityType !== 'all' && ev.target_entity_type !== selectedEntityType) {
-        return false
-      }
-
-      // 6. Tìm kiếm từ khóa
-      if (searchKeyword.trim() !== '') {
-        const q = searchKeyword.toLowerCase()
-        const matchId = ev.event_id.toLowerCase().includes(q)
-        const matchActor = ev.actor_name.toLowerCase().includes(q)
-        const matchEntity = ev.target_entity_name.toLowerCase().includes(q)
-        const matchAction = ev.action_label_vi.toLowerCase().includes(q)
-        const matchLocation = ev.target_location?.toLowerCase().includes(q) || false
-        const matchReason = ev.reason.toLowerCase().includes(q)
-        if (!matchId && !matchActor && !matchEntity && !matchAction && !matchLocation && !matchReason) {
-          return false
-        }
-      }
-
-      return true
-    })
-  }, [events, selectedProject, timeFilter, selectedActorRole, selectedActionType, selectedEntityType, searchKeyword])
-
-  // Đồng bộ selectedEventId khi bộ lọc hoặc dự án thay đổi
-  useEffect(() => {
-    if (filteredEvents.length > 0) {
-      const exists = filteredEvents.some((e) => e.id === selectedEventId)
-      if (!exists) {
-        setSelectedEventId(filteredEvents[0].id)
-      }
-    }
-  }, [filteredEvents, selectedEventId])
-
-  // Sự kiện đang được chọn để soi chi tiết
-  const selectedEvent = useMemo(() => {
-    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0] || events[0]
-  }, [filteredEvents, selectedEventId, events])
-
-  // Thống kê số liệu tính toán động theo danh sách đang hiển thị
-  const calculatedStats = useMemo(() => {
-    const totalEventsInScope = filteredEvents.length
-    const stateTransitions = filteredEvents.filter((e) => Boolean(e.from_status && e.to_status)).length
-    const approvalDecisions = filteredEvents.filter(
-      (e) =>
-        e.action_type === 'APPROVE_BATCH' ||
-        e.action_type === 'ACCEPT_WORK_ORDER' ||
-        e.action_type === 'REJECT_BATCH' ||
-        e.action_type === 'LOCK_LEGAL_HOLD'
-    ).length
-
-    return {
-      total_events: totalEventsInScope,
-      state_transitions: stateTransitions,
-      approval_decisions: approvalDecisions
-    }
-  }, [filteredEvents])
-
-  // Sao chép Mã sự kiện
-  const handleCopyEventId = (eventId: string) => {
-    navigator.clipboard.writeText(eventId)
-    setCopiedEventId(true)
-    setTimeout(() => setCopiedEventId(false), 2000)
-  }
-
-  // Làm mới dữ liệu
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
+  const load = useCallback(async (signal: AbortSignal) => {
+    setLoading(true); setError(''); setNotes([])
     try {
-      const data = await auditService.getAuditEvents({
-        projectId: selectedProject
+      const all = await projectService.fetchProjects()
+      const targets = all.filter((p) => projectId === 'all' || p.id === projectId)
+      const hours = win === '24h' ? 24 : win === '7d' ? 168 : win === '30d' ? 720 : 0
+      const filters = hours ? { from: new Date(Date.now() - hours * 3600000).toISOString(), to: new Date().toISOString() } : {}
+      const out: Row[] = []
+      const warn: string[] = []
+      const results = await Promise.allSettled(targets.map((p) => projectReportingService.timeline(p.id, filters, signal)))
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') { warn.push(`${targets[i].code}: ${exportError(r.reason)}`); return }
+        if (r.value.availability.availability !== 'AVAILABLE') warn.push(`${targets[i].code}: nguồn ${r.value.availability.availability}${r.value.availability.reasonCodes.length ? ` (${r.value.availability.reasonCodes.join(', ')})` : ''}`)
+        for (const it of r.value.items) out.push({ ...it, projectId: targets[i].id, projectName: targets[i].name })
       })
-      setEvents(data)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
+      out.sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt))
+      if (signal.aborted) return
+      setRows(out); setNotes(warn); setSelectedId((prev) => prev || out[0]?.eventId || '')
+    } catch (e) { if (!signal.aborted) { setRows([]); setError(exportError(e)) } } finally { if (!signal.aborted) setLoading(false) }
+  }, [projectId, win])
+  useEffect(() => { const c = new AbortController(); void load(c.signal); return () => c.abort() }, [load, reload, authEpoch])
 
-  // Xuất báo cáo nhật ký
-  const handleExport = async () => {
-    await auditService.exportAuditTrail(exportFormat, selectedProject)
-    setExportSuccess(true)
-    setTimeout(() => {
-      setExportSuccess(false)
-      setShowExportModal(false)
-    }, 1600)
-  }
-
-  const handleResetFilters = () => {
-    setSelectedActorRole('all')
-    setSelectedActionType('all')
-    setSelectedEntityType('all')
-    setSearchKeyword('')
-    setTimeFilter('all')
-  }
-
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-5 max-w-7xl mx-auto w-full pb-16 animate-pulse">
-        <div className="h-20 bg-slate-100 rounded-xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="h-24 bg-slate-100 rounded-xl" />
-          <div className="h-24 bg-slate-100 rounded-xl" />
-          <div className="h-24 bg-slate-100 rounded-xl" />
-        </div>
-        <div className="h-96 bg-slate-100 rounded-xl" />
-      </div>
-    )
-  }
+  const filtered = useMemo(() => {
+    const k = keyword.trim().toLowerCase()
+    return k ? rows.filter((r) => [r.summary, r.action, r.actorDisplay, r.source.type, r.projectName].some((v) => (v || '').toLowerCase().includes(k))) : rows
+  }, [rows, keyword])
+  const selected = filtered.find((r) => r.eventId === selectedId) || filtered[0]
 
   return (
-    <div className="flex flex-col gap-5 max-w-7xl mx-auto w-full pb-16">
-      <AuditTrailHeader
-        isSupervisor={isSupervisor}
-        isPM={isPM}
-        selectedProject={selectedProject}
-        onSelectProject={setSelectedProject}
-        isRefreshing={isRefreshing}
-        onRefresh={handleRefresh}
-        onOpenExportModal={() => setShowExportModal(true)}
-      />
-
-      <AuditTrailMetrics
-        calculatedStats={calculatedStats}
-        isSupervisor={isSupervisor}
-      />
-
-      <AuditTrailFilters
-        selectedActorRole={selectedActorRole}
-        onChangeActorRole={setSelectedActorRole}
-        selectedActionType={selectedActionType}
-        onChangeActionType={setSelectedActionType}
-        selectedEntityType={selectedEntityType}
-        onChangeEntityType={setSelectedEntityType}
-        searchKeyword={searchKeyword}
-        onChangeSearchKeyword={setSearchKeyword}
-        timeFilter={timeFilter}
-        onChangeTimeFilter={setTimeFilter}
-        onResetFilters={handleResetFilters}
-        filteredCount={filteredEvents.length}
-        isSupervisor={isSupervisor}
-      />
-
-      {/* 3. BẢNG DÒNG SỰ KIỆN HOẠT ĐỘNG (FULL CHIỀU RỘNG, THOÁNG ĐÃNG) */}
-      <div className="w-full">
-        <AuditTrailTable
-          filteredEvents={filteredEvents}
-          selectedEventId={selectedEvent?.id || selectedEventId}
-          onSelectEventId={(id) => {
-            setSelectedEventId(id)
-          }}
-          onOpenDetails={(id) => {
-            setSelectedEventId(id)
-            setIsInspectorOpen(true)
-          }}
-        />
+    <div className="space-y-4 pb-10" data-testid="audit-trail">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nhật ký hoạt động</h1>
+        <p className="text-xs text-slate-500 mt-1">{scopeLabel} · Dữ liệu từ lịch sử báo cáo của máy chủ (reports/timeline).</p>
       </div>
-
-      {/* 4. SLIDE-OVER DRAWER: CHI TIẾT SỰ KIỆN (CHỈ HIỂN THỊ KHI BẤM XEM CHI TIẾT) */}
-      {isInspectorOpen && selectedEvent && (
-        <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
-          {/* Nền mờ (Backdrop) */}
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsInspectorOpen(false)}
-          />
-
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-12">
-            <div className="w-screen max-w-lg md:max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-200">
-              <div className="p-4 sm:p-5 overflow-y-auto flex-1">
-                <AuditTrailInspector
-                  selectedEvent={selectedEvent}
-                  copiedEventId={copiedEventId}
-                  onCopyEventId={handleCopyEventId}
-                  onSelectImage={setActiveImageModal}
-                  onClose={() => setIsInspectorOpen(false)}
-                />
-              </div>
-            </div>
-          </div>
+      <PanelShell icon="history" title="Sự kiện nghiệp vụ" subtitle="Chỉ các trường máy chủ trả về" actions={<PanelButton onClick={() => setReload((n) => n + 1)} disabled={loading}>Tải lại</PanelButton>}>
+        <div className="flex flex-wrap gap-2">
+          <select aria-label="Dự án" className="rg-field !w-auto" value={projectId} onChange={(e) => { setProjectId(e.target.value); setSelectedId('') }}>
+            <option value="all">Tất cả dự án</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}
+          </select>
+          <select aria-label="Khoảng thời gian" className="rg-field !w-auto" value={win} onChange={(e) => { setWin(e.target.value as Win); setSelectedId('') }}>
+            <option value="24h">24 giờ qua</option><option value="7d">7 ngày qua</option><option value="30d">30 ngày qua</option><option value="all">Toàn bộ</option>
+          </select>
+          <input aria-label="Tìm trong sự kiện" className="rg-field !w-64" placeholder="Tìm theo mô tả, hành động, người thực hiện" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
         </div>
-      )}
-
-      <AuditTrailModals
-        activeImageModal={activeImageModal}
-        onCloseImageModal={() => setActiveImageModal(null)}
-        showExportModal={showExportModal}
-        onCloseExportModal={() => setShowExportModal(false)}
-        exportFormat={exportFormat}
-        onChangeExportFormat={setExportFormat}
-        isPM={isPM}
-        selectedProject={selectedProject}
-        projectList={AUDIT_PROJECT_OPTIONS}
-        filteredCount={filteredEvents.length}
-        exportSuccess={exportSuccess}
-        onExport={handleExport}
-      />
+        <Feedback error={error} />
+        {notes.length > 0 && <div className="rg-alert rg-alert-warn"><p className="min-w-0 break-words">{notes.join(' · ')}</p></div>}
+        {loading && <Loading>Đang đọc lịch sử từ máy chủ…</Loading>}
+        {!loading && !error && filtered.length === 0 && <Empty icon="history">Không có sự kiện trong phạm vi đã chọn.</Empty>}
+        {filtered.length > 0 && (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div className="xl:col-span-2 overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr className="text-left text-slate-500 border-b"><th className="py-2 pr-3">Thời điểm</th><th className="pr-3">Dự án</th><th className="pr-3">Người thực hiện</th><th className="pr-3">Hành động</th><th>Mô tả</th></tr></thead>
+                <tbody>
+                  {filtered.map((r) => (
+                    <tr key={`${r.projectId}:${r.eventId}`} onClick={() => setSelectedId(r.eventId)} className={`border-b cursor-pointer hover:bg-slate-50 ${selected?.eventId === r.eventId ? 'bg-brand-surfaceAlt' : ''}`}>
+                      <td className="py-2 pr-3 whitespace-nowrap font-mono">{new Date(r.occurredAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</td>
+                      <td className="pr-3">{r.projectName}</td>
+                      <td className="pr-3">{r.actorDisplay || 'Máy chủ không trả tên'}</td>
+                      <td className="pr-3"><Pill tone="neutral">{r.action}</Pill></td>
+                      <td className="max-w-xs truncate" title={r.summary}>{r.summary}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {selected && (
+              <div className="space-y-2">
+                <SectionTitle icon="info">Chi tiết sự kiện</SectionTitle>
+                <KV items={[
+                  { k: 'Mã sự kiện', v: selected.eventId, mono: true },
+                  { k: 'Dự án', v: selected.projectName },
+                  { k: 'Thời điểm', v: new Date(selected.occurredAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) },
+                  { k: 'Người thực hiện', v: selected.actorDisplay || 'Máy chủ không trả tên' },
+                  { k: 'Hành động', v: selected.action, mono: true },
+                  { k: 'Mô tả', v: selected.summary },
+                  { k: 'Nguồn', v: `${selected.source.type} · ${selected.source.id}`, mono: true },
+                  { k: 'Phiên bản nguồn', v: selected.source.version, mono: true },
+                ]} />
+              </div>
+            )}
+          </div>
+        )}
+      </PanelShell>
     </div>
   )
 }

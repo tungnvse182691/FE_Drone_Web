@@ -135,10 +135,10 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 font-body">
       {/* Stat 1: Draft */}
       <KpiCard
-        title="Gói đang soạn thảo"
+        title="Gói chờ chuẩn bị / giao"
         count={stats.draft}
-        badgeLabel="Bản nháp"
-        subText="Chưa khóa trình duyệt"
+        badgeLabel="Chờ chuẩn bị / giao"
+        subText="Chưa đề xuất hoặc Fast Track chờ PM giao"
         icon="edit"
         isActive={activeFilterTab === 'DRAFT'}
         onClick={() => onTabChange(activeFilterTab === 'DRAFT' ? 'ALL' : 'DRAFT')}
@@ -187,10 +187,10 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
 
       {/* Stat 3: Decided */}
       <KpiCard
-        title="Gói đã phê duyệt"
+        title="Gói có kết quả xử lý"
         count={stats.decided}
-        badgeLabel="Đã duyệt"
-        subText="Đã phê duyệt phương án"
+        badgeLabel="Đọc theo hạng mục"
+        subText="Đã có kết quả xử lý phương án"
         icon="check_circle"
         isActive={activeFilterTab === 'DECIDED'}
         onClick={() => onTabChange(activeFilterTab === 'DECIDED' ? 'ALL' : 'DECIDED')}

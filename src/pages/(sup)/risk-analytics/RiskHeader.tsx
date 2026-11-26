@@ -12,8 +12,6 @@ interface RiskHeaderProps {
   setSelectedProject: (val: string) => void
   selectedTimeRange: string
   setSelectedTimeRange: (val: string) => void
-  selectedTrack: string
-  setSelectedTrack: (val: string) => void
   sortField: 'as_of_timestamp' | 'code' | 'scope_display' | 'file_size_mb' | 'status'
   setSortField: (val: any) => void
   sortAsc: boolean
@@ -38,8 +36,6 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
   setSelectedProject,
   selectedTimeRange,
   setSelectedTimeRange,
-  selectedTrack,
-  setSelectedTrack,
   sortField,
   setSortField,
   sortAsc,
@@ -63,7 +59,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
         <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
         <span>Báo cáo & Hồ sơ</span>
         <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
-        <span className="text-[#8C6D1F] font-semibold">Phân tích rủi ro suy thoái & Bằng chứng số (RPT-06)</span>
+        <span className="text-[#8C6D1F] font-semibold">Báo cáo KPI & Hồ sơ</span>
       </nav>
 
       {/* 2. PAGE HEADER & PRIMARY ACTION CONTROLS */}
@@ -72,7 +68,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="font-sansation text-2xl font-bold tracking-tight text-slate-900">
-                Báo cáo phân tích rủi ro & Diễn biến suy thoái (RPT-06)
+                Báo cáo KPI
               </h1>
               <span className="px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 font-mono text-xs font-semibold border border-amber-200">
                 {currentProject.code}
@@ -89,10 +85,10 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                   sync
                 </span>
                 <span>
-                  Cập nhật lúc: <strong className="text-slate-800 font-semibold font-mono">21:45, 25/08/2026</strong>
+                  Cập nhật lúc: <strong className="text-slate-800 font-semibold font-mono">Đọc lại từ máy chủ</strong>
                 </span>
                 <span className="text-slate-300">•</span>
-                <span className="text-slate-600">Đồng bộ tự động theo thời gian thực</span>
+                <span className="text-slate-600">Danh mục export đọc lại định kỳ khi còn tác vụ</span>
               </div>
             </div>
           </div>
@@ -105,7 +101,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium text-xs hover:bg-slate-50 transition cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px] text-slate-500">calendar_month</span>
-              <span>Tùy chỉnh thời gian</span>
+              <span>Giới hạn nguồn KPI</span>
             </button>
 
             <button
@@ -165,42 +161,15 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                 value={selectedTimeRange}
                 onChange={(e) => {
                   setSelectedTimeRange(e.target.value)
-                  showToast('Đã lọc lại số liệu theo mốc kỳ hạn mới')
+                  showToast('Đã lọc ngày tạo hồ sơ xuất; dùng phạm vi báo cáo phía dưới để lọc KPI.')
                 }}
                 className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
               >
+                <option value="ALL">Toàn bộ thời gian tạo hồ sơ</option>
                 <option value="Q3_2026">Quý 3 / 2026 (01/07/2026 - 30/09/2026)</option>
                 <option value="Q2_2026">Quý 2 / 2026 (01/04/2026 - 30/06/2026)</option>
                 <option value="MONTH_08_2026">Tháng 08/2026 (Kỳ giải trình thanh tra)</option>
                 <option value="YTD">Lũy kế 12 tháng gần nhất (Year-To-Date)</option>
-              </select>
-              <span className="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                expand_more
-              </span>
-            </div>
-
-            {/* Workflow Track Selector */}
-            <div className="relative min-w-[220px]">
-              <select
-                value={selectedTrack}
-                onChange={(e) => {
-                  setSelectedTrack(e.target.value)
-                  const trackLabel = 
-                    e.target.value === 'FAST_TRACK' 
-                      ? 'Quy trình xử lý nhanh' 
-                      : e.target.value === 'APPROVAL_TRACK' 
-                      ? 'Thẩm duyệt thông thường' 
-                      : e.target.value === 'EMERGENCY'
-                      ? 'Xử lý khẩn cấp (24/7)'
-                      : 'Tất cả quy trình'
-                  showToast(`Đã lọc danh sách theo: ${trackLabel}`)
-                }}
-                className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
-              >
-                <option value="ALL">Tất cả quy trình (Xử lý nhanh, Thẩm duyệt, Khẩn cấp)</option>
-                <option value="FAST_TRACK">Quy trình xử lý nhanh (&lt; 24h)</option>
-                <option value="APPROVAL_TRACK">Thẩm duyệt thông thường (Hồ sơ kỹ thuật)</option>
-                <option value="EMERGENCY">Xử lý khẩn cấp (24/7)</option>
               </select>
               <span className="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                 expand_more

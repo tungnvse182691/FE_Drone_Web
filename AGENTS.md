@@ -5,25 +5,63 @@
 
 ---
 
+# Andrej Karpathy Coding Guidelines & Behavior Rules
+
+Bạn là AI Assistant phát triển dự án này. Hãy luôn tuân thủ nghiêm ngặt 4 nguyên tắc sau trong MỌI tác vụ:
+
+## 1. Think Before Coding (Nghĩ trước khi làm)
+- Không tự tiện đoán mò. Không giấu sự mơ hồ hoặc thiếu rõ ràng của yêu cầu.
+- Nếu có nhiều cách hiểu hoặc nhiều phương án thiết kế khác nhau, hãy nêu rõ các lựa chọn và hỏi tôi trước, KHÔNG được tự ý chọn ngầm.
+- Nếu giải pháp của tôi đưa ra có cách làm khác đơn giản hơn nhiều, hãy đề xuất và phản biện.
+
+## 2. Simplicity First (Tối giản là trên hết)
+- Chỉ viết lượng code tối thiểu cần thiết để giải quyết đúng bài toán được yêu cầu. Không phỏng đoán thêm tính năng tương lai.
+- Không tạo các lớp trừu tượng (abstraction), generic wrapper cho các đoạn code chỉ dùng 1 lần.
+- Không thêm các cấu hình, tùy chọn linh hoạt ("flexibility") mà tôi không yêu cầu.
+- Đoạn code nào 50 dòng giải quyết được thì tuyệt đối không viết thành 200 dòng.
+
+## 3. Surgical Changes (Can thiệp chính xác như phẫu thuật)
+- Chỉ chỉnh sửa đúng những file và những dòng code trực tiếp phục vụ yêu cầu.
+- Tuyệt đối không "tiện tay" refactor, format lại code, xóa comment hoặc sửa code ở các vùng xung quanh không liên quan.
+- Giữ nguyên coding style và quy ước đặt tên hiện có của dự án.
+- **BẢO TỒN 100% GIAO DIỆN:** Toàn bộ giao diện (timeline stepper, bản đồ MapLibre, corridor map, drone simulator, AI review modal/drawer, charts) là UI chuẩn Hoàng Hải. Tuyệt đối KHÔNG xóa bỏ, KHÔNG rút gọn thành stub/khung rỗng tối giản. Gắn API chỉ can thiệp vào service/state kết nối dữ liệu.
+- Nếu thay đổi của bạn tạo ra code thừa (unused import, unused variable do chính bạn tạo ra), hãy tự dọn dẹp. Nhưng KHÔNG xóa dead code cũ của dự án trừ khi được yêu cầu.
+- Mọi dòng code thay đổi trong git diff phải giải thích được là phục vụ trực tiếp cho yêu cầu của tôi.
+
+## 4. Goal-Driven Execution (Lặp cho tới khi nghiệm thu)
+- Luôn xác định tiêu chí thành công (success criteria) rõ ràng trước khi báo hoàn thành (ví dụ: build không lỗi, endpoint trả đúng mã, test pass).
+- Đối với tác vụ phức tạp gồm nhiều bước, hãy kiểm tra và xác nhận từng bước trước khi chuyển sang bước tiếp theo.
+
+---
+
 ## 🛡️ PHẦN A: KỶ LUẬT CHỐNG AI "NGÁO" (BẮT BUỘC TUÂN THỦ 100%)
 
 Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commitment), **tưởng tượng thay vì chạy thật**, và **đoán tên/API/field thay vì tra cứu**.
 
-### 5 Nguyên Tắc Vàng
+### 6 Nguyên Tắc Vàng
 1. **Evidence trước, edit sau:** Chỉ sửa file sau khi đã đọc file đó + các file liên quan (caller, type, mock, config).
-2. **Spec v2.2 là source of truth, Stitch chỉ để tham khảo bố trí & mã màu:**
-   - **Tài liệu `v2.2`** là căn cứ duy nhất về nghiệp vụ, logic, quy tắc (BR), chức năng (FR), trường dữ liệu và nội dung.
+2. **Spec 17_10 là source of truth, Stitch chỉ để tham khảo bố trí & mã màu:**
+   - **Tài liệu `17_10` (`docs/specs/17_10/` và `docs/contracts/openapi.json`)** là căn cứ duy nhất về nghiệp vụ, logic, quy tắc, chức năng, trường dữ liệu và nội dung. Tuyệt đối CẤM đọc hay dùng tài liệu cũ `v2.2`.
    - **Ảnh/HTML Stitch** trong `docs/stitch-designs/` **CHỈ DÙNG ĐỂ THAM KHẢO CÁCH BỐ TRÍ (LAYOUT) VÀ MÃ MÀU/PHONG CÁCH GIAO DIỆN**. Tuyệt đối **KHÔNG copy nội dung, text hay dữ liệu giả** từ Stitch bỏ vào web.
 3. **Đừng tưởng tượng — hãy kiểm chứng:** Sau khi viết code, chạy build hoặc kiểm tra import/type, không phán đoán mơ hồ.
-4. **Mọi tên đều phải có căn cứ:** Tên hàm, field, endpoint, mã màn — mỗi cái phải trỏ được về một nơi đã đọc trong `src/types/domain.ts` hoặc spec `v2.2`. Không trỏ được = bịa = CẤM.
+4. **Mọi tên đều phải có căn cứ:** Tên hàm, field, endpoint, mã màn — mỗi cái phải trỏ được về một nơi đã đọc trong `src/types/domain.ts` hoặc spec `17_10`. Không trỏ được = bịa = CẤM.
 5. **Không chắc → hỏi Hoàng, không tự chế:** Thiếu thông tin hoặc phát hiện mâu thuẫn thì dừng lại hỏi Hoàng ngay, không tự lấp chỗ trống.
+6. **Đã gắn API = BẮT BUỘC trả dữ liệu Database thật — Lỗi thì báo lỗi, CẤM tự ý trả mock data:**
+   - Khi một chức năng/màn hình đã chuyển sang gắn API, dữ liệu hiển thị lên giao diện **bắt buộc phải lấy từ CSDL Backend (Docker)**.
+   - Nếu gọi API bị lỗi (4xx, 5xx, timeout, sai DTO, thiếu quyền), **bắt buộc phải ném lỗi / hiển thị thông báo lỗi (Toast/Alert/Error state)** rõ ràng để Hoàng biết nguyên nhân và sửa.
+   - **TUYỆT ĐỐI CẤM** hành vi âm thầm catch error rồi fallback trả về `mock data` giả vờ chạy thành công. Không đánh lừa người dùng bằng dữ liệu giả khi đang kiểm thử API. Nếu Database rỗng thì hiển thị Empty State ("Không có dữ liệu trong CSDL").
+7. **Bảo tồn 100% giao diện chuẩn Hoàng Hải (CẤM xóa hoặc rút gọn UI):**
+   - Các màn hình, stepper timeline, modal, video simulation, bản đồ MapLibre, corridor map và component UI trong `src/pages/` và `src/components/` là thiết kế hoàn chỉnh.
+   - Tuyệt đối CẤM xóa bỏ, rút gọn thành stub/khung rỗng hoặc thay bằng template sơ sài. Chỉ can thiệp surgical vào API service và state logic khi nối dữ liệu thật.
 
 ### Checklist Chống Bịa (Kiểm tra trước mỗi lần sinh code)
 - [ ] **Đường dẫn file:** Đã kiểm tra file tồn tại trong cấu trúc phẳng `src/pages/(pm)/` hoặc `src/pages/(sup)/`.
+- [ ] **Bảo tồn giao diện:** Không xóa bỏ hoặc rút gọn bất kỳ UI component hay tương tác người dùng nào hiện có.
 - [ ] **Tham khảo Stitch:** Chỉ tham khảo bố cục khung hình, vị trí thành phần và mã màu từ `docs/stitch-designs/`. Không bê nguyên text/nội dung/dữ liệu giả của Stitch vào.
-- [ ] **Nội dung & Dữ liệu chuẩn v2.2:** Nghiệp vụ, field dữ liệu, nhãn hiển thị đối chiếu 100% theo tài liệu `v2.2`, `src/types/domain.ts` và `src/types/enums.ts`.
+- [ ] **Nội dung & Dữ liệu chuẩn 17_10:** Nghiệp vụ, field dữ liệu, nhãn hiển thị đối chiếu 100% theo tài liệu `17_10` (`docs/specs/17_10/`), `src/types/domain.ts` và `src/types/enums.ts`.
 - [ ] **Màu sắc & Phông chữ:** Dùng đúng tokens trong `src/design-tokens.ts` (Vàng đồng `#C9A227`, Navy `#2D3748`, Dark `#1A1D20`).
 - [ ] **Không scope creep & không suy luận thêm:** Chỉ sửa/tạo đúng màn hình hoặc tính năng Hoàng yêu cầu, spec không có thì không tự vẽ ra.
+- [ ] **100% Dữ liệu Database thật khi gắn API:** Không âm thầm nuốt lỗi rồi trả mock data giả mạo. API lỗi thì báo lỗi rõ ràng, CSDL rỗng thì hiển thị trạng thái rỗng (Empty state), tuyệt đối không tự chèn mock data vào.
 
 ---
 
@@ -39,30 +77,6 @@ Phiên bản Web Dashboard phục vụ **2 vai trò chính tại văn phòng**:
 
 ---
 
-## 🗺️ PHẦN C: BẢNG MAPPING 18 MÀN HÌNH STITCH → ROUTE & FILE
-
-Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Router):
-
-| STT | Tên màn hình Stitch | Vai trò | Route URL | File Component |
-|:---:|---|:---:|---|---|
-| **01** | Đăng nhập & Đổi mật khẩu lần đầu | Chung | `/login`, `/force-change-password` | `src/pages/(auth)/Login.tsx` |
-| **02** | Dashboard KPI & Lối tắt PM | PM | `/pm/dashboard` | `src/pages/(pm)/PMDashboard.tsx` |
-| **03** | Dashboard KPI & Rủi ro Giám sát | SUP | `/sup/dashboard` | `src/pages/(sup)/SupDashboard.tsx` |
-| **04** | Danh sách dự án bảo hành | Chung | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/ProjectList.tsx` |
-| **05** | Danh sách yêu cầu bay khảo sát | PM | `/pm/surveys` | `src/pages/(pm)/SurveyRequests.tsx` |
-| **06** | Tạo yêu cầu bay khảo sát Drone | PM | `/pm/surveys/create` | `src/pages/(pm)/CreateSurvey.tsx` |
-| **07** | Hộp thư tiếp nhận lỗi do AI phát hiện | PM | `/pm/ai-inbox` | `src/pages/(pm)/AIReviewInbox.tsx` |
-| **08** | Thẩm định chi tiết lỗi AI (Bounding box) | PM | `/pm/defects/:id/verify-a` | `src/pages/(pm)/DefectDetailVerify.tsx` |
-| **09** | So sánh ảnh hư hỏng đa kỳ (Temporal) | PM | `/pm/defects/:id/verify-b` | `src/pages/(pm)/DefectDetailVerify.tsx` |
-| **10** | Gom đợt sửa chữa & Lập phương án khối lượng kỹ thuật | PM | `/pm/proposals` (alias: `/pm/repair-batches/create`) | `src/pages/(pm)/RepairProposals.tsx` |
-| **11** | Trình duyệt hồ sơ đợt sửa chữa | PM | `/pm/proposals/:id` (alias: `/pm/repair-batches/:id/submit`) | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
-| **12** | Danh sách & Thẩm duyệt đợt sửa chữa | SUP | `/sup/proposals`, `/sup/approvals/:id` | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
-| **13** | Yêu cầu sửa đổi / Từ chối đợt sửa | SUP | `/sup/approvals/:id/reject` | `src/pages/(sup)/BatchRejection.tsx` |
-| **14** | Phân công đội thi công (Repair Crew) | PM | `/pm/repair-batches/assign` | `src/pages/(pm)/AssignCrew.tsx` |
-| **15** | Theo dõi nhiệm vụ đo đạc bổ sung | PM | `/pm/field-tasks` | `src/pages/(pm)/FieldTasks.tsx` |
-| **16** | Nghiệm thu chất lượng ngoài hiện trường | SUP | `/sup/acceptance`, `/sup/acceptance/:batchId` | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` |
-| **17** | Xác nhận hoàn thành công việc | PM | `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` |
-| **18** | Báo cáo phân tích rủi ro & Ký đóng đợt | SUP | `/sup/risk-analytics`, `/sup/signoff` | `src/pages/(sup)/RiskAnalytics.tsx` |
 
 ---
 
@@ -90,3 +104,35 @@ Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Rout
 - **Routing:** React Router DOM v7
 - **Icons:** Lucide React
 - **HTTP Client:** Axios (với Request/Response Interceptor)
+
+---
+
+## 📡 PHẦN F: KỶ LUẬT TÍCH HỢP API BACKEND ROADGUARD (CHỐNG BỊA / CHỐNG SÓT)
+
+> **MỤC TIÊU:** Đảm bảo 100% code gọi API ăn khớp với Backend Candidate3 đang chạy trong Docker (http://localhost:18081). Tuyệt đối không đoán endpoint hay DTO.
+
+### 1. Nguồn-Sự-Thật (Source of Truth) cho API:
+- **Contract chuẩn duy nhất:** File docs/contracts/openapi.json (chứa toàn bộ 260 endpoint canonical, schema request/response, headers bắt buộc).
+- **Danh mục tra nhanh:** docs/contracts/FE-API-CATALOG.json (tra theo operationId).
+- **Luồng nghiệp vụ mẫu:** docs/contracts/FE-W01-W10-RECIPES.md (các bước W01–W10, vai trò và điều kiện tiên quyết).
+
+### 2. Quy trình 4 bước BẮT BUỘC trước khi viết code gọi API:
+1. **Tra cứu operationId:** Mở docs/contracts/openapi.json tìm chính xác method (GET/POST/PUT/PATCH/DELETE), đường dẫn path (ví dụ: /api/v1/projects/{projectId}/...).
+2. **Kiểm tra schema DTO:** Đối chiếu đúng tên trường request/response. Tuyệt đối không tự suy diễn tên trường camelCase hay snake_case nếu OpenAPI quy định khác.
+3. **Kiểm tra Header bắt buộc:**
+   - **X-CSRF-TOKEN:** Bắt buộc cho mọi mutation Web (POST, PUT, PATCH, DELETE). Lấy từ GET /api/v1/auth/web/csrf hoặc cookie session.
+   - **Idempotency-Key:** Bắt buộc cho các lệnh ghi/tạo mới tài nguyên (sinh UUID ngẫu nhiên v4).
+   - **If-Match:** Bắt buộc khi cập nhật tài nguyên có rowVersion / ETag (lấy từ ETag của response GET trước đó).
+4. **Xử lý Optional Fields đúng Candidate3:**
+   - Các trường như conclusion (Case) hoặc accessPoint (Survey) có thể bị omit (trả về undefined thay vì null). Code FE phải dùng safe navigation (item?.conclusion) và hiển thị empty state phù hợp.
+
+### 3. Môi trường kết nối:
+- Backend Docker chạy tại: http://localhost:18081.
+- Vite Dev Server chạy tại: http://localhost:5173 với reverse proxy /api trỏ về http://localhost:18081 (được cấu hình trong vite.config.ts).
+- Web Auth sử dụng cookie WebSession với withCredentials: true. Không lưu JWT vào localStorage cho Web.
+
+### 4. KỶ LUẬT BẤT BIẾN: ĐÃ GẮN API THÌ 100% DATABASE THẬT, CẤM TRẢ MOCK DATA, LỖI PHẢI BÁO LỖI:
+- **Đã gắn API là phải lấy dữ liệu thật 100%:** Khi một màn hình hoặc service được đánh dấu gắn API, toàn bộ dữ liệu trả về cho UI phải đến từ CSDL Backend thông qua API tương ứng.
+- **Báo lỗi minh bạch, cấm nuốt lỗi:** Nếu API gọi thất bại (400, 401, 403, 404, 422, 500, Network error), service PHẢI ném lỗi (throw error) hoặc UI PHẢI hiển thị thông báo lỗi rõ ràng (qua Toast / Error Alert / Banner) để Hoàng biết backend đang phản hồi lỗi gì và kịp thời sửa.
+- **TUYỆT ĐỐI CẤM fallback mock data:** Không bao giờ được dùng cú pháp `catch (err) { return mockData; }` để tạo cảm giác giả vờ thành công. 
+- **Database rỗng thì hiển thị Empty State:** Nếu CSDL thật chưa có bản ghi nào, UI phải hiển thị danh sách rỗng kèm trạng thái trống (ví dụ: "Chưa có dữ liệu trong CSDL"), tuyệt đối không được tự ý lấp đầy bằng mock data.

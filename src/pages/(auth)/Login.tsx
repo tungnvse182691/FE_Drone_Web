@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { authService } from '../../api/services/authService'
+import { webLoginErrorMessage, webSessionErrorMessage } from '../../api/auth'
 import { LoginViewMode } from './login/types'
 import { LoginForm } from './login/LoginForm'
 import { ForcePasswordSection } from './login/ForcePasswordSection'
@@ -13,7 +14,7 @@ import './auth-light-aurora.css'
 export const Login: React.FC = () => {
   const toast = useToastStore()
   const navigate = useNavigate()
-  const { setUserAndToken } = useAuthStore()
+  const authError = useAuthStore(state => state.authError)
 
   // Chế độ xem: 'login' (Form Đăng nhập chính) hoặc 'force' (Chặn đổi mật khẩu lần đầu)
   const [viewMode, setViewMode] = useState<LoginViewMode>('login')
@@ -24,10 +25,11 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [loginError, setLoginError] = useState(false)
+  const [loginErrorMessage, setLoginErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   // State cho Form Đổi mật khẩu bắt buộc
-  const [tempPassword, setTempPassword] = useState('123456')
+  const [tempPassword, setTempPassword] = useState('')
   const [showTempPassword, setShowTempPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -51,20 +53,25 @@ export const Login: React.FC = () => {
     e.preventDefault()
     setIsLoading(true)
     setLoginError(false)
+    setLoginErrorMessage('')
 
     try {
-      // Gọi qua Mock API Service bất đồng bộ
       const res = await authService.login({ email, password })
-      setUserAndToken(res.user)
 
       if (res.user.must_change_password) {
+        toast.error('Bạn phải đổi mật khẩu trước khi tiếp tục.')
         setViewMode('force')
       } else {
         const dest = res.user.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
         navigate(dest)
       }
-    } catch {
+    } catch (err: any) {
       setLoginError(true)
+      const detailMsg = err?.authContext === 'session' ? webSessionErrorMessage(err) : webLoginErrorMessage(err)
+      console.warn('[Web login]', { status: err?.response?.status, code: err?.response?.data?.code,
+        correlationId: err?.response?.data?.correlationId || err?.response?.headers?.['x-correlation-id'] })
+      setLoginErrorMessage(detailMsg)
+      toast.error(detailMsg)
     } finally {
       setIsLoading(false)
     }
@@ -76,20 +83,23 @@ export const Login: React.FC = () => {
 
     try {
       const res = await authService.changePassword({ tempPassword, newPassword })
+      if (res.requiresLogin || !res.user) { navigate('/login', { replace: true }); return }
+      const currentUser = res.user
       setIsForceSuccess(true)
-      setTimeout(() => {
-        const currentUser = res.user
-        setUserAndToken(currentUser)
-        const dest = currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
-        navigate(dest)
-      }, 700)
-    } catch {
-      toast.error('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+      navigate(currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard')
+    } catch (err: any) {
+      const detailMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        err?.message ||
+        'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.'
+      toast.error(detailMsg)
     }
   }
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1D20] flex flex-col justify-between relative overflow-x-hidden">
+      {authError && <p role="alert" className="relative z-20 p-3 text-sm text-rose-700">{authError}{authError.includes('chưa xác nhận thu hồi') && <button type="button" onClick={() => useAuthStore.getState().logout()}>Thử đăng xuất lại</button>}</p>}
       {/* Light Aurora background: blobs + grid + contour lines */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[120px] -left-[120px] aurora-blob-light-1 rounded-full" />
@@ -170,6 +180,7 @@ export const Login: React.FC = () => {
                     setRememberMe={setRememberMe}
                     loginError={loginError}
                     setLoginError={setLoginError}
+                    errorMessage={loginErrorMessage}
                     isLoading={isLoading}
                     onSubmit={handleLoginSubmit}
                     onSwitchToForce={() => setViewMode('force')}

@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import { useAuthStore } from '../../../store/authStore'
+import { apiClient } from '../../../api/client'
+import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { AIDetectionItem } from './types'
 
@@ -10,18 +12,6 @@ export interface MissionViewportProps {
   selectedDetectionId: string | null
   onSelectDetection: (item: AIDetectionItem) => void
   selectedItem?: AIDetectionItem | null
-}
-
-// Map hình ảnh trích xuất mặt đường phân giải cao (sử dụng các URL ổn định 100%)
-const DEFECT_IMAGE_MAP: Record<string, string> = {
-  'DET-01': 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80', // Ổ gà sâu
-  'DET-02': 'https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=1200&auto=format&fit=crop&q=80', // Vết nứt dọc
-  'DET-03': 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80', // Vỡ mép thảm
-  'DET-04': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80', // Nước phản xạ
-  'DET-05': 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=1200&auto=format&fit=crop&q=80', // Nứt chéo khe co giãn
-  'DET-06': 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80', // Bong tróc vi mô
-  'DET-07': 'https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=1200&auto=format&fit=crop&q=80', // Hằn lún sống trâu
-  'DET-08': 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80', // Nứt ngang
 }
 
 export const MissionViewport: React.FC<MissionViewportProps> = ({
@@ -40,6 +30,24 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
     setImageErrorMap((prev) => ({ ...prev, [id]: true }))
   }
 
+  const epoch = useAuthStore(state => state.authEpoch)
+  const fileId = activeItem?.frameFileId
+  const fileVersion = activeItem?.frameFileVersion
+  const imageKey = `${epoch}:${fileId}:${fileVersion}`
+  const [frame, setFrame] = useState<{ key: string; url: string } | null>(null)
+  const [frameError, setFrameError] = useState('')
+  useEffect(() => {
+    const controller = new AbortController(); let objectUrl = ''
+    setFrame(null); setFrameError('')
+    if (!fileId || !fileVersion) return () => controller.abort()
+    apiClient.get<Blob>(`/files/${encodeURIComponent(fileId)}/content`, {responseType:'blob',signal:controller.signal}).then(response => {
+      if (controller.signal.aborted) return
+      if (!['image/jpeg','image/png'].includes(response.data.type.split(';')[0])) throw new Error('Không phải ảnh')
+      objectUrl = URL.createObjectURL(response.data); setFrame({key:imageKey,url:objectUrl})
+    }).catch(() => { if (!controller.signal.aborted) setFrameError('Không thể tải ảnh nguồn trong phiên và quyền hiện tại.') })
+    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [epoch, fileId, fileVersion])
+  const frameUrl = frame?.key === imageKey ? frame.url : ''
   const isCurrentImgError = activeItem ? imageErrorMap[activeItem.id] : false
 
   return (
@@ -50,67 +58,23 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
           <div className="absolute top-3 left-3 bg-black/85 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-mono text-[11px] border border-white/10 z-10 pointer-events-none shadow-lg">
             <div className="flex items-center gap-1.5 font-bold text-[#C9A227]">
               <Icon name="flight_takeoff" size={14} />
-              <span>Hành lang bay Drone 6.0 km (Km 1024+000 → Km 1030+000)</span>
+              <span>Hành lang bay Drone ({activeItem?.stationing ? `Lý trình ${activeItem.stationing}` : "Toàn tuyến"})</span>
             </div>
             <div className="text-slate-300 text-[10px] mt-0.5">
-              8 điểm phát hiện AI được ghim trực tiếp theo tọa độ WGS84 • Bấm marker để xem chi tiết
+              {detections.length} điểm phát hiện AI được ghim trực tiếp theo tọa độ WGS84 • Bấm marker để xem chi tiết
             </div>
           </div>
         </div>
       ) : activeItem ? (
         <>
-          {/* Lớp nền bề mặt thảm bê tông nhựa (Asphalt Road Surface Fallback) - Không bao giờ bị đen kịt */}
-          <div className="absolute inset-0 bg-[#2b2e35] overflow-hidden pointer-events-none">
-            {/* Vân hạt cốt liệu đá bê tông nhựa C19 */}
-            <div
-              className="absolute inset-0 opacity-40"
-              style={{
-                backgroundImage:
-                  'radial-gradient(#475569 1px, transparent 1px), radial-gradient(#1e293b 1px, transparent 1px)',
-                backgroundSize: '16px 16px',
-                backgroundPosition: '0 0, 8px 8px'
-              }}
-            ></div>
-
-            {/* Vạch sơn tim đường phản quang trắc địa màu vàng */}
-            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-3 border-r-4 border-dashed border-amber-400/50"></div>
-
-            {/* Vạch sơn mép lề đường màu trắng */}
-            <div className="absolute top-0 bottom-0 left-12 w-1.5 bg-white/40"></div>
-            <div className="absolute top-0 bottom-0 right-12 w-1.5 bg-white/40"></div>
-
-            {/* Mô phỏng hình học khiếm khuyết bên trong Bounding Box khi ảnh chưa tải */}
-            {isCurrentImgError && activeItem.bbox && (
-              <div
-                style={{
-                  top: activeItem.bbox?.top || '30%',
-                  left: activeItem.bbox?.left || '30%',
-                  width: activeItem.bbox?.width || '30%',
-                  height: activeItem.bbox?.height || '30%'
-                }}
-                className="absolute bg-slate-950/60 rounded flex items-center justify-center border border-white/15"
-              >
-                <div className="text-center p-2">
-                  <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-slate-800/80 border border-slate-600 flex items-center justify-center text-amber-400">
-                    <Icon name="road" size={18} />
-                  </div>
-                  <span className="text-[10px] text-slate-300 block font-mono">Bề mặt hư hỏng {activeItem.type}</span>
-                  <span className="text-[9px] text-slate-400">{activeItem.metrics?.area || activeItem.metrics?.length || ''}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
+          {(!frameUrl || isCurrentImgError) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 text-slate-400 gap-2"><Icon name="image_not_supported" size={32} /><p className="text-xs">{frameError || 'Chưa có bằng chứng hình ảnh được phép đọc.'}</p></div>}
           {/* Ảnh trích xuất không ảnh Drone thực tế (Nếu load thành công sẽ phủ lên nền) */}
-          {!isCurrentImgError && (
+          {!isCurrentImgError && frameUrl && (
             <img
               key={activeItem.id}
               alt={`Khung hình trích xuất mặt đường ${activeItem.code}`}
               className="w-full h-full object-cover transition-opacity duration-300 animate-in fade-in"
-              src={
-                DEFECT_IMAGE_MAP[activeItem.id] ||
-                'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80'
-              }
+              src={frameUrl}
               onError={() => handleImageError(activeItem.id)}
             />
           )}
@@ -166,8 +130,19 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
               </div>
 
               {/* Kích thước hình học đo đạc phía dưới */}
-              <div className="absolute -bottom-6 right-0 bg-slate-900/95 backdrop-blur-md text-white px-2 py-0.5 rounded font-mono text-[10px] shadow border border-slate-700/60 whitespace-nowrap">
-                {activeItem.bbox?.dims || ''}
+              <div
+                className={`absolute -bottom-6 right-0 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-medium shadow border whitespace-nowrap flex items-center gap-1 ${
+                  activeItem.status === 'APPROVED'
+                    ? 'bg-slate-900/95 text-emerald-300 border-emerald-600/70'
+                    : 'bg-slate-900/95 text-amber-300 border-slate-700/60'
+                }`}
+              >
+                <Icon
+                  name={activeItem.status === 'APPROVED' ? 'check_circle' : 'straighten'}
+                  size={12}
+                  className={activeItem.status === 'APPROVED' ? 'text-emerald-400' : 'text-amber-400'}
+                />
+                <span>{activeItem.bbox?.dims || 'Chờ đo thực tế'}</span>
               </div>
             </div>
           )}
@@ -179,18 +154,12 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
             </div>
           </div>
 
-          {/* Telemetry HUD Overlay góc dưới bên trái */}
-          <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2.5 text-[11px] font-mono pointer-events-none shadow-md border border-slate-700/60">
-            <span className="flex items-center gap-1 text-sky-300">
-              <Icon name="place" size={13} />
-              16.0544° N, 108.2022° E
-            </span>
-            <span className="text-slate-500">|</span>
+          {/* Thông tin trích xuất trắc địa góc dưới bên trái */}
+          <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2 text-[11px] font-mono pointer-events-none shadow-md border border-slate-700/60">
+            <Icon name="place" size={13} className="text-[#C9A227]" />
             <span className="text-slate-200">{activeItem.stationing}</span>
-            <span className="text-slate-500">|</span>
-            <span>AGL: 45.0m</span>
-            <span className="text-slate-500">|</span>
-            <span className="text-[#FEF08A] font-bold">GSD: 0.35 cm/px</span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-300">{activeItem.lane}</span>
           </div>
         </>
       ) : (

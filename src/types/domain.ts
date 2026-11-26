@@ -60,10 +60,31 @@ export interface Defect {
   status: DefectStatus
   image_url: string
   previous_epoch_image_url?: string // Ảnh kỳ trước để so sánh đa kỳ (Verify B)
+  previous_epoch_frame_id?: string | null
+  previous_epoch_bbox?: BoundingBox
+  previous_epoch_label?: string
+  current_epoch_label?: string
+  source_kind?: 'AI_DETECTION' | 'DEFECT'
+  run_id?: string | null
+  fixture_version?: string | null
+  frame_file_id?: string | null
+  timestamp_ms?: number | null
+  source_version?: string | null
+  geometry_version?: string | null
+  route_version_id?: string | null
+  disposition_id?: string | null
+  disposition_version?: string | null
+  decision_kind?: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null
+  linked_defect_id?: string | null
+  version?: string | null
+  etag?: string | null
+  verification_status?: string | null
+  lifecycle_status?: string | null
   bounding_box: BoundingBox
   length_m?: number
   width_m?: number
   depth_mm?: number
+  area_m2?: number
   batch_id?: string
   created_at: string
 }
@@ -96,13 +117,16 @@ export interface RepairBatch {
 export interface FieldTask {
   id: string
   code: string
+  version?: string | null
+  project_id?: string
+  project_name?: string
   defect_id: string
   defect_code: string
   defect_name?: string
   defect_photo_url?: string // Ảnh chụp khiếm khuyết từ Drone (Triage)
   measurement_type: string
-  chainage_km: number
-  status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED'
+  chainage_km: number | null
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED' | 'SUPPLEMENT_REQUIRED' | 'CANCELLED' | 'REJECTED' | 'UNKNOWN'
   measured_value?: number
   evidence_photo_url?: string // Ảnh chụp thước đo đối chứng từ hiện trường (Mobile)
   technician_name: string
@@ -113,6 +137,20 @@ export interface FieldTask {
   gps_lng?: number
   exif_device?: string
   exif_captured_at?: string
+  source_origin?: 'DRONE' | 'CITIZEN_REPORT'
+  linked_case_code?: string
+  reporter_name?: string
+  reporter_phone?: string
+  report_description?: string
+  reused_evidence?: {
+    file_id: string
+    source_evidence_id: string
+    source_kind: string
+    checksum_sha256?: string
+    reason: string
+    reused_at?: string
+    photo_url?: string
+  }
 }
 
 export interface WorkOrder {
@@ -154,10 +192,12 @@ export type ResolutionStatus =
   | 'RESCUE_SUBMITTED'
   | 'RESCUE_AUTHORIZED'
   | 'RESCUE_REJECTED'
+  | 'EVIDENCE_REQUIRED'
 
 export interface SyncConflictItem {
   id: string
   conflict_code: string
+  project_id?: string
   task_code: string
   defect_code: string
   defect_type_label: string
@@ -168,26 +208,51 @@ export interface SyncConflictItem {
   severity: 'HIGH' | 'MEDIUM' | 'CRITICAL'
   status: ResolutionStatus
   status_label: string
+  created_at?: string
   offline_actor: {
     name: string
     role: string
     team: string
     device_id: string
     device_model: string
-    offline_duration: string
+    offline_duration?: string
     captured_at: string
   }
   incoming_data: {
     measurement_type: string
     measured_value: string
-    depth_mm: number
-    area_m2: number
+    applied_policy_version?: string
+    applied_policy_name?: string
+    applied_policy_approved_by?: string
+    applied_policy_effective_at?: string
+    depth_mm?: number
+    area_m2?: number
     photo_evidence_url: string
     photo_after_url?: string
     sha256_hash: string
-    gps_coords: string
-    accuracy_m: number
+    gps_coords?: string
+    accuracy_m?: number
     notes: string
+    rescue_device_serial?: string
+    handover_timestamp?: string
+    extracted_measurements?: {
+      crack_length_m?: number
+      width_mm?: number
+    }
+    policy_measurements?: {
+      code: string
+      name?: string
+      unit: string
+      measured_value: number
+      policy_minimum?: number
+      policy_maximum?: number
+      method?: string
+    }[]
+    policy_stop_conditions?: string[]
+    registered_key?: string
+    security_status?: string
+    sla_deadline?: string
+    supervisor_authorization_required?: boolean
   }
   duplicate_device_a?: {
     name: string
@@ -211,6 +276,30 @@ export interface SyncConflictItem {
     last_updated: string
     server_photo_url: string
     server_notes: string
+    device_id?: string
+    device_model?: string
+    measured_at?: string
+    depth_cm?: number
+    area_sqm?: number
+    reassigned_measurements?: {
+      code: string
+      name: string
+      unit: string
+      measured_value: number
+      dimension?: string
+    }[]
+    policy_measurements?: {
+      code: string
+      name?: string
+      unit: string
+      minimum: number
+      maximum: number
+    }[]
+    policy_stop_conditions?: string[]
+    registered_key?: string
+    security_status?: string
+    sla_deadline?: string
+    supervisor_authorization_required?: boolean
   }
   timeline?: {
     time: string
@@ -417,16 +506,16 @@ export interface AuditEvent {
   actor_role: RoleCode | 'SYSTEM'
   actor_role_label: string
   actor_avatar?: string
-  action_type: 
-    | 'SUBMIT_BATCH'
-    | 'APPROVE_BATCH'
-    | 'REJECT_BATCH'
-    | 'ASSIGN_CREW'
-    | 'CLOSE_FAST_TRACK'
-    | 'SUBMIT_WORK_ORDER'
-    | 'ACCEPT_WORK_ORDER'
-    | 'PUBLISH_SEGMENTS'
-    | 'LOCK_LEGAL_HOLD'
+  action_type:
+  | 'SUBMIT_BATCH'
+  | 'APPROVE_BATCH'
+  | 'REJECT_BATCH'
+  | 'ASSIGN_CREW'
+  | 'CLOSE_FAST_TRACK'
+  | 'SUBMIT_WORK_ORDER'
+  | 'ACCEPT_WORK_ORDER'
+  | 'PUBLISH_SEGMENTS'
+  | 'LOCK_LEGAL_HOLD'
   action_label_vi: string
   action_badge_style: string
   target_entity_type: 'REPAIR_BATCH' | 'DEFECT' | 'ROAD_SEGMENT' | 'WORK_ORDER' | 'LEGAL_HOLD'
@@ -469,13 +558,15 @@ export interface SystemUserAccount {
   role_label: string
   project_scope: string
   project_id?: string
+  assigned_project_ids?: string[]
   device_info: string
   ip_address: string
-  status: 'ACTIVE' | 'SUSPENDED' | 'INVITED'
+  status: 'ACTIVE' | 'SUSPENDED' | 'INVITED' | 'UNKNOWN'
   last_active: string
   is_current_user?: boolean
   certificate?: string
   joined_date?: string
+  project_memberships?: Array<{ projectId: string; projectName: string; membershipId: string; role?: string | null; status?: string | null; isPrimary?: boolean; validFrom?: string | null; validTo?: string | null }>
 }
 
 export interface AIModelVersion {
@@ -546,26 +637,37 @@ export interface PasswordRules {
 }
 
 export interface HubProject {
+  /** CRS kỹ thuật của dự án (GET /projects/overviews → engineeringUtmSrid). */
+  engineering_utm_srid?: number | null
+  server_data_loaded?: boolean
+  server_facts?: import('../api/services/projectServerFacts').ProjectServerFacts
+  geometry_read_error?: string
+  warranty_read_error?: string
+  warranty_message?: string
+  warranty_start_date?: string
   id: string
   code: string
   name: string
   region: string
   location_detail: string
-  start_km: number
-  end_km: number
+  start_km?: number
+  end_km?: number
   stationing_text: string
-  status: 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT' | 'RESTRICTED' | 'CLOSED'
+  status: 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT' | 'RESTRICTED' | 'CLOSED' | 'UNKNOWN'
   status_label: string
   status_color: string
   pm_name: string
   pm_email: string
   pm_role_badge: string
+  pm_user_id?: string
   pm_avatar?: string
+  warranty_data_missing?: boolean
   warranty_passed_percent: number
   days_remaining: number
-  length_km: number
+  length_km?: number
   open_defects: number
   repair_packages: number
+  stats_error?: string
   image_url: string
   is_assigned: boolean
   is_restricted_for_pm?: boolean
@@ -587,6 +689,8 @@ export interface PolicyThresholdConfig {
   maxAreaM2: number
   maxDepthCm: number
   maxPerimeterM: number
+  crackWidthMm?: number
+  crackLengthM?: number
   allowedSeverities: ('LOW' | 'MEDIUM' | 'HIGH' | string)[]
   slaHours: number
   activatedBy: string
@@ -598,25 +702,29 @@ export interface PolicyThresholdConfig {
 export interface TriageCase {
   id: string
   code: string
-  source: 'DRONE_AI' | 'CITIZEN' | 'PATROL'
+  source: 'DRONE_AI' | 'CITIZEN' | 'PATROL' | 'UNKNOWN'
+  case_status?: string
+  verification_method?: string
   source_label: string
   source_detail: string
   project_id: string
+  project_code?: string
+  report_details_state?: 'UNSUPPORTED' | 'READY' | 'LOADING' | 'ERROR'
   project_name: string
   stationing: string
   lane: string
   defect_title: string
   defect_type: string
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  urgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'UNKNOWN'
+  urgency: 'NORMAL' | 'URGENT' | 'EMERGENCY' | 'UNKNOWN'
   time_ago: string
   created_at: string
-  status: 'PENDING' | 'MERGED' | 'NEED_SURVEY' | 'VERIFIED' | 'REJECTED'
+  status: 'PENDING' | 'MERGED' | 'NEED_SURVEY' | 'VERIFIED' | 'REJECTED' | 'AWAITING_EVIDENCE'
   status_label: string
   image_url: string
   gps: {
-    lat: number
-    lng: number
+    lat: number | null
+    lng: number | null
     altitude_m: number
     resolution_cm_px: number
   }
@@ -630,14 +738,38 @@ export interface TriageCase {
   reporter_phone?: string
   reporter_channel?: string
   description?: string
-  conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | 'NEED_SURVEY' | null
+  conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | 'NEED_SURVEY' | 'NEEDS_EVIDENCE' | null
   conclusion_reason?: string
+  report_ids?: string[]
+  /** Defect do BE gắn vào Case (InternalCaseDto.defectIds); nguồn cho form công bố. */
+  defect_ids?: string[]
   linked_report_ids?: string[]
   master_case_id?: string
   is_assigned?: boolean
+  version?: string
+  etag?: string
   is_published?: boolean
   published_at?: string
   public_notice?: string
+  run_id?: string | null
+  fixture_version?: string | null
+  frame_file_id?: string | null
+  timestamp_ms?: number | null
+  source_version?: string | null
+  geometry_version?: string | null
+  route_version_id?: string | null
+  disposition_id?: string | null
+  disposition_version?: string | null
+  decision_kind?: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null
+  linked_defect_id?: string | null
+  /** Quyết định Report→Defect (KEEP_NEW) đã đọc lại từ BE. Tách khỏi trạng thái Case và trạng thái xác minh Defect. */
+  decision_recorded?: boolean
+  decision_read_error?: string
+  /** Trạng thái Defect do BE trả (GET /defects/{id}); không suy ra từ Case. */
+  defect_status?: string | null
+  /** Case đã OPEN lại sau khi có bổ sung; kết luận trước đó chuyển vào lịch sử. */
+  reopened_after_conclusion?: boolean
+  previous_conclusion?: { outcome: string; reason?: string; concluded_at?: string } | null
   survey_assignment?: {
     mode: 'MEASURE_ONLY' | 'DRONE_RESURVEY'
     reason: string
@@ -678,7 +810,8 @@ export interface ProposalWorkPackage {
   created_by_initials: string
   created_by_role: string
   created_at: string
-  status: 'DRAFT' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED'
+  status: 'DRAFT' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED' | 'READY_TO_ASSIGN' | 'UNPROPOSED'
+  defect_id?:string
   status_label: string
   approved_items: number
   total_items: number

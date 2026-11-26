@@ -1,4 +1,9 @@
 export interface ProjectRouteConfig {
+  serverGeometry?: import('../../../api/services/alignmentService').RoadGeometryVersionView
+  engineeringSrid?: number
+  roadSectionId?: string
+  routeVersionId?: string
+  serverSet?: import('../../../api/services/segmentSetService').ServerSegmentSet
   id: string
   code: string
   name: string
@@ -14,6 +19,8 @@ export interface ProjectRouteConfig {
   endKm: number
   defaultCoords: [number, number][]
   defaultKmPoints: number[]
+  hasAlignment?: boolean
+  alignmentStatusText?: string
 }
 
 export interface AvailablePilot {

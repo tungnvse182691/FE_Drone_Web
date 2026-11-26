@@ -13,12 +13,12 @@ import {
   BarChart3,
   ShieldCheck,
   Zap,
-  Route,
   Sparkles,
   History,
   Sliders,
   ChevronDown,
-  Users
+  Users,
+  GitCompare
 } from 'lucide-react'
 
 interface NavNestedChild {
@@ -57,12 +57,9 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'projects',
-      title: 'Dự án & Tuyến',
+      title: 'Dự án bảo hành',
       icon: FolderKanban,
-      items: [
-        { label: 'Dự án bảo hành', path: '/pm/projects', icon: FolderKanban },
-        { label: 'Tuyến & Phân đoạn', path: '/pm/alignment', icon: Route }
-      ]
+      directPath: '/pm/projects'
     },
     {
       id: 'surveys',
@@ -70,16 +67,7 @@ export const Sidebar: React.FC = () => {
       icon: PlaneTakeoff,
       items: [
         {
-          label: 'Đợt bay Drone',
-          path: '/pm/surveys',
-          icon: PlaneTakeoff,
-          children: [
-            { label: 'Danh sách đợt bay', path: '/pm/surveys' },
-            { label: 'Tạo yêu cầu bay', path: '/pm/surveys/create' },
-            { label: 'Khung hình thẩm định AI', path: '/pm/surveys/srv-01/review' },
-            { label: 'Thẩm định khung nhận diện', path: '/pm/defects/det-03/verify-a' }
-          ]
-        },
+          label: 'Đợt bay Drone', path: '/pm/surveys', icon: PlaneTakeoff },
         { label: 'Hộp thư tiếp nhận lỗi', path: '/pm/ai-inbox', icon: Inbox },
         { label: 'Điều phối nhanh', path: '/pm/fast-track', icon: Zap }
       ]
@@ -91,7 +79,8 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Gói sửa chữa', path: '/pm/proposals', icon: Boxes },
         { label: 'Nghiệm thu', path: '/pm/acceptance', icon: ShieldCheck },
-        { label: 'Nhiệm vụ & Đo đạc hiện trường', path: '/pm/field-tasks', icon: ClipboardList }
+        { label: 'Nhiệm vụ & Đo đạc hiện trường', path: '/pm/field-tasks', icon: ClipboardList },
+        { label: 'Điều phối ngoại tuyến', path: '/pm/offline', icon: GitCompare }
       ]
     },
     {
@@ -118,18 +107,16 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'projects',
-      title: 'Dự án & Tuyến',
+      title: 'Dự án bảo hành',
       icon: FolderKanban,
-      items: [
-        { label: 'Dự án bảo hành', path: '/sup/projects', icon: FolderKanban },
-        { label: 'Phê duyệt tuyến', path: '/sup/alignment', icon: Route }
-      ]
+      directPath: '/sup/projects'
     },
     {
       id: 'surveys',
       title: 'Khảo sát & Tiếp nhận',
       icon: PlaneTakeoff,
       items: [
+        { label: 'Tiếp nhận phản ánh', path: '/sup/cases', icon: Inbox },
         { label: 'Giám sát Drone', path: '/sup/surveys', icon: PlaneTakeoff },
         { label: 'Xử lý cấp bách', path: '/sup/fast-track', icon: Zap }
       ]
@@ -141,7 +128,8 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Phê duyệt gói', path: '/sup/proposals', icon: Boxes },
         { label: 'Nghiệm thu đóng đợt', path: '/sup/acceptance', icon: ShieldCheck },
-        { label: 'Nghiệm thu hiện trường', path: '/sup/field-tasks', icon: ClipboardList }
+        { label: 'Nghiệm thu hiện trường', path: '/sup/field-tasks', icon: ClipboardList },
+        { label: 'Điều phối ngoại tuyến', path: '/sup/offline', icon: GitCompare }
       ]
     },
     {
@@ -242,15 +230,16 @@ export const Sidebar: React.FC = () => {
               <NavLink
                 key={group.id}
                 to={group.directPath}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                    isActive
+                className={({ isActive }) => {
+                  const isMatch = isActive || (group.directPath ? location.pathname.startsWith(group.directPath) : false)
+                  return `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isMatch
                       ? isPM
                         ? 'bg-amber-50 text-[#8C6D1F] border-l-4 border-[#C9A227] shadow-2xs'
                         : 'bg-slate-100 text-slate-900 border-l-4 border-[#2D3748] shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`
-                }
+                }}
               >
                 <GroupIcon className="w-4 h-4 shrink-0 text-slate-500" />
                 <span className="truncate">{group.title}</span>
@@ -410,7 +399,7 @@ export const Sidebar: React.FC = () => {
       {/* Footer bản quyền & phiên bản */}
       <div className="p-3.5 border-t border-[#E2E5E9] bg-slate-50/60 text-[11px] text-slate-500">
         <div className="font-bold text-slate-700">Dự án Nhà thầu Hoàng Hải</div>
-        <div className="text-[10px] text-slate-400 font-mono">Hạ tầng đường bộ v2.2</div>
+        <div className="text-[10px] text-slate-400 font-mono">Hạ tầng đường bộ</div>
       </div>
     </aside>
   )

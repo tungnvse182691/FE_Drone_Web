@@ -9,11 +9,25 @@ export const Header: React.FC = () => {
   const { user, logout, updateUser } = useAuthStore()
   const navigate = useNavigate()
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
+  const [avatarError, setAvatarError] = useState<boolean>(false)
 
   const roleTitle =
     user?.role === RoleCode.PROJECT_MANAGER
       ? 'Chỉ huy trưởng dự án (PM)'
       : 'Kỹ sư Giám sát / Chủ đầu tư (SUP)'
+
+  const displayName =
+    user?.full_name ||
+    (user as any)?.displayName ||
+    (user?.email ? user.email.split('@')[0] : 'Kỹ sư Hoàng Hải')
+
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .slice(-2)
+      .map((w: string) => w[0]?.toUpperCase())
+      .join('') || 'HH'
 
   return (
     <>
@@ -62,16 +76,23 @@ export const Header: React.FC = () => {
                 className="flex items-center gap-3 text-left p-1 -m-1 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group"
               >
                 <div className="relative">
-                  <img
-                    src={user?.avatar_url}
-                    alt={user?.full_name}
-                    className="w-9 h-9 rounded-full object-cover ring-2 ring-brand-gold/30 group-hover:ring-brand-gold transition-all"
-                  />
+                  {!avatarError && user?.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt={displayName}
+                      onError={() => setAvatarError(true)}
+                      className="w-9 h-9 rounded-full object-cover ring-2 ring-brand-gold/30 group-hover:ring-brand-gold transition-all"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-[#C9A227]/20 border border-[#C9A227] text-[#8C6D15] font-bold text-xs flex items-center justify-center ring-2 ring-brand-gold/30 group-hover:ring-brand-gold transition-all font-mono">
+                      {initials}
+                    </div>
+                  )}
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
                 </div>
                 <div className="hidden lg:block">
                   <div className="text-sm font-semibold text-slate-900 leading-tight group-hover:text-brand-goldDark transition-colors">
-                    {user?.full_name}
+                    {displayName}
                   </div>
                   <div className="text-xs text-slate-500 font-medium">{roleTitle}</div>
                 </div>

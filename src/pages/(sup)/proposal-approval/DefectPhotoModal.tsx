@@ -37,11 +37,15 @@ export const DefectPhotoModal: React.FC<DefectPhotoModalProps> = ({
         </div>
 
         <div className="relative bg-black flex items-center justify-center overflow-hidden flex-1 min-h-[360px] max-h-[520px]">
-          <img
-            src={viewingPhotoItem.image_url}
-            alt={viewingPhotoItem.defect_title}
-            className="max-h-full max-w-full object-contain"
-          />
+          {viewingPhotoItem.image_url ? (
+            <img
+              src={viewingPhotoItem.image_url}
+              alt={viewingPhotoItem.defect_title}
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : (
+            <span className="text-xs text-slate-400">Chưa có ảnh từ máy chủ cho hạng mục này</span>
+          )}
 
           <div className="absolute top-1/4 left-1/3 w-36 h-24 border border-brand-gold bg-brand-gold/15 rounded pointer-events-none">
             <span className="absolute -top-5 left-0 bg-brand-gold text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shadow">

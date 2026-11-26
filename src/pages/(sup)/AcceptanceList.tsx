@@ -4,9 +4,9 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import {
   acceptanceService,
-  AcceptancePackage,
-  INITIAL_ACCEPTANCE_RECORDS
+  AcceptancePackage
 } from '../../api/services/acceptanceService'
+import { PackageThumbs } from './evidence-closeout/PackageThumbs'
 import { Icon } from '../../components/ui/Icon'
 
 export const AcceptanceList: React.FC = () => {
@@ -20,6 +20,7 @@ export const AcceptanceList: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
   const [selectedProject, setSelectedProject] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Tải danh sách gói thầu từ Mock API bất đồng bộ
   useEffect(() => {
@@ -27,12 +28,15 @@ export const AcceptanceList: React.FC = () => {
     const fetchPackages = async () => {
       try {
         setIsLoading(true)
+        setLoadError(null)
         const data = await acceptanceService.getAcceptancePackages()
         if (isMounted) {
           setPackages(data)
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách nghiệm thu:', err)
+        const r = err as { response?: { status?: number; data?: { detail?: string; title?: string } }; message?: string }
+        if (isMounted) setLoadError((r.response?.status ? `HTTP ${r.response.status}: ` : '') + (r.response?.data?.detail || r.response?.data?.title || r.message || 'Lỗi không xác định'))
       } finally {
         if (isMounted) setIsLoading(false)
       }
@@ -105,7 +109,7 @@ export const AcceptanceList: React.FC = () => {
               Danh sách hồ sơ &amp; Gói thầu chờ nghiệm thu
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Kiểm tra hồ sơ Trước/Sau, đối chứng độ chặt K98 và tiến hành nghiệm thu hoặc yêu cầu sửa lại theo TCVN 8819:2011.
+              Đối chiếu ảnh Trước/Sau của bản nộp hiện hành: PM đánh giá hồ sơ, sau đó Giám sát xác nhận nghiệm thu.
             </p>
           </div>
 
@@ -269,6 +273,12 @@ export const AcceptanceList: React.FC = () => {
         </div>
       </section>
 
+      {loadError && (
+        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
+          Không tải được danh sách nghiệm thu: {loadError}
+        </div>
+      )}
+
       {/* LƯỚI THẺ NGHIỆM THU (GRID 3 CỘT THAY CHO BẢNG) */}
       {isLoading ? (
         <div className="flex items-center justify-center p-16 bg-white rounded-[20px] border border-[#E2E5E9] text-slate-500 shadow-2xs">
@@ -319,10 +329,8 @@ export const AcceptanceList: React.FC = () => {
               }
             })()
 
-            // Lấy ảnh mẫu Trước / Sau từ records
-            const matchedRecord = INITIAL_ACCEPTANCE_RECORDS.find((r) => r.package_id === pkg.id) || INITIAL_ACCEPTANCE_RECORDS[0]
-            const beforePhoto = matchedRecord?.before_photo
-            const afterPhoto = matchedRecord?.after_photo
+            // Hạng mục đại diện cho thẻ: hạng mục đang chờ bước tiếp theo (nếu có), ngược lại hạng mục đầu
+            const repItem = (pkg.items || []).find((it) => it.step !== 'ACCEPTED' && it.step !== 'CANCELLED') || (pkg.items || [])[0]
             const progressRatio = pkg.total_items > 0 ? Math.round((pkg.accepted_items / pkg.total_items) * 100) : 0
 
             return (
@@ -342,8 +350,8 @@ export const AcceptanceList: React.FC = () => {
                 <div className="p-5 flex flex-col justify-between flex-1 gap-4">
                   {/* Hàng 1: Mã gói & Badges */}
                   <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
                         {/* Dot 10px + Halo 4px */}
                         <div className="relative flex items-center justify-center w-4 h-4 shrink-0 mt-0.5">
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cfg.dot }} />
@@ -356,24 +364,24 @@ export const AcceptanceList: React.FC = () => {
                       </div>
 
                       {/* Badge trạng thái */}
-                      <div className="shrink-0">
+                      <div className="max-w-full min-w-0">
                         {isClosed ? (
-                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#1A1D20] text-white border border-[#2D3748]">
+                          <span className="inline-flex max-w-full items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#1A1D20] text-white border border-[#2D3748]">
                             <Icon name="lock" size={13} className="text-[#C9A227]" />
                             <span>ĐÃ ĐÓNG GÓI</span>
                           </span>
                         ) : isPassed ? (
-                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
+                          <span className="inline-flex max-w-full items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
                             <Icon name="check_circle" size={13} />
                             <span>{pkg.status_label}</span>
                           </span>
                         ) : isRework ? (
-                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#B91C1C] border border-[#E6A8A8]">
+                          <span className="inline-flex max-w-full items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#B91C1C] border border-[#E6A8A8]">
                             <Icon name="replay" size={13} />
                             <span>{pkg.status_label}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
+                          <span className="inline-flex max-w-full items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
                             <Icon name="schedule" size={13} />
                             <span>{pkg.status_label}</span>
                           </span>
@@ -388,30 +396,7 @@ export const AcceptanceList: React.FC = () => {
 
                   {/* Ảnh Đối Chứng Trước / Sau */}
                   <div className="grid grid-cols-2 gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
-                    <div className="space-y-1">
-                      <div className="w-full h-24 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 relative group/img">
-                        <img
-                          src={beforePhoto}
-                          alt="Trước thi công"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
-                        />
-                        <span className="absolute top-1.5 left-1.5 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                          Trước
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="w-full h-24 rounded-xl overflow-hidden bg-slate-100 border border-emerald-300 relative group/img">
-                        <img
-                          src={afterPhoto}
-                          alt="Sau thi công"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
-                        />
-                        <span className="absolute top-1.5 left-1.5 bg-emerald-900/80 text-emerald-200 text-[9px] font-bold px-1.5 py-0.5 rounded">
-                          Sau
-                        </span>
-                      </div>
-                    </div>
+                    <PackageThumbs projectId={pkg.project_id} packageId={pkg.id} itemId={repItem?.id} />
                   </div>
 
                   {/* Thông tin metadata */}
@@ -420,6 +405,17 @@ export const AcceptanceList: React.FC = () => {
                       <Icon name="near_me" size={14} className="text-slate-400 shrink-0" />
                       <span className="font-medium text-slate-800 truncate">{pkg.project_name}</span>
                     </div>
+                    {(pkg.items || []).length > 0 && (
+                      <div className="space-y-1" data-testid="card-items">
+                        {(pkg.items || []).map((it) => (
+                          <div key={it.id} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span className="font-mono font-semibold text-slate-800">{it.code}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600">{it.mode}</span>
+                            <span className="font-medium text-slate-700 break-words min-w-0">{it.step_label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center gap-1.5 font-mono text-[11px]">
                       <Icon name="location_on" size={14} className="text-[#C9A227] shrink-0" />
                       <span className="text-slate-700">{pkg.chainage_display}</span>
@@ -433,7 +429,7 @@ export const AcceptanceList: React.FC = () => {
                   {/* Thanh tiến độ */}
                   <div className="space-y-1 pt-1">
                     <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
-                      <span>Tiến độ: {pkg.accepted_items}/{pkg.total_items} hạng mục</span>
+                      <span>Đã nghiệm thu: {pkg.accepted_items}/{pkg.total_items} hạng mục</span>
                       <span className="font-mono font-bold text-slate-700">{progressRatio}%</span>
                     </div>
                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/80">

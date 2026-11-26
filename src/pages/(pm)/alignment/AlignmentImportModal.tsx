@@ -4,6 +4,8 @@ import { AssignedProjectOption } from './types'
 import { ImportPanel } from './ImportPanel'
 
 export interface AlignmentImportModalProps {
+  importDisabled?: boolean
+  importStatus?: string
   isOpen: boolean
   onClose: () => void
   importTab: 'FILE' | 'MANUAL'
@@ -18,6 +20,8 @@ export interface AlignmentImportModalProps {
 
 export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
   isOpen,
+  importStatus = '',
+  importDisabled = false,
   onClose,
   importTab,
   onSetImportTab,
@@ -36,7 +40,7 @@ export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <FileUp className="w-5 h-5 text-brand-gold" />
-            <h3 className="font-bold text-slate-900 text-base">Thiết Lập Tim Tuyến (WF-02 • Spec v2.2)</h3>
+            <h3 className="font-bold text-slate-900 text-base">Thiết Lập Tim Tuyến</h3>
           </div>
           <button
             onClick={onClose}
@@ -46,6 +50,7 @@ export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
           </button>
         </div>
 
+        <fieldset disabled={importDisabled} className="border-0 p-0 m-0 min-w-0">
         <ImportPanel
           importTab={importTab}
           onSetImportTab={onSetImportTab}
@@ -56,6 +61,8 @@ export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
           onProcessManualCoordinates={onProcessManualCoordinates}
           activeProject={activeProject}
         />
+        </fieldset>
+        {importStatus && <p role="status" className="text-xs text-slate-600">{importStatus}</p>}
       </div>
     </div>
   )

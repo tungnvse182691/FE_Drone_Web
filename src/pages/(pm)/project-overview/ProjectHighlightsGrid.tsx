@@ -1,3 +1,5 @@
+import { displayKm } from '../../../utils/projectDistanceDisplay'
+import { hasWarrantyData } from '../../../utils/projectWarranty'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from '../projects/types'
@@ -11,10 +13,13 @@ interface ProjectHighlightsGridProps {
 
 export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
   project,
-  mainlineLengthKm = 0,
-  branchesLengthKm = 0,
-  branchesCount = 0
+  mainlineLengthKm,
+  branchesLengthKm,
+  branchesCount
 }) => {
+  const warrantyReady = hasWarrantyData(project)
+  const defectsReady = Number.isFinite(project.open_defects)
+  const packagesReady = Number.isFinite(project.repair_packages)
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 font-body">
       {/* Card 1: Thời hạn bảo hành (#C9A227 Gold) */}
@@ -30,7 +35,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-slate-900 font-mono">
-                Còn {project.days_remaining} ngày
+                {warrantyReady ? `Còn ${project.days_remaining} ngày` : project.warranty_read_error ? 'Không tải được bảo hành' : project.warranty_message || 'Chưa có dữ liệu'}
               </span>
             </div>
           </div>
@@ -40,14 +45,14 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
         </div>
         <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
           <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
-            <span>Hết hạn: <strong className="text-slate-900 font-mono">{project.warranty_end_date || '3 năm từ bàn giao'}</strong></span>
-            <span className="font-mono font-bold text-[#8C6D1F]">{project.warranty_passed_percent}% đã qua</span>
+            <span>Hết hạn: <strong className="text-slate-900 font-mono">{warrantyReady ? project.warranty_end_date : 'Chưa cập nhật'}</strong></span>
+            <span className="font-mono font-bold text-[#8C6D1F]">{warrantyReady ? `${project.warranty_passed_percent}% đã qua` : 'Chưa cập nhật'}</span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div
+            {warrantyReady && <div
               className="bg-[#C9A227] h-full rounded-full transition-all duration-500"
-              style={{ width: `${project.warranty_passed_percent}%` }}
-            />
+              style={{ width: `${Math.max(0,Math.min(100,project.warranty_passed_percent))}%` }}
+            />}
           </div>
         </div>
       </div>
@@ -65,7 +70,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-slate-900 font-mono">
-                {project.length_km > 0 ? `${project.length_km} km` : '0 km'}
+                {Number.isFinite(project.length_km) ? displayKm(project.length_km!) : project.geometry_read_error ? 'Không tải được tim tuyến' : 'Chưa có dữ liệu'}
               </span>
               <span className="text-[11px] font-bold text-[#1E40AF] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                 {project.kml_status || 'Chưa duyệt tim'}
@@ -85,7 +90,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               <span>Trục chính:</span>
             </span>
             <span className="font-mono font-bold text-slate-900">
-              {mainlineLengthKm > 0 ? `${mainlineLengthKm} km` : (project.length_km > 0 ? `${project.length_km} km` : '0 km')}
+              {typeof mainlineLengthKm === 'number' && Number.isFinite(mainlineLengthKm) ? displayKm(mainlineLengthKm!) : 'Chưa cập nhật'}
             </span>
           </div>
 
@@ -95,12 +100,12 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               <span>Tuyến phụ:</span>
             </span>
             <span className="font-mono font-bold text-slate-900">
-              {branchesCount > 0 ? (
+              {Number.isFinite(branchesCount) && Number.isFinite(branchesLengthKm) ? (
                 <span className="text-amber-800 font-bold">
-                  {branchesLengthKm} km ({branchesCount} nhánh)
+                  {displayKm(branchesLengthKm!)} ({branchesCount} nhánh)
                 </span>
               ) : (
-                <span className="text-slate-400 font-normal italic">0 km (0 nhánh)</span>
+                <span className="text-slate-400 font-normal italic">Chưa cập nhật</span>
               )}
             </span>
           </div>
@@ -127,10 +132,10 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-slate-900 font-mono">
-                {project.open_defects} điểm
+                {defectsReady ? `${project.open_defects} điểm` : 'Chưa có số liệu'}
               </span>
               <span className="text-[11px] font-bold text-[#047857] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                {project.repair_packages} gói sửa chữa
+                {packagesReady ? `${project.repair_packages} gói sửa chữa` : 'Chưa tải được'}
               </span>
             </div>
           </div>
@@ -141,22 +146,15 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
         <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
           <div className="flex justify-between items-center text-xs font-medium">
             <span className="text-slate-500">
-              {project.open_defects > 0 ? (
-                <>Đang mở: <strong className="text-rose-600 font-bold">{project.open_defects} điểm</strong></>
-              ) : (
-                'Chưa phát hiện hư hỏng mặt đường'
-              )}
+              {defectsReady ? (
+                <>Số liệu theo phạm vi dự án</>
+              ) : 'Chưa tải được thống kê khiếm khuyết'}
             </span>
             <span className="font-mono font-bold text-slate-700">
-              {project.open_defects === 0 ? 'Ổn định 100%' : 'Cần xử lý'}
+              {defectsReady ? '' : 'Chưa tải được'}
             </span>
           </div>
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
-            <div
-              className={`h-full ${project.open_defects === 0 ? 'bg-[#047857]' : 'bg-[#C9A227]'}`}
-              style={{ width: `${project.open_defects === 0 ? 100 : 70}%` }}
-            />
-          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex" />
         </div>
       </div>
     </div>

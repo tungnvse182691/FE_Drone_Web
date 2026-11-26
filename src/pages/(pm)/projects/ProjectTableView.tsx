@@ -1,3 +1,4 @@
+import { hasWarrantyData } from '../../../utils/projectWarranty'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from './types'
@@ -8,6 +9,7 @@ interface ProjectTableViewProps {
   isSupervisor?: boolean
   onNavigateDetail: (projectId: string) => void
   onOpenCloseModal?: (prj: HubProject) => void
+  onOpenEditModal?: (prj: HubProject) => void
 }
 
 export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
@@ -15,7 +17,8 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   totalProjectsCount,
   isSupervisor,
   onNavigateDetail,
-  onOpenCloseModal
+  onOpenCloseModal,
+  onOpenEditModal
 }) => {
   return (
     <>
@@ -27,7 +30,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                 <th className="py-3 px-4">Mã Dự Án</th>
                 <th className="py-3 px-4">Tên Tuyến Đường</th>
                 <th className="py-3 px-4">Khu Vực &amp; Lý Trình</th>
-                <th className="py-3 px-4">PM Phụ Trách (BR-01)</th>
+                <th className="py-3 px-4">PM Phụ Trách</th>
                 <th className="py-3 px-4 text-center">Tiến Độ Bảo Hành</th>
                 <th className="py-3 px-4 text-center">Lỗi Mở</th>
                 <th className="py-3 px-4">Trạng Thái</th>
@@ -39,9 +42,14 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                 <tr key={prj.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3 px-4 font-mono font-bold text-brand-goldMuted">{prj.code}</td>
                   <td className="py-3 px-4 font-bold text-slate-900">{prj.name}</td>
-                  <td className="py-3 px-4 text-slate-600">
-                    <div>{prj.region} ({prj.location_detail})</div>
-                    <div className="font-mono text-[11px] text-slate-400">{prj.stationing_text}</div>
+                  <td className="py-3 px-4 text-slate-700">
+                    <div className="flex items-center gap-1 font-medium">
+                      <Icon name="location_on" size={14} className="text-brand-gold shrink-0" />
+                      <span className={prj.region || prj.location_detail ? 'font-bold text-slate-900' : 'text-slate-400 italic'}>
+                        {prj.region || prj.location_detail || 'Chưa thiết lập địa bàn'}
+                      </span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-400 mt-0.5">{prj.stationing_text}</div>
                   </td>
                   <td className="py-3 px-4">
                     {prj.is_assigned ? (
@@ -56,9 +64,9 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <div className="font-mono font-semibold text-slate-800">{prj.warranty_passed_percent}%</div>
+                    <div className="font-mono font-semibold text-slate-800">{hasWarrantyData(prj) ? `${prj.warranty_passed_percent}%` : 'Chưa cập nhật'}</div>
                     <div className="text-[10px] text-slate-500 font-mono">
-                      {prj.status === 'CLOSED' ? 'Đã hoàn tất' : `Còn ${prj.days_remaining} ngày`}
+                      {hasWarrantyData(prj) ? `Còn ${prj.days_remaining} ngày` : 'Chưa cập nhật'}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center">
@@ -67,7 +75,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                         prj.open_defects > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
                       }`}
                     >
-                      {prj.open_defects}
+                      {Number.isFinite(prj.open_defects) ? prj.open_defects : 'Chưa có số liệu'}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -87,6 +95,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      {isSupervisor&&onOpenEditModal&&<button type="button" onClick={()=>onOpenEditModal(prj)} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 font-semibold transition cursor-pointer text-xs">Sửa dự án</button>}
                       {prj.status === 'CLOSED' ? (
                         <button
                           type="button"
@@ -108,7 +117,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                           {isSupervisor && onOpenCloseModal && (
                             <button
                               type="button"
-                              title="Đóng dự án khi hết hạn bảo hành (DA12)"
+                              title="Đóng dự án khi kết thúc bảo hành"
                               onClick={() => onOpenCloseModal(prj)}
                               className="p-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 rounded-lg text-xs font-semibold transition border border-slate-200 hover:border-rose-200 cursor-pointer"
                             >
@@ -130,7 +139,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 text-slate-500 text-xs font-body">
         <div className="flex items-center gap-2">
           <span>
-            Hiển thị <strong className="text-slate-900 font-mono">1 - {filteredProjects.length}</strong> trong tổng số{' '}
+            Hiển thị <strong className="text-slate-900 font-mono">{filteredProjects.length ? 1 : 0} - {filteredProjects.length}</strong> trong tổng số{' '}
             <strong className="text-slate-900 font-mono">{totalProjectsCount}</strong> dự án bảo hành
           </span>
         </div>

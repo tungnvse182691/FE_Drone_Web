@@ -1,37 +1,63 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { projectService } from '../../api/services'
+import { projectService, personnelService } from '../../api/services'
+import {readProjectPublishedSegments} from '../../api/services/projectPublishedSegments'
 import { alignmentService } from '../../api/services/alignmentService'
+import { geometrySubmissionService, type GeometrySubmission } from '../../api/services/geometrySubmissionService'
 import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
 import { Segment, ProjectMember } from './project-overview/types'
-import { INITIAL_SEGMENTS, INITIAL_MEMBERS } from './project-overview/mockData'
+import { PrimaryProjectManagerReadDto } from '../../api/services/personnelService'
 import { ProjectOverviewHeader } from './project-overview/ProjectOverviewHeader'
 import { ProjectHighlightsGrid } from './project-overview/ProjectHighlightsGrid'
 import { ProjectTimelineStepper } from './project-overview/ProjectTimelineStepper'
 import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
-import { ProjectMapPreviewCard } from './project-overview/ProjectMapPreviewCard'
-import { calculateCoordsLengthKm } from './alignment/alignmentGeometryHelpers'
+import { ProjectCrsProfileCard } from './project-overview/ProjectCrsProfileCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
+import { ProjectRenewScopeCard } from './project-overview/ProjectRenewScopeCard'
+import { ProjectConstructionCard } from './project-overview/ProjectConstructionCard'
+import { ProjectLocalityCard } from './project-overview/ProjectLocalityCard'
+import { ProjectWarrantyCard } from './project-overview/ProjectWarrantyCard'
 
 export type { Segment, ProjectMember }
 
 export const ProjectOverview: React.FC = () => {
   const { id } = useParams<{ id: string }>()
-  const projectId = id || 'prj-ql1a-02'
+  const projectId = id || ''
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
 
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
+  const submissionScope = `${authEpoch}:${projectId}`
+  const [submissionRead, setSubmissionRead] = useState<{scope: string; data: GeometrySubmission | null; loading: boolean; error: string}>({scope: '', data: null, loading: true, error: ''})
+  const [submissionReload, setSubmissionReload] = useState(0)
+  const submission = submissionRead.scope === submissionScope ? submissionRead : {data: null, loading: true, error: ''}
+  useEffect(() => {
+    let active = true
+    setSubmissionRead({scope: submissionScope, data: null, loading: true, error: ''})
+    geometrySubmissionService.read(projectId).then(data => {
+      if (active && useAuthStore.getState().authEpoch === authEpoch) setSubmissionRead({scope: submissionScope, data, loading: false, error: ''})
+    }).catch(error => {
+      if (active && useAuthStore.getState().authEpoch === authEpoch) setSubmissionRead({scope: submissionScope, data: null, loading: false, error: `Không đọc được hồ sơ tuyến: HTTP ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`})
+    })
+    return () => { active = false }
+  }, [submissionScope, submissionReload])
 
   const [project, setProject] = useState<HubProject | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [segments, setSegments] = useState<Segment[]>([])
+  const [segmentError,setSegmentError]=useState('')
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [projectError, setProjectError] = useState<string | null>(null)
+  const [memberError, setMemberError] = useState<string | null>(null)
+  const [primaryError, setPrimaryError] = useState<string | null>(null)
+  const [primaryPm, setPrimaryPm] = useState<PrimaryProjectManagerReadDto | null>(null)
+  const [includeHistory, setIncludeHistory] = useState(false)
+  const requestId = useRef(0)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
 
@@ -43,9 +69,9 @@ export const ProjectOverview: React.FC = () => {
     branchesCount: number
     branches: any[]
   }>({
-    mainlineLengthKm: 0,
-    branchesLengthKm: 0,
-    branchesCount: 0,
+    mainlineLengthKm: Number.NaN,
+    branchesLengthKm: Number.NaN,
+    branchesCount: Number.NaN,
     branches: []
   })
 
@@ -54,13 +80,13 @@ export const ProjectOverview: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3800)
   }
 
-  // Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10)
+  // Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10 - Duy nhất Supervisor có quyền)
   const handleCloseProjectConfirm = async (reason: string) => {
     if (!project) return
     try {
-      const closed = await projectService.closeProject(project.id, { reason })
-      setProject(closed)
-      showToast(`Đã đóng thành công dự án [${closed.code}] và lưu trữ hồ sơ theo quy chuẩn (DA12, QT13)!`)
+      await projectService.closeProject(project.id, { reason })
+      setProject((prev) => (prev ? { ...prev, status: 'CLOSED', status_label: 'Đã đóng hồ sơ' } : null))
+      showToast(`Đã đóng thành công dự án [${project.code}] và chuyển sang lưu trữ hồ sơ!`)
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi đóng dự án')
       throw err
@@ -69,104 +95,69 @@ export const ProjectOverview: React.FC = () => {
 
   // Fetch Project Data bất đồng bộ qua Mock API
   const loadProjectData = useCallback(async () => {
+    const request = ++requestId.current
+    const current = () => request === requestId.current && useAuthStore.getState().authEpoch === authEpoch
     setIsLoading(true)
+    setProjectError(null)
     try {
       const data = await projectService.fetchProjectById(projectId)
+      if (!current()) return
       if (data) {
         setProject(data)
 
-        // 1. Phân đoạn lý trình động & Bóc tách tuyến chính / tuyến phụ
-        const alignmentData = alignmentService.getAlignmentData(data.id)
-        const mainlineCoords = alignmentData.coords || []
-        const branchesList = alignmentData.branches || []
-
-        const mainLen = mainlineCoords.length >= 2
-          ? calculateCoordsLengthKm(mainlineCoords)
-          : (data.id === 'prj-ql1a-02' ? data.length_km : 0)
-
-        const branchLen = branchesList.reduce((sum: number, b: any) => {
-          const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
-          return sum + len
-        }, 0)
-
+        const facts = data.server_facts
         setAlignmentDetail({
-          mainlineLengthKm: mainLen,
-          branchesLengthKm: parseFloat(branchLen.toFixed(3)),
-          branchesCount: branchesList.length,
-          branches: branchesList
+          mainlineLengthKm: facts?.mainlineLengthKm ?? Number.NaN,
+          branchesLengthKm: facts?.branchesLengthKm ?? Number.NaN,
+          branchesCount: facts?.branchesCount ?? Number.NaN,
+          branches: facts?.routes.filter(route => route.routeKind === 'BRANCH').map(route => ({id: route.routeVersionId, name: route.name, lengthKm: route.lengthMeters / 1000})) || []
         })
+        // Width intervals and local edits are not persisted segment sets.
+        setSegments([]);setSegmentError('')
+        if(facts?.geometryError)setSegmentError(facts.geometryError)
+        else try{const rows=await readProjectPublishedSegments(data.id,facts?.routes||[]);if(current())setSegments(rows)}catch{if(current())setSegmentError('Không tải được phân đoạn đã công bố. Vui lòng tải lại.')}
+        if(!current())return
 
-        if (data.id === 'prj-ql1a-02') {
-          setSegments(INITIAL_SEGMENTS)
-        } else {
-          const storedSegments = (alignmentData.segments as any[]) || []
-          const mappedSegments: Segment[] = storedSegments.map((s: any, idx: number) => {
-            const start = s.startKm !== undefined ? s.startKm : (s.start_km ?? 0)
-            const end = s.endKm !== undefined ? s.endKm : (s.end_km ?? 0)
-            const len = s.lengthKm !== undefined ? s.lengthKm : (s.length_km ?? parseFloat((end - start).toFixed(3)))
-            const stationText = s.stationing || `Km ${start.toFixed(3).replace('.', '+')} → Km ${end.toFixed(3).replace('.', '+')}`
-            return {
-              code: s.code || `Đoạn #${String(idx + 1).padStart(2, '0')}`,
-              stationing: stationText,
-              length_km: len,
-              status_label: s.statusText || s.status_label || 'Hợp lệ',
-              status_type: s.status === 'GAP_WARNING' ? 'WARNING' : 'GOOD',
-              open_defects: s.open_defects || '0 điểm',
-              defects_count: s.defects_count || 0
-            }
-          })
-          setSegments(mappedSegments)
-        }
-
-        // 2. Cơ cấu nhân sự động bám sát PM phụ trách theo BR-01
-        if (data.id === 'prj-ql1a-02') {
-          setMembers(INITIAL_MEMBERS)
-        } else {
-          const dynamicMembers: ProjectMember[] = [
-            {
-              id: 'mem-sup-01',
-              name: 'Nguyễn Văn An',
-              role_code: 'SUPERVISOR',
-              role_title: 'Giám sát trưởng (Supervisor)',
-              role_badge: 'SUPERVISOR',
-              avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-              is_online: true,
-              authority: 'Khởi tạo dự án, thẩm duyệt hồ sơ & ký số đóng đợt bảo hành (DA01)',
-              contact: 'an.nv@hoanghai-infra.vn • 0912.888.666',
-              unit: 'Ban Giám sát Hoàng Hải / Chủ đầu tư'
-            },
-            {
-              id: `mem-pm-${data.id}`,
-              name: data.pm_name || 'Đỗ Quốc Hoàng',
-              role_code: 'PM',
-              role_title: 'Chỉ huy trưởng dự án (Project Manager)',
-              role_badge: 'PM CHÍNH',
-              avatar: data.pm_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-              is_online: true,
-              authority: 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)',
-              contact: `${data.pm_email || 'pmhoang@gmail.com'} • Đang trực tuyến`,
-              unit: 'Ban Chỉ huy Công trường'
-            }
-          ]
-          setMembers(dynamicMembers)
-        }
+        // Directory, effective members and primary designation are separate read models.
+        const [memberResult, primaryResult] = await Promise.allSettled([
+          projectService.fetchProjectMembers(data.id, includeHistory),
+          personnelService.getPrimaryProjectManager(data.id)
+        ])
+        if (!current()) return
+        setMemberError(memberResult.status === 'rejected' ? 'Chưa tải được thành viên dự án. Vui lòng thử lại.' : null)
+        setPrimaryError(primaryResult.status === 'rejected' ? 'Chưa tải được phân công PM chính. Vui lòng thử lại.' : null)
+        if (primaryResult.status === 'fulfilled') setPrimaryPm(primaryResult.value)
+        if (memberResult.status === 'fulfilled') setMembers(memberResult.value.map((m: any) => ({
+          id: m.membershipId, user_id:m.userId, name: m.displayName || 'Chưa cập nhật tên', role_code: m.role,
+          role_title: m.role === 'PM' ? 'Chỉ huy trưởng dự án' : m.role === 'OPERATOR' ? 'Phi công Drone' : m.role === 'CREW' ? 'Đội thi công' : m.role || 'Chưa cập nhật vai trò',
+          role_badge: primaryResult.status==='fulfilled'&&primaryResult.value?.userId===m.userId ? 'PM CHÍNH' : m.role || 'Chưa cập nhật',
+          avatar: '', authority: '', contact: '', unit: '',
+          valid_from: m.validFrom, valid_to: m.validTo, membership_status: m.status
+        })))
       } else {
         // Fallback an toàn nếu không tìm thấy ID
-        setProject(projectService.getProjects()[0] || null)
+        setProject(null)
+        setProjectError('Không tìm thấy dự án trong phạm vi được phép.')
       }
     } catch (err: any) {
-      console.error('[ProjectOverview] Lỗi tải dữ liệu dự án:', err)
+      if (current()) setProjectError('Không tải được hồ sơ dự án. Vui lòng thử lại.')
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
-  }, [projectId])
+  }, [projectId, authEpoch, includeHistory])
 
   useEffect(() => {
-    loadProjectData()
+    setProject(null)
+    setMembers([])
+    setPrimaryPm(null)
+    setMemberError(null)
+    setPrimaryError(null)
+    void loadProjectData()
     window.addEventListener('roadguard_state_change', loadProjectData)
-    return () => window.removeEventListener('roadguard_state_change', loadProjectData)
+    return () => { requestId.current++; window.removeEventListener('roadguard_state_change', loadProjectData) }
   }, [loadProjectData])
 
+  if (projectError && !project) return <div role="alert" className="p-6 border rounded-xl text-sm text-rose-700">{projectError}<button type="button" className="ml-3 underline" onClick={() => { void loadProjectData() }}>Thử lại</button></div>
   if (isLoading || !project) {
     return (
       <div className="p-16 text-center bg-white rounded-[20px] border-[1.5px] border-[#E2E5E9] text-slate-500 text-xs flex flex-col items-center justify-center gap-2 shadow-2xs">
@@ -178,6 +169,11 @@ export const ProjectOverview: React.FC = () => {
 
   return (
     <div className="space-y-6 font-body">
+      {projectError && <div role="alert" className="text-sm text-rose-700">{projectError}<button type="button" onClick={() => { void loadProjectData() }}>Thử lại</button></div>}
+      {project.stats_error && <div role="alert" className="text-sm text-rose-700">
+        Một phần thông tin nhân sự hoặc thống kê chưa tải được. Các số liệu đã tải vẫn được giữ.
+        <button type="button" className="ml-3 underline" onClick={() => { void loadProjectData() }}>Thử lại</button>
+      </div>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in duration-200 text-xs">
@@ -191,11 +187,15 @@ export const ProjectOverview: React.FC = () => {
 
       {/* 1. TOP BAR & BREADCRUMB CONTEXT */}
       <ProjectOverviewHeader
+        submission={submission.data}
+        submissionLoading={submission.loading}
+        submissionError={submission.error}
+        submissionReady={!submission.loading && !submission.error}
+        onRetrySubmission={() => setSubmissionReload(n => n + 1)}
         project={project}
         basePath={basePath}
         isSupervisor={isSupervisor}
         onNavigate={navigate}
-        onUpdateInfo={() => showToast('Mở màn hình cập nhật thông tin dự án...')}
         onCloseProject={() => setIsCloseModalOpen(true)}
         mainlineLengthKm={alignmentDetail.mainlineLengthKm}
         branchesLengthKm={alignmentDetail.branchesLengthKm}
@@ -215,12 +215,24 @@ export const ProjectOverview: React.FC = () => {
         {/* LEFT COLUMN: 8 COLS */}
         <div className="lg:col-span-8 space-y-6">
           <ProjectTimelineStepper
+            geometryStatus={project.geometry_read_error ? null : project.server_facts?.geometryState === 'CONFIRMED' ? 'CONFIRMED' : submission.data?.status === 'CONFIRMED' ? null : submission.data?.status ?? null}
             project={project}
             basePath={basePath}
+            isSupervisor={isSupervisor}
             onNavigate={navigate}
           />
 
+          {project.id === projectId && (user?.role === RoleCode.SUPERVISOR || user?.role === RoleCode.PROJECT_MANAGER) && (
+            <ProjectConstructionCard key={`${authEpoch}:${user.id}:${project.id}`} projectId={project.id} actorId={user.id} isSupervisor={isSupervisor} />
+          )}
+          {isSupervisor && <ProjectRenewScopeCard projectId={project.id} />}
+          {isSupervisor && <ProjectLocalityCard projectId={project.id} onSaved={() => { void loadProjectData() }} />}
+
           <ProjectSegmentsTable
+            serverReadOnly={project.server_data_loaded}
+            hasRoutes={!!project.server_facts?.routes.length}
+            readError={segmentError}
+            canSetup={!isSupervisor && project.status!=='CLOSED'}
             projectId={project.id}
             segments={segments}
             branches={alignmentDetail.branches}
@@ -228,7 +240,7 @@ export const ProjectOverview: React.FC = () => {
             branchesLengthKm={alignmentDetail.branchesLengthKm}
             basePath={basePath}
             onNavigate={navigate}
-            onViewSegment={(code) => showToast(`Xem chi tiết phân đoạn ${code}`)}
+            onViewSegment={(code) => {const row=segments.find(s=>s.code===code);if(row)navigate(`${basePath}/projects/${project.id}/alignment?roadSectionId=${row.roadSectionId}&routeVersionId=${row.routeVersionId}&segmentSetId=${row.segmentSetId}`)}}
             activeTab={activeAlignmentTab}
             onTabChange={setActiveAlignmentTab}
           />
@@ -236,18 +248,24 @@ export const ProjectOverview: React.FC = () => {
 
         {/* RIGHT COLUMN: 4 COLS */}
         <div className="lg:col-span-4 space-y-6">
-          <ProjectPersonnelCard members={members} project={project} />
-
-          <ProjectMapPreviewCard
+          <ProjectPersonnelCard
+            members={members}
             project={project}
-            basePath={basePath}
-            onNavigate={navigate}
-            activeTab={activeAlignmentTab}
+            memberError={memberError}
+            primaryError={primaryError}
+            primaryPm={primaryPm}
+            includeHistory={includeHistory}
+            onChangeHistory={setIncludeHistory}
+            onReloadMembers={loadProjectData}
+            showToast={showToast}
           />
+
+          <ProjectCrsProfileCard key={projectId} projectId={projectId} />
+          <ProjectWarrantyCard key={`sources:${authEpoch}:${projectId}`} projectId={projectId} onOpenCoverage={()=>navigate(`${basePath}/fast-track?projectId=${encodeURIComponent(projectId)}`)}/>
         </div>
       </div>
 
-      {/* MODAL ĐÓNG DỰ ÁN KHI HẾT HẠN BẢO HÀNH (DA12, QT13, BC10) */}
+      {/* MODAL ĐÓNG DỰ ÁN KHI HẾT HẠN BẢO HÀNH (DA12, QT13, BC10 - Duy nhất Supervisor) */}
       <CloseProjectModal
         isOpen={isCloseModalOpen}
         project={project}

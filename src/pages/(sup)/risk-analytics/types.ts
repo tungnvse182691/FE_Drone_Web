@@ -1,3 +1,4 @@
+import type {ExportJob,ExportManifest} from '../../../api/services/projectExportService'
 export interface ProjectConfig {
   id: string
   code: string
@@ -22,6 +23,8 @@ export interface ProjectConfig {
 }
 
 export interface ExportRecord {
+  server?:ExportJob
+  manifest?:ExportManifest
   id: string
   code: string
   project_id: string
@@ -74,7 +77,7 @@ export interface Rpt06RiskSegment {
   chainage_start: string
   chainage_end: string
   chainage_display: string
-  risk_level: 'CRITICAL' | 'WATCH' | 'MODERATE'
+  risk_level: 'CRITICAL' | 'WATCH' | 'MODERATE' | 'UNKNOWN'
   risk_level_label: string
   risk_score: number
   open_defects_count: number

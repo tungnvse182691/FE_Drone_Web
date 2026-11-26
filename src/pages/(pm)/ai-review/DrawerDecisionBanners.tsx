@@ -21,29 +21,98 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
   const navigate = useNavigate()
   const basePath = isSupervisor ? '/sup' : '/pm'
 
+  const severityLabel =
+    selectedCase.severity === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.severity === 'CRITICAL'
+      ? 'Khẩn cấp'
+      : selectedCase.severity === 'HIGH'
+        ? 'Nghiêm trọng'
+        : selectedCase.severity === 'MEDIUM'
+          ? 'Vừa'
+          : 'Nhẹ'
+
+  const urgencyLabel =
+    selectedCase.urgency === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.urgency === 'EMERGENCY'
+      ? 'Đặc biệt khẩn cấp'
+      : selectedCase.urgency === 'URGENT'
+        ? 'Khẩn cấp (24-48h)'
+        : 'Bình thường'
+
+  const previousOutcomeLabel = (outcome?: string) =>
+    outcome === 'CONFIRMED' ? 'Có khiếm khuyết (hợp lệ)'
+      : outcome === 'NO_DEFECT' ? 'Không có khiếm khuyết (báo sai)'
+        : outcome === 'NEEDS_EVIDENCE' ? 'Cần bổ sung bằng chứng'
+          : outcome || 'Chưa rõ'
+
   return (
     <>
-      {selectedCase.master_case_id && (
+      {selectedCase.reopened_after_conclusion && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5 text-blue-950 animate-in fade-in">
+          <div className="flex items-start gap-2">
+            <Icon name="history" size={20} className="text-blue-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-xs block">ĐÃ MỞ LẠI DO CÓ BỔ SUNG</span>
+              <span className="text-[11px] text-blue-800">
+                Máy chủ đã mở lại hồ sơ (trạng thái OPEN) khi người dân bổ sung. Hãy thẩm định tiếp ở khung bên dưới; kết luận trước đó chỉ còn là lịch sử.
+              </span>
+            </div>
+          </div>
+          {selectedCase.previous_conclusion && (
+            <details className="text-[11px] bg-white border border-blue-100 rounded-lg px-2.5 py-1.5">
+              <summary className="cursor-pointer font-semibold text-blue-900">Lịch sử kết luận (không còn hiệu lực hiện tại)</summary>
+              <div className="mt-1 space-y-0.5 text-slate-700">
+                <p>Kết luận trước: <strong>{previousOutcomeLabel(selectedCase.previous_conclusion.outcome)}</strong></p>
+                {selectedCase.previous_conclusion.reason && <p className="italic">Lý do ghi nhận: "{selectedCase.previous_conclusion.reason}"</p>}
+                {selectedCase.previous_conclusion.concluded_at && <p className="text-slate-500">Kết luận lúc: {new Date(selectedCase.previous_conclusion.concluded_at).toLocaleString('vi-VN')}</p>}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
+
+      {selectedCase.decision_recorded && (
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-950 animate-in fade-in">
+          <span className="font-bold text-xs block">ĐÃ GHI NHẬN QUYẾT ĐỊNH (KEEP_NEW)</span>
+          <span className="text-[11px] text-teal-800">
+            {selectedCase.linked_defect_id ? <>Khiếm khuyết <strong>#DEF-{selectedCase.linked_defect_id.slice(0, 8).toUpperCase()}</strong></> : 'Khiếm khuyết đã tạo'}
+            {selectedCase.defect_status ? <> • Trạng thái Defect do máy chủ trả: <strong>{selectedCase.defect_status}</strong></> : null}
+            . Trạng thái này tách khỏi trạng thái hồ sơ (Case) và khỏi kết luận Case.
+          </span>
+        </div>
+      )}
+
+      {selectedCase.decision_read_error && (
+        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700">{selectedCase.decision_read_error}</p>
+      )}
+
+      {(selectedCase.master_case_id || selectedCase.status === 'MERGED' || selectedCase.decision_kind === 'LINK_EXISTING') && (
         <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between text-purple-950 animate-in fade-in">
           <div className="flex items-center gap-2">
             <Icon name="link" size={20} className="text-purple-600 shrink-0" />
             <div>
-              <span className="font-bold text-xs block">HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO MASTER CASE</span>
+              <span className="font-bold text-xs block">
+                {selectedCase.decision_kind === 'LINK_EXISTING' && selectedCase.linked_defect_id ? `ĐÃ LIÊN KẾT DEFECT #DEF-${selectedCase.linked_defect_id.slice(0,8).toUpperCase()}` : 'HỒ SƠ CÓ LIÊN KẾT BÁO CÁO'}
+              </span>
               <span className="text-[11px] text-purple-700">
-                Dữ liệu được hợp nhất để không tạo trùng lệnh thi công.
+                Liên kết báo cáo giữa các Case không xác nhận đã liên kết hoặc thẩm định một Defect.
               </span>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setSelectedCaseId(selectedCase.master_case_id!)}
-              className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
-            >
-              <span>Xem Case Gốc</span>
-              <Icon name="arrow_forward" size={14} />
-            </button>
-            {!isSupervisor && (
+            {selectedCase.master_case_id ? (
+              <button
+                type="button"
+                onClick={() => setSelectedCaseId(selectedCase.master_case_id!)}
+                className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
+              >
+                <span>Xem hồ sơ gốc</span>
+                <Icon name="arrow_forward" size={14} />
+              </button>
+            ) : (
+              <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded-lg border border-purple-200">
+                Đã liên kết CSDL
+              </span>
+            )}
+            {!isSupervisor && selectedCase.master_case_id && (
               <button
                 type="button"
                 onClick={() => onUnlinkReport(selectedCase.id)}
@@ -62,10 +131,12 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-center gap-2">
             <Icon name="check_circle" size={20} className="text-emerald-600 shrink-0" />
             <div>
-              <span className="font-bold text-xs block">KẾT LUẬN: ĐÃ XÁC MINH CÓ KHIẾM KHUYẾT (DEFECT_FOUND)</span>
+              <span className="font-bold text-xs block">KẾT LUẬN: ĐÃ XÁC MINH CÓ KHIẾM KHUYẾT (HỢP LỆ)</span>
               <span className="text-[11px] text-emerald-700">
-                Mức độ: <strong>{selectedCase.severity}</strong> • Khẩn cấp: <strong>{selectedCase.urgency}</strong> • S:{' '}
-                <strong>{selectedCase.area_sqm} m²</strong>
+                Mức độ: <strong>{severityLabel}</strong> • Khẩn cấp: <strong>{urgencyLabel}</strong>
+                {selectedCase.area_sqm > 0 && (
+                  <> • S: <strong>{selectedCase.area_sqm} m²</strong></>
+                )}
               </span>
             </div>
           </div>
@@ -128,7 +199,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-start gap-2">
             <Icon name="warning" size={20} className="text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-xs block">KẾT LUẬN: NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE)</span>
+              <span className="font-bold text-xs block">KẾT LUẬN: NGOÀI PHẠM VI BẢO HÀNH</span>
               <p className="text-[11px] text-amber-800 mt-0.5">
                 Vị trí nằm ngoài phạm vi đoạn đường thuộc hợp đồng bảo hành của Hoàng Hải.
               </p>
@@ -153,13 +224,13 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               <Icon name="photo_camera" size={20} className="text-blue-600 shrink-0" />
               <div>
                 <span className="font-bold text-xs block text-blue-900">
-                  LỆNH KHẢO SÁT &amp; ĐO ĐẠC BỔ SUNG (WF-11)
+                  LỆNH KHẢO SÁT &amp; ĐO ĐẠC BỔ SUNG
                 </span>
                 <span className="text-[11px] text-blue-700">
                   {selectedCase.survey_assignment
                     ? selectedCase.survey_assignment.mode === 'MEASURE_ONLY'
-                      ? '📐 Đo đạc hiện trường bằng thước chuyên dụng (MEASURE_ONLY)'
-                      : '🛸 Bay quét Drone chụp bổ sung (DRONE_RESURVEY)'
+                      ? '📐 Đo đạc hiện trường bằng thước chuyên dụng'
+                      : '🛸 Bay quét Drone chụp bổ sung'
                     : 'Đã chuyển sang hàng đợi nhiệm vụ khảo sát thực địa.'}
                 </span>
               </div>
@@ -209,7 +280,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-sky-800 flex items-center gap-1.5">
               <Icon name="campaign" size={16} className="text-sky-600" />
-              <span>Đã công bố tiến độ cho người dân (PA07)</span>
+              <span>Đã công bố tiến độ cho người dân</span>
             </span>
             <span className="text-[10px] text-sky-600 font-mono">{selectedCase.published_at}</span>
           </div>

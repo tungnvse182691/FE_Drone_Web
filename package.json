@@ -18,12 +18,14 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.3.0",
     "tailwind-merge": "^3.0.2",
+    "tedious": "^20.3.8",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.13.9",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.3",

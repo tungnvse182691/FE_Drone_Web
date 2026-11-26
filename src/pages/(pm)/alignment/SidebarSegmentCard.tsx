@@ -17,6 +17,8 @@ export interface SidebarSegmentCardProps {
   onEdit: () => void
   onOpenSplit: () => void
   onDelete: () => void
+  allowSplit?: boolean
+  isReadOnly?: boolean
 }
 
 export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
@@ -26,7 +28,9 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
   onSnap,
   onEdit,
   onOpenSplit,
-  onDelete
+  onDelete,
+  allowSplit = false,
+  isReadOnly = false
 }) => {
   return (
     <div
@@ -46,7 +50,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
             className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs border border-white"
           />
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-brand-dark">{segment.code}</span>
+            <span title={segment.id} className="text-xs font-bold text-brand-dark">{segment.code}</span>
             <span className="font-mono text-xs font-bold text-[#8F7212]">
               Km {segment.startKm.toFixed(3)} - Km {segment.endKm.toFixed(3)}
             </span>
@@ -70,10 +74,8 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
           Dài: {segment.lengthKm >= 1 ? `${segment.lengthKm.toFixed(2)} km` : `${Math.round(segment.lengthKm * 1000)} mét`}
         </span>
         <span className="bg-amber-50 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-full font-mono font-bold">
-          Rộng: {segment.roadWidthM || 8.0}m (±{((segment.roadWidthM || 8.0) / 2).toFixed(1)}m)
+          Rộng: {Number.isFinite(segment.roadWidthM) && segment.roadWidthM > 0 ? `${segment.roadWidthM}m (±${(segment.roadWidthM / 2).toFixed(1)}m)` : 'Chưa có dữ liệu'}
         </span>
-        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.laneCount} làn</span>
-        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.surfaceMaterial}</span>
       </div>
 
       {/* Cảnh báo khoảng hở & Nút nối tiếp giáp */}
@@ -85,18 +87,20 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               ? `Hở ${segment.gapDistance}m so với đoạn trước`
               : `Chồng lấn ${Math.abs(segment.gapDistance || 0)}m`}
           </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onSnap()
-            }}
-            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
-            title="Khép kín khoảng hở với phân đoạn liền trước"
-          >
-            <Link2 className="w-3 h-3" />
-            <span>Nối tiếp giáp</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSnap()
+              }}
+              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
+              title="Khép kín khoảng hở với phân đoạn liền trước"
+            >
+              <Link2 className="w-3 h-3" />
+              <span>Nối tiếp giáp</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -112,43 +116,45 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
             Tiếp giáp khép kín
           </span>
         )}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit()
-            }}
-            className="p-1.5 hover:bg-amber-100/60 rounded-md text-slate-500 hover:text-[#8F7212] transition-colors cursor-pointer"
-            title="Chỉnh sửa lý trình & thông số"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
+        {(!isReadOnly || allowSplit) && (
+          <div className="flex items-center gap-1">
+            {!isReadOnly && <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit()
+              }}
+              className="p-1.5 hover:bg-amber-100/60 rounded-md text-slate-500 hover:text-[#8F7212] transition-colors cursor-pointer"
+              title="Chỉnh sửa lý trình & thông số"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>}
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpenSplit()
-            }}
-            className="p-1.5 hover:bg-sky-100/60 rounded-md text-slate-500 hover:text-sky-700 transition-colors cursor-pointer"
-            title="Tách phân đoạn này tại mốc Km"
-          >
-            <SplitSquareVertical className="w-3.5 h-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpenSplit()
+              }}
+              className="p-1.5 hover:bg-sky-100/60 rounded-md text-slate-500 hover:text-sky-700 transition-colors cursor-pointer"
+              title="Tách phân đoạn này tại mốc Km"
+            >
+              <SplitSquareVertical className="w-3.5 h-3.5" />
+            </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-            className="p-1.5 hover:bg-rose-100/60 rounded-md text-slate-500 hover:text-rose-700 transition-colors cursor-pointer"
-            title="Xóa phân đoạn"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
+            {!isReadOnly && <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="p-1.5 hover:bg-rose-100/60 rounded-md text-slate-500 hover:text-rose-700 transition-colors cursor-pointer"
+              title="Xóa phân đoạn"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>}
+          </div>
+        )}
       </div>
     </div>
   )

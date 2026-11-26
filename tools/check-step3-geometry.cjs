@@ -1,0 +1,488 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),ts=require('typescript'),{webcrypto}=require('crypto')
+let epoch=1,actor={id:'pm',role:'PROJECT_MANAGER'};const listeners=[]
+const auth={useAuthStore:Object.assign(selector=>selector?selector({authEpoch:epoch,user:actor,isAuthenticated:true}):{authEpoch:epoch,user:actor,isAuthenticated:true},{getState:()=>({authEpoch:epoch,user:actor,isAuthenticated:true}),subscribe:fn=>listeners.push(fn)})}
+function load(file,mocks={}){const module={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8').replaceAll('import.meta.env','({})'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText;vm.runInNewContext(code,{module,exports:module.exports,require:n=>{if(n==='react'&&n in mocks)return {useRef:v=>({current:v}),useEffect(){},...mocks[n]};if(n in mocks)return mocks[n];if(n.endsWith('/projectDistanceDisplay'))return load('src/utils/projectDistanceDisplay.ts',{});if(n==='../../../api/services/alignmentService')return load('src/api/services/alignmentService.ts',{'../client':{apiClient:{}}});if(n==='./confirmedGeometryDisplay')return load('src/pages/(pm)/alignment/confirmedGeometryDisplay.ts');if(n==='./usePavementWorkflow')return{usePavementWorkflow:()=>({})};if(n==='./alignmentImportHelpers')return load('src/pages/(pm)/alignment/alignmentImportHelpers.ts',{'./data':{SEGMENT_COLORS:['#C9A227']},'./alignmentGeometryHelpers':load('src/pages/(pm)/alignment/alignmentGeometryHelpers.ts')});if(n==='./alignmentPavementDisplay')return load('src/pages/(pm)/alignment/alignmentPavementDisplay.ts');if(n==='./alignmentBranchHelpers')return load('src/pages/(pm)/alignment/alignmentBranchHelpers.ts');if(n==='./alignmentPavementHelpers')return load('src/pages/(pm)/alignment/alignmentPavementHelpers.ts');if(n==='./roadGuardDraftImportHelpers')return load('src/pages/(pm)/alignment/roadGuardDraftImportHelpers.ts');if(n.endsWith('/geometryCommandErrors'))return load('src/api/services/geometryCommandErrors.ts');if(n.endsWith('/enums'))return {RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}};if(n.endsWith('/authStore'))return auth;if(n.endsWith('/geometrySubmissionService')||n==='./geometrySubmissionService')return{geometrySubmissionService:{read:async()=>null}};if(n==='./projectService')return{projectService:{}};throw Error('Missing '+n)},console,Error,FileReader:mocks.__FileReader,crypto:webcrypto,localStorage:{getItem:()=>null},sessionStorage:mocks.__sessionStorage||{getItem:()=>null,setItem(){},removeItem(){}},setTimeout,clearTimeout,AbortController,URLSearchParams});return module.exports}
+const ok=data=>({data,headers:{etag:'"AAAAAAAAAAE="'}})
+const service=client=>load('src/api/services/alignmentService.ts',{'../client':{apiClient:client}}).alignmentService
+let count=0;async function test(name,run){if(process.env.RG_STEP3_FILTER&&!new RegExp(process.env.RG_STEP3_FILTER,'i').test(name))return;epoch=1;actor={id:'pm',role:'PROJECT_MANAGER'};await run();console.log('PASS '+name);count++}
+;(async()=>{
+await test('selected route caller sidebar footer isolates local branch from confirmed mainline',async()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),react={__esModule:true,default:React,...React},base='src/pages/(pm)/alignment/'
+ const Footer=load(base+'SidebarFooterKpis.tsx',{react}).SidebarFooterKpis
+ const Sidebar=load(base+'AlignmentSidebar.tsx',{react,'lucide-react':new Proxy({},{get:()=>()=>null}),'./SidebarSegmentsTab':{SidebarSegmentsTab:()=>null},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:()=>null},'./SidebarSlabsTab':{SidebarSlabsTab:()=>null},'./SidebarFooterKpis':{SidebarFooterKpis:Footer}}).AlignmentSidebar
+ const source=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8'),ast=ts.createSourceFile('caller.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let element
+ function visit(n){if(ts.isJsxSelfClosingElement(n)&&n.tagName.getText(ast)==='AlignmentSidebar')element=n;ts.forEachChild(n,visit)}visit(ast);assert.ok(element)
+ const props=element.attributes.properties.filter(p=>ts.isJsxAttribute(p)&&['segments','importedLengthKm','alignmentStatus','selectedTargetType'].includes(p.name.text)).map(p=>p.getText(ast)).join(' ')
+ const code=ts.transpileModule('function renderCaller(selectedTargetType, activeSegments, activeLengthKm){const alignmentStatus="CONFIRMED",rightTab="SEGMENTS",pavementWorkflow={},displayedSegments=activeSegments,submitted=false;return <AlignmentSidebar '+props+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
+ const renderCaller=vm.runInNewContext(code+';renderCaller',{React,AlignmentSidebar:Sidebar})
+ const segment={id:'s',lengthKm:0.1},render=(target,segments=[segment],length=.1)=>renderToStaticMarkup(renderCaller(target,segments,length))
+ assert.match(render('MAINLINE'),/Đã xác nhận/);assert.match(render('MAINLINE'),/Hình học đã khóa/)
+ const branch=render('local-branch');assert.ok(!branch.includes('Đã xác nhận'));assert.ok(!branch.includes('Hình học đã khóa'));assert.match(branch,/Chưa xác nhận/)
+ const gap=render('local-branch',[{...segment,hasGap:true}]);assert.match(gap,/Cảnh báo hở/);assert.match(gap,/Cần khép kín/)
+ const empty=render('local-branch',[],0);assert.match(empty,/Chưa có tuyến/);assert.match(empty,/Chưa có dữ liệu/);assert.ok(!empty.includes('Đã xác nhận'))
+ assert.match(render('MAINLINE'),/Đã xác nhận/);assert.match(render('MAINLINE',[{...segment,hasGap:true}]),/Cảnh báo hở/)
+})
+await test('project overview server submission labels and open action separate Sup geometry review from PM publication',async()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),react={__esModule:true,default:React,...React}
+ const Header=load('src/pages/(pm)/project-overview/ProjectOverviewHeader.tsx',{react,'../../../components/ui/Icon':{Icon:()=>null}}).ProjectOverviewHeader
+ const project={id:'project',name:'Source project',code:'SOURCE',status:'ACTIVE',length_km:0,repair_packages:0}
+ const render=props=>renderToStaticMarkup(React.createElement(Header,{project,isSupervisor:true,basePath:'/sup',onNavigate(){},submissionReady:true,...props}))
+ for(const status of ['SUBMITTED','CONFIRMED']){const html=render({submission:{projectId:'project',draftId:'draft',status}});assert.ok(html.includes('Xem hồ sơ tuyến'));assert.ok(html.includes(status==='SUBMITTED'?'chờ Giám sát xác nhận hình học':'Hình học đã xác nhận'));assert.ok(!html.includes('Chờ PM nạp tim tuyến'));assert.ok(!html.includes('Phân đoạn lý trình đang chờ thẩm duyệt'))}
+ assert.ok(render({submission:null}).includes('Chưa có hồ sơ trình'));const error=render({submissionReady:false,submissionError:'HTTP 403 access_forbidden'});assert.ok(error.includes('HTTP 403'));assert.ok(error.includes('Thử lại hồ sơ tuyến'));assert.ok(!error.includes('Chưa có hồ sơ trình'))
+ const source=fs.readFileSync('src/pages/(pm)/ProjectOverview.tsx','utf8');assert.match(source,/geometrySubmissionService.read\(projectId\)/);assert.match(source,/submission=\{submission.data\}/);assert.ok(source.includes("project.server_facts?.geometryState === 'CONFIRMED'"));assert.ok(source.includes("submission.data?.status === 'CONFIRMED' ? null"))
+ const page=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8');assert.ok(!page.includes('Xem trước bản đã lưu'));assert.match(page,/draftWorkflow.reviewNeedsRetry/);assert.match(page,/onClick=\{draftWorkflow.retryPreview\}/)
+})
+await test('CRS failure/wrong project/null never becomes empty; no automatic checksum profile',async()=>{
+ for(const data of [null,{},[{projectId:'other'}]])await assert.rejects(service({get:async()=>ok(data)}).fetchCrsProfiles('p'))
+ assert.equal((await service({get:async()=>ok([])}).fetchCrsProfiles('p')).length,0)
+ let posts=0;await assert.rejects(service({post:()=>posts++}).ensureUtm48NCrsProfile('p'),/provenance/);assert.equal(posts,0)
+})
+await test('draft identity/version is server-owned and epoch fences old cached draft',async()=>{
+ const s=service({get:async()=>ok({id:'d',projectId:'p',version:'AAAAAAAAAAE='})});assert.equal((await s.getGeometryDraft('p','d')).etag,'"AAAAAAAAAAE="')
+ await assert.rejects(s.getGeometryDraft('other','d'),/sai/)
+ const stale=service({get:async()=>{epoch++;return ok({id:'d',projectId:'p'})}});await assert.rejects(stale.getGeometryDraft('p','d'),/Phiên/);assert.equal(stale.getActiveDraftInfo('p'),undefined)
+})
+await test('readiness/context malformed payload propagates errors rather than claiming ready',async()=>{
+ await assert.rejects(service({get:async()=>ok({ready:true})}).readDraftReadiness('p','d'),/contract/)
+ await assert.rejects(service({get:async()=>ok({projectId:'other',roadSections:[]})}).readProjectContext('p'),/contract/)
+})
+await test('read model keeps draft when readiness fails; old project/epoch cannot replace it',async()=>{
+ const React=require('react');let slot=0,id='a',query=new URLSearchParams('draftId=11111111-1111-4111-8111-111111111111'),view
+ const values=[],effects=[],calls=[]
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const alignmentService={fetchCrsProfiles:async()=>[],getGeometryDraft:(projectId,draftId)=>new Promise((resolve,reject)=>calls.push({projectId,draftId,resolve,reject})),readDraftReadiness:async()=>{throw Error('unavailable')},readProjectContext:async projectId=>({projectId,roadSections:[]})}
+ const hook=load('src/pages/(pm)/alignment/useGeometryReadModel.ts',{react:hooks,'react-router-dom':{useSearchParams:()=>[query,next=>query=next]},'../../../api/client':{apiClient:{get:async()=>ok({items:[{projectId:'a'},{projectId:'b'}]})}},'../../../api/services/alignmentService':{alignmentService}}).useGeometryReadModel
+ const render=()=>{slot=0;view=hook(id);effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();render()}
+ render();id='b';render();calls[1].resolve({data:{id:calls[1].draftId,projectId:'b'}});await flush();assert.equal(view.draft.data.projectId,'b');assert.ok(view.draftError);assert.equal(view.readiness,null)
+ calls[0].resolve({data:{id:calls[0].draftId,projectId:'a'}});await flush();assert.equal(view.draft.data.projectId,'b')
+ epoch++;render();calls[2].reject(Error('old'));await flush();assert.equal(view.draft,null)
+ view.openGeometry('road-from-server','version-from-server');assert.equal(query.get('roadSectionId'),'road-from-server');assert.equal(query.get('routeVersionId'),'version-from-server');view.openDraft('22222222-2222-4222-8222-222222222222');assert.equal(query.get('draftId'),'22222222-2222-4222-8222-222222222222');assert.equal(query.get('routeVersionId'),null)
+ effects.forEach(e=>e?.cleanup?.())
+})
+await test('GeoJSON inspection preserves vertices and unknown CRS without axis guesses or generated segments',async()=>{
+ const parser=load('src/pages/(pm)/alignment/alignmentImportHelpers.ts',{'./data':{SEGMENT_COLORS:[]},'./alignmentGeometryHelpers':{smoothRoadPolyline(){throw Error('must not smooth')}}})
+ const coords=[[500000,1000000],[500000,1000000],[500020,1000010]]
+ const value=parser.inspectGeoJsonCenterline(JSON.stringify({type:'LineString',coordinates:coords}));assert.equal(JSON.stringify(value.coords),JSON.stringify(coords));assert.ok(value.sourceCrs.includes('UNKNOWN'));assert.equal(value.estimatedLengthMeters,null);assert.equal(value.adjacentDuplicates,1)
+ await assert.rejects(async()=>parser.inspectGeoJsonCenterline(JSON.stringify({type:'MultiLineString',coordinates:[coords]})))
+ const crs=srid=>({type:'name',properties:{name:`EPSG:${srid}`}})
+ for(const srid of [4326,32648,32649]) {
+   const feature={type:'Feature',properties:{type:'Centerline',sourceReference:'File source',axisOrder:'NE',metresPerUnit:0.001},geometry:{type:'LineString',coordinates:coords}}
+   for(const location of ['root','feature','geometry']) {
+     const input={type:'FeatureCollection',features:[JSON.parse(JSON.stringify(feature))]}
+     if(location==='root')input.crs=crs(srid);else if(location==='feature')input.features[0].crs=crs(srid);else input.features[0].geometry.crs=crs(srid)
+     const result=parser.inspectGeoJsonCenterline(JSON.stringify(input));assert.equal(result.declaredSrid,srid);assert.equal(JSON.stringify(result.declaredCrs),JSON.stringify(crs(srid)));assert.equal(JSON.stringify(result.metadata),JSON.stringify(feature.properties));assert.equal(JSON.stringify(result.coords),JSON.stringify(coords));assert.ok(result.sourceCrs.includes('UNKNOWN'));assert.equal(result.estimatedLengthMeters,null);assert.equal(JSON.stringify(parser.parseGeoJsonText(JSON.stringify(input))),JSON.stringify(coords))
+   }
+ }
+ for(const input of [
+   {type:'FeatureCollection',features:[null]},
+   {type:'FeatureCollection',features:[{type:'LineString',coordinates:coords}]},
+   {type:'Feature',properties:[],geometry:{type:'LineString',coordinates:coords}},
+   {type:'LineString',coordinates:[[1,2],[3,'4']]},
+   {type:'LineString',coordinates:[[1,2],[3,4,5]]},
+   {type:'LineString',coordinates:[[1,2],[null,4]]},
+   {type:'Feature',crs:crs(32648),geometry:{type:'LineString',crs:crs(32649),coordinates:coords}},
+   {type:'LineString',crs:{type:'name',properties:{name:'unverified'}},coordinates:coords}
+ ]) assert.throws(()=>parser.inspectGeoJsonCenterline(JSON.stringify(input)),e=>e instanceof parser.GeoJsonValidationError)
+ assert.throws(()=>parser.inspectGeoJsonCenterline('{'),e=>e instanceof parser.GeoJsonValidationError)
+})
+await test('active editor cannot restore or publish local approval; manual/preset imports do not manufacture engineering facts',async()=>{
+ const state=fs.readFileSync('src/pages/(pm)/alignment/useAlignmentState.ts','utf8')
+ for(const text of ['getAlignmentState(', 'getAlignmentData(', 'saveAlignmentData(', 'updateProjectAlignment(', 'wgs84ToUtm48N'])assert.ok(!state.includes(text),text)
+ const React=require('react');let message='';let writes=0
+ const hook=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react:{useState:v=>[v,()=>{}]},'maplibre-gl':{},'./alignmentImportHelpers':{inspectGeoJsonCenterline:()=>({coords:[]})}}).useAlignmentImportState
+ const model=hook({defaultManualText:'',showToast:m=>message=m,onAutoSave:()=>writes++,setSegments:()=>writes++,setSlabs:()=>writes++,setCurrentCoords:()=>writes++})
+ model.processManualCoordinates('[[1,2],[3,4]]');assert.ok(message.includes('chưa lưu server'));model.handleLoadPreset('sample',1);assert.equal(writes,0)
+})
+await test('map panel rejects missing metrics in main/all/branch paths while valid dimensions/counts remain correct',async()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+ const C=load('src/pages/(pm)/alignment/AlignmentMap.tsx',{react:{__esModule:true,default:React,...React},'lucide-react':new Proxy({},{get:()=>()=>null}),'./AlignmentMapLegend':{AlignmentMapLegend:()=>null},'./alignmentGeometryHelpers':{calculateCoordsLengthKm:()=>0}}).AlignmentMap
+ const base={mapContainerRef:{current:null},mapRef:{current:null},mapLayer:'VECTOR',cursorPos:{lat:NaN,lng:NaN,elevation:'Chưa có dữ liệu',station:''},segments:[],importedLengthKm:NaN,slabLengthM:NaN,slabThicknessCm:NaN,contractionSpacingM:NaN,expansionSpacingM:NaN,expansionGapMm:NaN,selectedSegmentId:'ALL'}
+ const render=patch=>renderToStaticMarkup(React.createElement(C,{...base,...patch}))
+ const missing=html=>{assert.ok(html.includes('Chưa có dữ liệu'));for(const text of ['NaN','Infinity','W = 8.0m','-4.0m','+4.0m','~400 tấm','5.0m ×','mỗi 50m'])assert.ok(!html.includes(text),text)}
+ for(const value of [NaN,null,undefined,Infinity,-Infinity]) {
+   const seg={id:'s',code:'S',roadWidthM:value,lengthKm:value}
+   for(const selectedSegmentId of ['s','ALL','unknown']) missing(render({segments:[seg],selectedSegmentId,slabLengthM:value,slabThicknessCm:value,contractionSpacingM:value,expansionSpacingM:value,expansionGapMm:value}))
+   for(const selectedSegmentId of ['s','ALL','unknown']) missing(render({selectedTargetType:'b',currentBranch:{id:'b',code:'B',roadWidthM:value,lengthKm:value,segments:[seg]},selectedSegmentId}))
+   missing(render({branches:[{id:'b',code:'B',roadWidthM:value,lengthKm:value}],selectedSegmentId:'b'}))
+ }
+ const valid={stripWidthMeters:4,slabLengthM:10,slabThicknessCm:24,contractionSpacingM:6,expansionSpacingM:60,expansionGapMm:15}
+ const a={id:'a',code:'A',roadWidthM:12,laneCount:3,startKm:0,endKm:.1,lengthKm:0.1},b={id:'b',code:'B',roadWidthM:6,laneCount:2,startKm:.1,endKm:.3,lengthKm:0.2}
+ // Strip width is a separate PM input; never infer it from laneCount. Keep exact engineering assertions below.
+ const preview=load('src/pages/(pm)/alignment/alignmentPavementHelpers.ts').buildMainlinePavementGeoJSON([a,b],[[105,10],[105.01,10]],[0,.3],{stripWidthMeters:4,slabLenM:10,thicknessCm:24,contractionSpacingM:6,expansionSpacingM:60,expansionGapMm:15})
+ const slabsA=preview.slabsGeoJSON.features.filter(f=>f.properties.segmentId==='a');assert.equal(slabsA.length,30);assert.ok(slabsA.every(f=>f.properties.lengthM===10&&f.properties.widthM===4&&f.properties.thicknessCm===24));assert.equal(preview.slabsGeoJSON.features.length,70)
+ let html=render({...valid,segments:[a],selectedSegmentId:'a',pavementPreview:preview});for(const text of ['W = 12.0m','10m × 4m · Dày: 24cm','30 tấm thực','15mm','Cự ly: 60m','Cự ly: 6m'])assert.ok(html.includes(text),text)
+ html=render({...valid,segments:[a,b],pavementPreview:preview});assert.ok(html.includes('W = 8.0m'));assert.ok(html.includes('70 tấm thực'));assert.ok(html.includes('Nhiều kích thước'))
+ html=render({...valid,selectedTargetType:'branch',currentBranch:{id:'branch',code:'R',segments:[a]},pavementPreview:preview});assert.ok(html.includes('W = 12.0m'));assert.ok(html.includes('chưa có preview pavement tuyến nhánh'));assert.ok(!html.includes('~'))
+ html=render({...valid,segments:[a,{...b,roadWidthM:NaN}]});assert.ok(!html.includes('W = 8.0m'));assert.ok(!html.includes('~'))
+})
+await test('GeoJSON import preserves syntax/ambiguity/geometry/CRS/validation errors and handles reader failures without writes',async()=>{
+ const parser=load('src/pages/(pm)/alignment/alignmentImportHelpers.ts',{'./data':{SEGMENT_COLORS:[]},'./alignmentGeometryHelpers':{}})
+ let reader,message='',writes=0
+ class Reader{constructor(){reader=this}readAsText(){}}
+ const make=inspector=>load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react:{useState:v=>[v,()=>{}]},'maplibre-gl':{},'./alignmentImportHelpers':{inspectGeoJsonCenterline:inspector,previewCenterlineCoordinates:parser.previewCenterlineCoordinates,GeoJsonValidationError:parser.GeoJsonValidationError},__FileReader:Reader}).useAlignmentImportState({defaultManualText:'',showToast:m=>message=m,onAutoSave:()=>writes++,setSegments:()=>writes++,setCurrentCoords:()=>writes++})
+ const model=make(parser.inspectGeoJsonCenterline)
+ const line={type:'Feature',geometry:{type:'LineString',coordinates:[[1,2],[3,4]]},properties:{}}
+ for(const [input,expected] of [['{',/sai cú pháp JSON/],[JSON.stringify({type:'FeatureCollection',features:[line,line]}),/đúng một Centerline/],[JSON.stringify({type:'FeatureCollection',features:[]}),/Không chọn được tim tuyến/],[JSON.stringify({type:'FeatureCollection',features:[{...line,properties:{type:'RoadEdge'}}]}),/Không chọn được tim tuyến/],[JSON.stringify({type:'Polygon',coordinates:[]}),/Geometry không hỗ trợ/],[JSON.stringify({type:'MultiLineString',coordinates:[]}),/Geometry không hỗ trợ/],[JSON.stringify({type:'LineString',coordinates:[[1,2],[3,4]],crs:{name:'unverified'}}),/chưa xác minh/],[JSON.stringify({type:'LineString',coordinates:[[1,2]]}),/2–100000/]]) {
+  model.processGeoJSONFile({});reader.onload({target:{result:input}});assert.match(message,expected)
+ }
+ model.processGeoJSONFile({});reader.onerror();assert.match(message,/Không đọc được tệp/)
+ model.processGeoJSONFile({});reader.onabort();assert.match(message,/hủy đọc/)
+ model.processGeoJSONFile({});reader.onload({target:{result:null}});assert.match(message,/Không đọc được nội dung/)
+ for(const error of [null,Error('Unexpected internal failure'),new TypeError('Unexpected shape')]){const unknown=make(()=>{throw error});unknown.processGeoJSONFile({});reader.onload({target:{result:'{}'}});assert.match(message,/Không thể kiểm tra nội dung/)}
+ const sync=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react:{useState:v=>[v,()=>{}]},'maplibre-gl':{},'./alignmentImportHelpers':parser,__FileReader:class{readAsText(){throw Error('read failure')}}}).useAlignmentImportState({defaultManualText:'',showToast:m=>message=m});sync.processGeoJSONFile({});assert.match(message,/Không đọc được tệp/)
+ model.processGeoJSONFile({});reader.onload({target:{result:JSON.stringify({type:'LineString',coordinates:[[1,2],[3,4]]})}});assert.match(message,/Đã đọc tệp, chưa lưu/);assert.match(message,/chưa được xác minh/);assert.equal(writes,0)
+})
+
+const roles={PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}
+const draftInput={sourceKind:'COORDINATES',sourceCrs:32648,stationOriginMeters:0,coordinates:[{x:500000,y:1000000},{x:500100,y:1000000}],widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:6}],surveyWidthMeters:10,changeReason:'Hồ sơ đo đã kiểm',roadCode:'R',roadName:'Road'}
+const dto={sourceCrs:draftInput.sourceCrs,roadCode:draftInput.roadCode,roadName:draftInput.roadName,id:'11111111-1111-4111-8111-111111111111',projectId:'p',roadSectionId:'road',status:'DRAFT',sourceKind:'COORDINATES',version:'AAAAAAAAAAE=',stationOriginMeters:0,surveyWidthMeters:10,widthProfile:draftInput.widthProfile,originalCoordinates:draftInput.coordinates}
+const storage=()=>{const map=new Map();return{getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)}}
+const commands=(client,journal=storage())=>load('src/api/services/geometryDraftCommands.ts',{'./geometrySubmissionService':{geometrySubmissionService:{read:async()=>{const url='/projects/p/road-geometry-submission';if(client.get){const result=await client.get(url);const d=result.data;return {projectId:d.projectId,draftId:d.sourceDraftId,roadSectionId:d.roadSectionId,confirmedRouteVersionId:d.routeVersionId,status:'CONFIRMED'}}}}},'./alignmentService':{alignmentService:service(client)},'../../types/enums':{RoleCode:roles},__sessionStorage:journal})
+const fail=(status,code)=>Object.assign(Error(code),{response:{status,data:{code}}})
+await test('create timeout/F5 holds key/body and explicit retry; another intent or actor cannot borrow it',async()=>{
+ const journal=storage(),posts=[];let timeout=true
+ const client={post:async(url,body,config)=>{posts.push({url,body:JSON.stringify(body),key:config.headers['Idempotency-Key']});if(timeout)throw Error('timeout');return{...ok(dto),status:201}},get:async()=>ok(dto)}
+ const c=commands(client,journal);await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}),/timeout/)
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:{...draftInput,changeReason:'different'}}),/Yêu cầu cũ/);assert.equal(posts.length,1)
+ actor={id:'other',role:'PROJECT_MANAGER'};assert.equal(c.pendingDraftCommand('p'),null);actor={id:'pm',role:'PROJECT_MANAGER'}
+ const reloaded=commands(client,journal);assert.ok(reloaded.pendingDraftCommand('p'));assert.equal(posts.length,1);timeout=false
+ const result=await reloaded.runDraftCommand('p');assert.equal(result.draft.data.id,dto.id);assert.deepEqual(posts[0],posts[1]);assert.ok(posts[0].url.includes('/road-sections/road/geometry-drafts'));assert.equal(reloaded.pendingDraftCommand('p'),null)
+})
+await test('201 with readback503 keeps receipt and retry never POSTs again',async()=>{
+ let writes=0,broken=true;const c=commands({post:async()=>{writes++;return{...ok(dto),status:201}},get:async()=>{if(broken)throw fail(503,'dependency_unavailable');return ok(dto)}})
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}),e=>!!e.receipt)
+ assert.ok(c.pendingDraftCommand('p').receipt);broken=false;await c.runDraftCommand('p');assert.equal(writes,1)
+})
+await test('update conflict preserves input/key and requires explicit new-version decision; exact If-Match',async()=>{
+ const calls=[];let conflict=true
+ const c=commands({put:async(url,body,config)=>{calls.push({body:JSON.stringify(body),headers:config.headers});if(conflict)throw fail(412,'concurrency_conflict');return ok({...dto,version:'AAAAAAAAAAI='})},get:async()=>({data:{...dto,version:'AAAAAAAAAAI='},headers:{etag:'"AAAAAAAAAAI="'}})})
+ await assert.rejects(c.runDraftCommand('p',{kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:draftInput}),e=>e.response.status===412)
+ assert.equal(c.pendingDraftCommand('p').command.input.changeReason,draftInput.changeReason);await assert.rejects(c.runDraftCommand('p'),/phiên bản mới/);assert.equal(calls.length,1)
+ c.acceptFreshDraftVersion('p');conflict=false;await c.runDraftCommand('p',{kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAI="',input:draftInput})
+ assert.equal(calls[0].headers['If-Match'],'"AAAAAAAAAAE="');assert.equal(calls[1].headers['If-Match'],'"AAAAAAAAAAI="');assert.notEqual(calls[0].headers['Idempotency-Key'],calls[1].headers['Idempotency-Key']);assert.equal(calls[0].body,calls[1].body)
+})
+await test('PM cannot confirm; Sup confirmation receipt/F5 readback is fenced and never resubmitted',async()=>{
+ let writes=0,broken=true;const geometry={projectId:'p',roadSectionId:'road',routeVersionId:'route-new',sourceDraftId:dto.id,metadataStatus:'COMPLETE'}
+ const c=commands({post:async(url,body,config)=>{writes++;assert.equal(body.expectedCurrentVersionId,'route-old');assert.equal(config.headers['If-Match'],'"AAAAAAAAAAE="');return{...ok(geometry),status:201}},get:async()=>{if(broken)throw fail(503,'read_failed');return ok(geometry)}})
+ const intent={kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:'route-old',effectiveFrom:'2026-11-07T01:00:00Z',reason:'Đối chiếu hồ sơ'}}
+ await assert.rejects(c.runDraftCommand('p',intent),/Vai trò/);assert.equal(writes,0);actor={id:'sup',role:'SUPERVISOR'}
+ await assert.rejects(c.runDraftCommand('p',intent),e=>!!e.receipt);broken=false;const result=await c.runDraftCommand('p');assert.equal(result.geometry.routeVersionId,'route-new');assert.equal(writes,1)
+})
+await test('late mutation after epoch change never returns accepted result or clears another session intent',async()=>{
+ let finish;const c=commands({post:()=>new Promise(resolve=>finish=resolve)})
+ const request=c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput});epoch++;finish({...ok(dto),status:201});await assert.rejects(request,/Phiên/);assert.ok(c.pendingDraftCommand('p'))
+})
+await test('coordinate form requires sourced matching EN/metre profile and never invents engineering data',async()=>{
+ const module=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:{},'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:{}},'../../../api/services/geometryDraftCommands':{}})
+ const form={sectionId:'road',profileId:'profile',origin:'0',surveyWidth:'10',widths:'0, 100, 6',reason:'Đo từ hồ sơ'}
+ const model={submissionReady:true,submissionLoading:false,submissionError:'',submission:null,context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'Road'}]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'authority datum',projection:'authority projection',sourceReference:'authority document',sourceChecksum:'a'.repeat(64),sampleOnly:false}}]}
+ const input=module.coordinateDraftInput(form,'500000, 1000000\n500100, 1000000',model);assert.equal(input.sourceCrs,32648);assert.equal(input.stationOriginMeters,0);assert.equal(input.widthProfile[0].widthMeters,6)
+ assert.throws(()=>module.coordinateDraftInput(form,'1,2\n3,4',{...model,context:null}),/phạm vi tuyến/)
+ for(const patch of [{axisOrder:'NE'},{metresPerUnit:0.001},{sourceSrid:32649},{sourceChecksum:''},{sampleOnly:true}]){const profiles=[{...model.profiles[0],definition:{...model.profiles[0].definition,...patch}}];assert.throws(()=>module.coordinateDraftInput(form,'500000,1000000\n500100,1000000',{...model,profiles}))}
+ assert.throws(()=>module.coordinateDraftInput({...form,origin:''},'500000,1000000\n500100,1000000',model));assert.throws(()=>module.coordinateDraftInput({...form,widths:'0,99,6'},'500000,1000000\n500100,1000000',model))
+})
+
+await test('rejected HTTP retry keeps key until explicit input revision',async()=>{
+ const keys=[];const c=commands({post:async(_,__,cfg)=>{keys.push(cfg.headers['Idempotency-Key']);throw fail(403,'access_forbidden')}})
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}));await assert.rejects(c.runDraftCommand('p'));assert.equal(keys[0],keys[1]);assert.equal(c.pendingDraftCommand('p').rejected,true);c.reviseRejectedDraftCommand('p');assert.equal(c.pendingDraftCommand('p'),null)
+})
+await test('workflow fences create/update receipt-to-URL transition, previews without confirming and Sup confirms exact fresh snapshot',async()=>{
+ const React=require('react');let slot=0,view,coords='',opened,confirmedRef;const values=[],effects=[],writes=[]
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const model={submissionReady:true,submissionLoading:false,submissionError:'',submission:null,draftId:'',draft:null,readiness:{ready:true,missingFields:[],errors:[]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'sourced',projection:'sourced',sourceReference:'test source',sourceChecksum:'a'.repeat(64),sampleOnly:false}}],context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'R',currentVersionId:'route-old'}]},retry(){},openDraft:id=>opened=id,openConfirmed:(id,geometry)=>confirmedRef={id,geometry},setReadiness:value=>model.readiness=value}
+ let next=1
+ const commandMock={pendingDraftCommand:()=>null,acceptFreshDraftVersion(){},reviseRejectedDraftCommand(){},runDraftCommand:async(_,intent)=>{writes.push(JSON.parse(JSON.stringify(intent)));if(intent.kind==='confirm')return{kind:'confirm',draftId:dto.id,geometry:{projectId:'p',roadSectionId:'road',routeVersionId:'route-new',sourceDraftId:dto.id}};return{kind:intent.kind,draft:{data:{...dto,version:next===1?'AAAAAAAAAAE=':'AAAAAAAAAAI='},etag:next++===1?'"AAAAAAAAAAE="':'"AAAAAAAAAAI="'}}}}
+ const api={getGeometryDraft:async()=>model.draft,readDraftReadiness:async()=>model.readiness,readProjectContext:async()=>model.context,previewGeometryDraft:async()=>({lengthMeters:100,warnings:[]})}
+ const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{'../../../api/services/geometrySubmissionService':{geometrySubmissionService:{read:async()=>model.submission}},react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:api},'../../../api/services/geometryDraftCommands':commandMock}).useGeometryDraftWorkflow
+ const render=()=>{slot=0;view=hook('p',model,coords,text=>coords=text,()=>{});effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
+ render();await flush();coords='500000,1000000\n500100,1000000';view.setForm({sectionId:'road',profileId:'profile',origin:'0',surveyWidth:'10',widths:'0,100,6',reason:'Tài liệu nguồn'});render();assert.equal(view.saveReason,'')
+ const oldSave=view.save;await oldSave();await oldSave();assert.equal(writes.length,1);assert.equal(opened,dto.id);render();assert.match(view.saveReason,/Đang nạp/)
+ model.draftId=dto.id;model.draft={data:{...dto},etag:'"AAAAAAAAAAE="'};render();await flush();view.setForm({...view.form,profileId:'profile',reason:'Bản nhập sửa'});render();const oldUpdate=view.save;await oldUpdate();await oldUpdate();assert.equal(writes.length,2);assert.equal(writes[1].kind,'update')
+ model.draft={data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'};render();await flush();await view.loadPreview();await flush();assert.equal(writes.length,2);assert.ok(view.preview)
+ actor={id:'sup',role:'SUPERVISOR'};model.draft.data.status='SUBMITTED';model.submission={draftId:model.draftId,status:'SUBMITTED'};epoch++;render();await flush();view.setEffectiveFrom('2026-11-07T10:00');view.setReason('Đã xem hồ sơ');render();await view.loadPreview();await flush();assert.equal(view.confirmReason,'');const confirm=view.confirm;await confirm();await confirm();assert.equal(writes.length,3);assert.equal(writes[2].kind,'confirm');assert.equal(writes[2].input.effectiveFrom,'2026-11-07T03:00:00.000Z');assert.equal(writes[2].input.reason,'Đã xem hồ sơ');assert.equal(writes[2].input.expectedCurrentVersionId,'route-old');assert.equal(writes[2].etag,'"AAAAAAAAAAI="');assert.equal(confirmedRef.geometry.routeVersionId,'route-new')
+ effects.forEach(e=>e?.cleanup?.())
+})
+await test('late GeoJSON FileReader cannot replace another project/draft input',async()=>{
+ let reader,messages=[],setInputs=0,refSlot=0,stateSlot=0;const refs=[]
+ const React={useState:v=>{const i=stateSlot++;return[v,()=>{if(i===2)setInputs++}]},useRef:v=>refs[refSlot++]||(refs[refSlot-1]={current:v}),useEffect(){}}
+ class Reader{constructor(){reader=this}readAsText(){}}
+ const hook=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react:React,'maplibre-gl':{},'./alignmentImportHelpers':{GeoJsonValidationError:class extends Error{},inspectGeoJsonCenterline:()=>({coords:[[1,2],[3,4]]})},__FileReader:Reader}).useAlignmentImportState
+ const render=inputScope=>{refSlot=0;stateSlot=0;return hook({inputScope,defaultManualText:'',showToast:m=>messages.push(m)})}
+ const a=render('epoch1:p:d1');a.processGeoJSONFile({});const old=reader;render('epoch2:q:d2');old.onload({target:{result:'{}'}});old.onerror();assert.equal(setInputs,0);assert.equal(messages.length,0)
+})
+
+await test('native edit is specifically blocked but preview remains usable; pending confirmation inputs restore after F5',async()=>{
+ const React=require('react');let slot=0,view,held=null;const values=[],effects=[]
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const model={submissionReady:true,submissionLoading:false,submissionError:'',submission:null,draftId:dto.id,draft:{data:{...dto,sourceKind:'NATIVE_ALIGNMENT'},etag:'"AAAAAAAAAAE="'},context:{projectId:'p',roadSections:[{roadSectionId:'road',currentVersionId:'v'}]},profiles:[],readiness:{ready:true,missingFields:[],errors:[]},setReadiness(){},retry(){}}
+ let previews=0
+ const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{'../../../api/services/geometrySubmissionService':{geometrySubmissionService:{read:async()=>model.submission}},react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:{previewGeometryDraft:async()=>{previews++;return{lengthMeters:100}},readDraftReadiness:async()=>model.readiness}},'../../../api/services/geometryDraftCommands':{pendingDraftCommand:()=>held}}).useGeometryDraftWorkflow
+ const render=()=>{slot=0;view=hook('p',model,'',()=>{},()=>{});effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
+ render();await flush();assert.match(view.saveReason,/native/);await view.loadPreview();await flush();assert.equal(previews,1)
+ held={key:'held',command:{kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:'v',effectiveFrom:'2026-11-07T03:00:00Z',reason:'Lý do đã nhập trước F5'}}};actor={id:'sup',role:'SUPERVISOR'};model.draft.data.status='SUBMITTED';model.submission={draftId:model.draftId,status:'SUBMITTED'};epoch++;render();await flush();await flush();assert.equal(view.reason,'Lý do đã nhập trước F5');assert.ok(view.effectiveFrom);assert.ok(view.pending);let reference;model.openConfirmed=(id,geometry)=>reference={id,geometry};held={...held,receipt:{projectId:'p',roadSectionId:'road',routeVersionId:'confirmed-version',sourceDraftId:dto.id}};model.draftId='';model.draft=null;epoch++;render();await flush();assert.equal(reference.geometry.routeVersionId,'confirmed-version');assert.equal(view.preview,null);effects.forEach(e=>e?.cleanup?.())
+})
+await test('command never dispatches when browser cannot retain stable identity',async()=>{
+ let writes=0;const c=commands({post:async()=>writes++},{getItem:()=>null,setItem(){throw Error('quota')},removeItem(){}})
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}),/Không giữ được yêu cầu/);assert.equal(writes,0)
+})
+await test('first dispatch uses the same immutable payload that was journaled, even if caller changes its object',async()=>{
+ let finish,observed;const input=JSON.parse(JSON.stringify(draftInput))
+ const c=commands({post:async(_,body)=>{await new Promise(resolve=>finish=resolve);observed=body.changeReason;return{...ok(dto),status:201}},get:async()=>ok(dto)})
+ const request=c.runDraftCommand('p',{kind:'create',sectionId:'road',input});input.changeReason='Changed after dispatch';finish();await request;assert.equal(observed,draftInput.changeReason)
+})
+
+function hydrateHarness(sourceUnverified=false){
+ const control={error:null}
+ const React=require('react');let slot=0,view,coords='',versionReads=0,held=null;const values=[],effects=[],writes=[]
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const model={submissionReady:true,submissionLoading:false,submissionError:'',submission:null,draftId:dto.id,draft:{data:{...dto},etag:'"AAAAAAAAAAE="'},draftLoading:false,draftError:'',context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'R',currentVersionId:'route-old'}]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'sourced',projection:'sourced',sourceReference:'source',sourceChecksum:'a'.repeat(64),sampleOnly:false}}],readiness:{ready:true,missingFields:[],errors:[]},retry(){versionReads++;model.draft=null;model.draftLoading=true;model.draftError=''},openDraft(){},openConfirmed(){},setReadiness(){}}
+ const notices=[]
+ const api={getGeometryDraft:async()=>model.draft,readProjectContext:async()=>model.context,previewGeometryDraft:async()=>({lengthMeters:100}),readDraftReadiness:async()=>model.readiness}
+ const commandMock={pendingDraftCommand:()=>held,acceptFreshDraftVersion(){held=null},reviseRejectedDraftCommand(){held=null},runDraftCommand:async(_,intent)=>{writes.push(intent);if(intent?.kind==='confirm'&&control.confirmGeometry)return{kind:'confirm',draftId:intent.draftId,geometry:control.confirmGeometry};if(control.error)throw control.error;return{kind:'update',draft:{data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'}}}}
+ const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{'../../../api/services/geometrySubmissionService':{geometrySubmissionService:{read:async()=>model.submission}},react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:api},'../../../api/services/geometryDraftCommands':commandMock}).useGeometryDraftWorkflow
+ const render=()=>{slot=0;view=hook('p',model,coords,text=>coords=text,text=>notices.push(text),sourceUnverified);effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
+ const prepare=async()=>{render();await flush();view.setForm({...view.form,profileId:'profile',reason:'Bản nhập chưa được quyết định'});render();return view}
+ const hydrate=(etag)=>{model.draft={data:{...dto,version:etag.slice(1,-1),stationOriginMeters:999},etag};model.draftLoading=false;model.draftError='';render()}
+ return{api,control,model,render,flush,prepare,hydrate,get view(){return view},get coords(){return coords},writes,notices,get reads(){return versionReads},setHeld:value=>held=value,unmount:()=>effects.forEach(e=>e?.cleanup?.())}
+}
+await test('submission blocks PM save/update/replacement and Sup confirm until server SUBMITTED lookup',async()=>{
+ for(const status of ['SUBMITTED','CONFIRMED']){
+  const h=hydrateHarness();h.model.draft.data.status=status;h.model.submission={draftId:h.model.draftId,status};await h.prepare();assert.ok(h.view.saveDisabledReason);await h.view.save();assert.equal(h.writes.length,0);h.unmount()
+ }
+ const h=hydrateHarness();h.model.submission={draftId:'other',status:'SUBMITTED'};await h.prepare();h.model.draftId='';h.model.draft=null;h.render();assert.ok(h.view.saveDisabledReason);await h.view.save();assert.equal(h.writes.length,0);h.unmount()
+ const sup=hydrateHarness();actor={id:'sup',role:'SUPERVISOR'};await sup.prepare();await sup.view.loadPreview();await sup.flush();assert.match(sup.view.confirmReason,/SUBMITTED/);sup.view.openConfirm();sup.render();assert.equal(sup.view.confirmModalOpen,false);assert.equal(sup.writes.length,0);sup.unmount()
+})
+await test('REJECTED same draft can edit/save, remains rejected readback and cannot confirm until resubmitted',async()=>{
+ const h=hydrateHarness();h.model.draft.data.status='REJECTED';h.model.submission={draftId:h.model.draftId,status:'REJECTED'};await h.prepare();assert.equal(h.view.saveDisabledReason,'');await h.view.save();assert.equal(h.writes.length,1);assert.equal(h.writes[0].kind,'update');assert.equal(h.writes[0].draftId,dto.id);h.unmount()
+ const other=hydrateHarness();other.model.draft.data.status='REJECTED';other.model.submission={draftId:'another',status:'REJECTED'};await other.prepare();assert.ok(other.view.saveDisabledReason);await other.view.save();assert.equal(other.writes.length,0);other.unmount()
+ const journal=storage(),read={...dto,status:'REJECTED'},input={...draftInput};let puts=0;const c=commands({put:async()=>{puts++;return ok(read)},get:async()=>ok(read)},journal);const result=await c.runDraftCommand('p',{kind:'update',sectionId:'road',draftId:dto.id,etag:'"AAAAAAAAAAE="',input});assert.equal(result.draft.data.status,'REJECTED');assert.equal(result.draft.data.id,dto.id);assert.equal(puts,1);const equal=load('src/pages/(pm)/alignment/roadGuardDraftImportHelpers.ts').sameCoordinateDraftContent;assert.equal(equal(input,read),true);assert.equal(equal({...input,widthProfile:input.widthProfile.map(w=>({...w,widthMeters:w.widthMeters+1}))},read),false)
+})
+await test('Sup submitted dossier auto preview/readiness pins exact ETag; errors retry explicitly, stale response never enables confirm',async()=>{
+ actor={id:'sup',role:'SUPERVISOR'};const h=hydrateHarness();let previews=[],readyReads=0;h.model.draft.data.status='SUBMITTED';h.model.submission={draftId:h.model.draftId,status:'SUBMITTED'}
+ h.api.previewGeometryDraft=async(p,d,etag)=>{previews.push({p,d,etag});return{lengthMeters:100}};h.api.readDraftReadiness=async()=>{readyReads++;return h.model.readiness}
+ await h.prepare();for(let i=0;i<4;i++)await h.flush();assert.equal(previews.length,1);assert.equal(previews[0].etag,'"AAAAAAAAAAE="');assert.equal(h.view.confirmReason,'');assert.ok(readyReads>0);assert.equal(h.writes.length,0)
+ let release;h.api.previewGeometryDraft=()=>new Promise(resolve=>release=resolve);h.model.draft={...h.model.draft,etag:'"AAAAAAAAAAI="',data:{...h.model.draft.data,version:'AAAAAAAAAAI='}};h.render();await h.flush();h.model.draftId='other';h.model.draft=null;h.render();release({lengthMeters:100});await h.flush();assert.equal(h.view.preview,null);assert.ok(h.view.confirmReason);assert.equal(h.writes.length,0);h.unmount()
+ const broken=hydrateHarness();broken.model.draft.data.status='SUBMITTED';broken.model.submission={draftId:broken.model.draftId,status:'SUBMITTED'};let attempts=0;broken.api.previewGeometryDraft=async()=>{attempts++;throw Object.assign(Error('503'),{response:{status:503,data:{code:'dependency_unavailable'}}})};await broken.prepare();for(let i=0;i<4;i++)await broken.flush();assert.equal(attempts,1);assert.ok(broken.view.previewError);assert.ok(broken.view.confirmReason);assert.equal(broken.writes.length,0)
+ broken.api.previewGeometryDraft=async()=>{attempts++;return{lengthMeters:100}};broken.view.retryPreview();for(let i=0;i<4;i++)await broken.flush();assert.equal(attempts,2);assert.equal(broken.view.previewError,'');assert.equal(broken.view.confirmReason,'');assert.equal(broken.writes.length,0);broken.unmount()
+ const blocked=hydrateHarness();blocked.model.draft.data.status='SUBMITTED';blocked.model.submission={draftId:blocked.model.draftId,status:'SUBMITTED'};blocked.model.readiness={ready:false,missingFields:['source'],errors:[]};await blocked.prepare();for(let i=0;i<4;i++)await blocked.flush();assert.equal(blocked.view.reviewNeedsRetry,true);assert.match(blocked.view.confirmReason,/Readiness/);blocked.model.readiness={ready:true,missingFields:[],errors:[]};blocked.view.retryPreview();for(let i=0;i<4;i++)await blocked.flush();assert.equal(blocked.view.confirmReason,'');assert.equal(blocked.writes.length,0);blocked.unmount()
+})
+await test('null-section Sup preview opens existing modal and confirms expected null without borrowing project routes',async()=>{
+ for(const roads of [[],[{roadSectionId:'unrelated',currentVersionId:'other-version'},{roadSectionId:'another',currentVersionId:'another-version'}]]){
+ const h=hydrateHarness();let opened;h.control.confirmGeometry={projectId:'p',roadSectionId:'created-section',routeVersionId:'created-version',sourceDraftId:dto.id};h.model.openConfirmed=(id,geometry)=>opened={id,geometry};h.model.draft.data.roadSectionId=null;h.model.context.roadSections=roads;actor={id:'sup',role:'SUPERVISOR'};h.model.draft.data.status='SUBMITTED';h.model.submission={draftId:h.model.draftId,status:'SUBMITTED'};await h.prepare();await h.view.loadPreview();await h.flush();assert.equal(h.view.confirmReason,'');h.view.openConfirm();h.render();assert.equal(h.view.confirmModalOpen,true);h.view.setEffectiveFrom('2026-11-09T10:00');h.view.setReason('Sup xác nhận nguồn');h.render();await h.view.confirm();assert.equal(h.writes.length,1);assert.equal(h.writes[0].input.expectedCurrentVersionId,null);assert.equal(h.writes[0].etag,'"AAAAAAAAAAE="');assert.equal(opened.id,dto.id);assert.equal(opened.geometry.roadSectionId,'created-section');assert.equal(opened.geometry.routeVersionId,'created-version');h.unmount()
+ }
+})
+
+await test('null-section confirm rejects changed section version ETag context readiness and PM after preview',async()=>{
+ for(const change of ['section','etag','context','version','readiness','sample','pm','missing-section','missing-version','model-version']){
+ const h=hydrateHarness();const linked=change.startsWith('missing-')||change==='version';if(!linked)h.model.draft.data.roadSectionId=null;actor={id:'sup',role:'SUPERVISOR'};h.model.draft.data.status='SUBMITTED';h.model.submission={draftId:h.model.draftId,status:'SUBMITTED'};await h.prepare();await h.view.loadPreview();await h.flush();assert.equal(h.view.confirmReason,'');h.view.setEffectiveFrom('2026-11-09T10:00');h.view.setReason('Sup lý do');h.render();const confirm=h.view.confirm
+ if(change==='section')h.api.getGeometryDraft=async()=>({data:{...dto},etag:'"AAAAAAAAAAE="'})
+ if(change==='etag')h.api.getGeometryDraft=async()=>({data:{...h.model.draft.data},etag:'"AAAAAAAAAAI="'})
+ if(change==='version')h.api.readProjectContext=async()=>({...h.model.context,roadSections:[{roadSectionId:'road',currentVersionId:'changed-version'}]})
+ if(change==='context')h.api.readProjectContext=async()=>({...h.model.context,projectId:'q'})
+ if(change==='readiness')h.api.readDraftReadiness=async()=>({ready:false,missingFields:['official'],errors:[]})
+ if(change==='sample')h.api.readDraftReadiness=async()=>({ready:true,missingFields:[],errors:[],sampleOnly:true})
+ if(change==='missing-section')h.api.readProjectContext=async()=>({...h.model.context,roadSections:[]})
+ if(change==='missing-version')h.api.readProjectContext=async()=>({...h.model.context,roadSections:[{roadSectionId:'road',currentVersionId:null}]})
+ if(change==='model-version'){h.model.draft={...h.model.draft,etag:'"AAAAAAAAAAI="'};h.render()}
+ if(change==='pm'){actor={id:'pm',role:'PROJECT_MANAGER'};epoch++;h.render();await h.view.confirm()}else await confirm()
+ assert.equal(h.writes.length,0,change);h.unmount()
+ }
+})
+
+await test('null-section confirm command timeout replay and receipt F5 only GET geometry with server references',async()=>{
+ actor={id:'sup',role:'SUPERVISOR'};const journal=storage(),posts=[],gets=[];let timeout=true,broken=true
+ const geometry={projectId:'p',roadSectionId:'created-section',routeVersionId:'created-version',sourceDraftId:dto.id,metadataStatus:'COMPLETE'}
+ const client={post:async(url,body,config)=>{posts.push({url,body:JSON.stringify(body),key:config.headers['Idempotency-Key'],etag:config.headers['If-Match']});assert.equal(body.expectedCurrentVersionId,null);if(timeout)throw Error('timeout');return ok(geometry)},get:async url=>{gets.push(url);if(broken)throw fail(503,'read_failed');return ok(geometry)}}
+ const c=commands(client,journal),intent={kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:null,effectiveFrom:'2026-11-09T03:00:00Z',reason:'Sup nhập'}}
+ await assert.rejects(c.runDraftCommand('p',intent),/timeout/);timeout=false;await assert.rejects(c.runDraftCommand('p'),e=>!!e.receipt);assert.deepEqual(posts[0],posts[1]);const afterF5=commands(client,journal);broken=false;const result=await afterF5.runDraftCommand('p');assert.equal(posts.length,2);assert.ok(gets.includes('/projects/p/road-geometry-submission'));assert.ok(gets.includes('/projects/p/road-sections/created-section/versions/created-version/geometry'));assert.ok(gets.every(url=>['/projects/p/road-geometry-submission','/projects/p/road-sections/created-section/versions/created-version/geometry'].includes(url)));assert.equal(result.geometry.sourceDraftId,dto.id);assert.equal(afterF5.pendingDraftCommand('p'),null)
+})
+
+await test('null-section confirm rejects wrong geometry project source section version without replaying receipt',async()=>{
+ actor={id:'sup',role:'SUPERVISOR'}
+ for(const field of ['projectId','sourceDraftId','roadSectionId','routeVersionId']){let posts=0;const geometry={projectId:'p',roadSectionId:'new-road',routeVersionId:'new-version',sourceDraftId:dto.id};const c=commands({post:async()=>{posts++;return ok(geometry)},get:async()=>ok({...geometry,[field]:'wrong'})});const intent={kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:null,effectiveFrom:'2026-11-09T03:00:00Z',reason:'Sup nhập'}};await assert.rejects(c.runDraftCommand('p',intent),e=>!!e.receipt);await assert.rejects(c.runDraftCommand('p'),e=>!!e.receipt);assert.equal(posts,1,field)}
+})
+
+await test('late null-section preview response cannot authorize another draft or actor epoch',async()=>{
+ for(const change of ['draft','epoch']){const h=hydrateHarness();h.model.draft.data.roadSectionId=null;actor={id:'sup',role:'SUPERVISOR'};h.model.draft.data.status='SUBMITTED';h.model.submission={draftId:h.model.draftId,status:'SUBMITTED'};await h.prepare();let finish;h.api.previewGeometryDraft=()=>new Promise(resolve=>finish=resolve);const read=h.view.loadPreview();if(change==='draft'){h.model.draftId='other';h.model.draft={data:{...dto,id:'other',roadSectionId:null},etag:'"AAAAAAAAAAE="'}}else epoch++;h.render();finish({lengthMeters:100});await read;await h.flush();assert.equal(h.view.preview,null);assert.ok(h.view.confirmReason);assert.equal(h.writes.length,0);h.unmount()}
+})
+
+await test('reason modal opens after F5, validates whitespace, cancels without writes and sends the current update once',async()=>{
+ const h=hydrateHarness();await h.prepare();h.view.setForm({...h.view.form,reason:''});h.render()
+ assert.equal(h.view.saveDisabledReason,'');await h.view.save();h.render();assert.equal(h.view.reasonModalOpen,true);assert.equal(h.writes.length,0)
+ h.view.setForm({...h.view.form,reason:'   '});h.render();await h.view.save(true);h.render();assert.match(h.view.reasonError,/khoảng trắng/);assert.equal(h.writes.length,0)
+ const coords=h.coords;h.view.cancelReason();h.render();assert.equal(h.view.reasonModalOpen,false);assert.equal(h.coords,coords);assert.equal(h.view.form.origin,'0')
+ await h.view.save();h.render();h.view.setForm({...h.view.form,reason:'PM cập nhật sau F5'});h.render();const save=h.view.save;await save(true);await save(true);h.render()
+ assert.equal(h.writes.length,1);assert.equal(h.writes[0].kind,'update');assert.equal(h.writes[0].draftId,dto.id);assert.equal(h.writes[0].etag,'"AAAAAAAAAAE="');assert.equal(h.writes[0].input.changeReason,'PM cập nhật sau F5');assert.equal(h.view.reasonModalOpen,false);h.unmount()
+})
+await test('reason modal preserves reason/editor on API error; pending retry cannot replace its payload',async()=>{
+ const h=hydrateHarness();await h.prepare();h.view.setForm({...h.view.form,reason:''});h.render();await h.view.save();h.render()
+ h.view.setForm({...h.view.form,reason:'PM giữ lý do khi lỗi'});h.render();h.control.error=fail(503,'dependency_unavailable')
+ const command={kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{...draftInput,changeReason:h.view.form.reason}}
+ h.setHeld({key:'same-key',command});await h.view.save(true);h.render()
+ assert.equal(h.view.reasonModalOpen,true);assert.equal(h.view.form.reason,'PM giữ lý do khi lỗi');assert.ok(h.coords.includes('500000'));assert.equal(h.view.busy,false)
+ assert.equal(h.view.pending.key,'same-key');assert.equal(h.view.pending.command.input.changeReason,'PM giữ lý do khi lỗi')
+ const writes=h.writes.length;h.view.setForm({...h.view.form,reason:'Không sửa command đang chờ'});h.render();await h.view.save(true);assert.equal(h.writes.length,writes)
+ h.control.error=null;await h.view.retryCommand();h.render();assert.equal(h.writes.at(-1),undefined);assert.equal(h.view.reasonModalOpen,false);h.unmount()
+})
+await test('Sup modal technical gate, timezone, cancel, whitespace and fresh version checks never invent approval',async()=>{
+ actor={id:'sup',role:'SUPERVISOR'}
+ const h=hydrateHarness();h.model.draft.data.status='SUBMITTED';h.model.submission={draftId:h.model.draftId,status:'SUBMITTED'};await h.prepare();await h.view.loadPreview();await h.flush()
+ assert.equal(h.view.confirmReason,'');h.view.openConfirm();h.render();assert.equal(h.view.confirmModalOpen,true);assert.equal(h.view.reason,'');assert.equal(h.view.effectiveFrom,'')
+ h.view.setEffectiveFrom('2026-11-09T09:15');h.view.setReason('   ');h.render();await h.view.confirm();h.render();assert.equal(h.writes.length,0);assert.match(h.view.confirmInputError,/lý do/)
+ h.view.cancelConfirm();h.render();assert.equal(h.view.confirmModalOpen,false);assert.equal(h.view.effectiveFrom,'2026-11-09T09:15')
+ h.view.setReason('Sup kiểm tra');h.render();h.api.getGeometryDraft=async()=>({...h.model.draft,etag:'"AAAAAAAAAAI="'});await h.view.confirm();h.render();assert.equal(h.writes.length,0);assert.equal(h.view.conflict,true);assert.equal(h.view.reason,'Sup kiểm tra');h.unmount()
+ const {confirmationIso,readinessBlocker}=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:require('react'),'../../../types/enums':{RoleCode:roles},'../../../api/services/geometryDraftCommands':{}})
+ assert.equal(confirmationIso('2026-11-09T09:15'),'2026-11-09T02:15:00.000Z');for(const value of ['','2026-02-30T09:15','2026-11-09T25:00'])assert.throws(()=>confirmationIso(value))
+ assert.match(readinessBlocker({ready:false,missingFields:['nativeAlignment'],errors:['crs_unverified']}),/nativeAlignment.*crs_unverified/)
+ actor={id:'pm',role:'PROJECT_MANAGER'};const pm=hydrateHarness();await pm.prepare();await pm.view.loadPreview();await pm.flush();pm.view.openConfirm();pm.render();assert.equal(pm.view.confirmModalOpen,false);assert.equal(pm.writes.length,0);pm.unmount()
+})
+await test('saved V2 then hydrate a different opaque V3 releases busy without overwriting input, accepting it or writing again',async()=>{
+ const h=hydrateHarness();await h.prepare();const save=h.view.save;await save();h.render();assert.equal(h.view.busy,true);assert.equal(h.writes.length,1)
+ h.hydrate('"AAAAAAAAAAA="');await h.flush();assert.equal(h.view.busy,false);assert.equal(h.view.conflict,true);assert.equal(h.view.freshVersion,false);assert.equal(h.view.form.origin,'0');assert.equal(h.view.form.reason,'Bản nhập chưa được quyết định');assert.ok(h.coords.includes('500000'));assert.match(h.view.message,/phiên bản khác/);assert.ok(!h.view.saveReason.includes('Đang nạp'))
+ await save();await h.view.save();assert.equal(h.writes.length,1);h.view.acceptVersion();h.render();assert.equal(h.view.conflict,true)
+ await h.view.reviewConflict();await h.flush();h.hydrate('"AAAAAAAAAAA="');await h.flush();h.view.acceptVersion();h.render();assert.equal(h.view.conflict,false);assert.equal(h.view.form.origin,'0');assert.equal(h.writes.length,1);h.unmount()
+})
+await test('hydrate failure after save releases the latch; retry only reads and a later different version still requires a decision',async()=>{
+ const h=hydrateHarness();await h.prepare();await h.view.save();h.render();h.model.draftLoading=false;h.model.draftError='mock read503';h.render();await h.flush();assert.equal(h.view.busy,false);assert.equal(h.view.hydrateReadError,true);assert.equal(h.view.form.reason,'Bản nhập chưa được quyết định');assert.match(h.view.message,/Đã lưu thành công nhưng chưa tải/)
+ const reads=h.reads;h.view.retryHydrate();h.render();assert.equal(h.reads,reads+1);assert.equal(h.writes.length,1);assert.equal(h.view.busy,true);h.hydrate('"AAAAAAAAAAI="');await h.flush();assert.equal(h.view.busy,false);assert.equal(h.view.hydrateReadError,false);assert.match(h.view.message,/Đã đọc lại bản nháp đã lưu/);assert.equal(h.view.form.origin,'0');assert.equal(h.writes.length,1);h.unmount()
+ const newer=hydrateHarness();await newer.prepare();await newer.view.save();newer.render();newer.model.draftLoading=false;newer.model.draftError='read failed';newer.render();await newer.flush();newer.view.retryHydrate();newer.render();newer.hydrate('\"AAAAAAAAAAM=\"');await newer.flush();assert.equal(newer.view.busy,false);assert.equal(newer.view.conflict,true);assert.equal(newer.view.form.origin,'0');assert.equal(newer.writes.length,1);newer.unmount()
+})
+await test('matching hydrate still fences repeated clicks and stale epoch outcomes cannot unlock a new scope',async()=>{
+ const h=hydrateHarness();await h.prepare();const save=h.view.save;await save();await save();h.render();assert.equal(h.writes.length,1);assert.equal(h.view.busy,true);h.hydrate('"AAAAAAAAAAI="');await h.flush();assert.equal(h.view.busy,false);assert.equal(h.view.conflict,false);assert.equal(h.view.form.origin,'0')
+ epoch++;h.render();await h.flush();h.model.draftLoading=false;h.model.draftError='late old error';h.render();await h.flush();assert.equal(h.view.hydrateReadError,false);assert.equal(h.writes.length,1);h.unmount()
+})
+await test('ProblemDetails codes distinguish CSRF, permissions, state/idempotency/version conflicts and never echo arbitrary error text',async()=>{
+ const{geometryCommandErrorMessage:message}=load('src/api/services/geometryCommandErrors.ts')
+ for(const[status,code,pattern]of [[422,'geometry_validation_failed',/hình học chưa hợp lệ/],[400,'validation_error',/chưa hợp lệ/],[403,'csrf_failed',/CSRF/],[403,'access_forbidden',/không có quyền/],[409,'project_closed',/Dự án đã đóng/],[409,'duplicate_request',/Khóa yêu cầu/],[409,'road_geometry_invalid_state',/Trạng thái bản nháp/],[409,'road_section_code_conflict',/Mã tuyến đã tồn tại/],[409,'road_section_concurrency_conflict',/Phiên bản tuyến/],[412,'concurrency_conflict',/Phiên bản/],[428,'validation_error',/Thiếu điều kiện/],[401,'auth_session_revoked',/không còn hiệu lực/]])assert.match(message(fail(status,code),true,null),pattern)
+ assert.ok(!message(fail(403,'unknown'),true,null).includes('không có quyền'));assert.ok(!message(fail(409,'project_closed'),true,null).includes('Phiên bản'));assert.ok(!message(fail(409,'duplicate_request'),true,null).includes('Phiên bản'))
+ assert.match(message(fail(401,'auth_unauthorized'),true,null),/chưa được xác thực/);assert.match(message(fail(401,'auth_unauthorized'),false,null),/không còn hiệu lực/)
+ assert.match(message({code:'ERR_NETWORK',request:{}},true,null),/Không kết nối/);assert.match(message({code:'ERR_NETWORK'},true,{}),/Chưa rõ kết quả/);assert.match(message(fail(500,'internal_error'),true,{}),/Chưa rõ kết quả/)
+ assert.match(message({receipt:dto,cause:fail(403,'access_forbidden')},true,{receipt:dto}),/đã tiếp nhận lệnh; chưa đọc/)
+ const secret='STACK SECRET TOKEN';const result=message({message:secret,stack:secret,response:{status:409,data:{code:'unknown',detail:secret,title:secret}}},true,null);assert.ok(!result.includes(secret));assert.ok(!message(Error(secret),true,null).includes(secret))
+})
+await test('UI restore sidebar edits survive busy/conflict and are not replaced by a newer server snapshot',async()=>{
+ const React=require('react');let slot=0,view;const values=[],effects=[]
+ const react={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useMemo:fn=>fn(),useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||!deps||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const geometry=load('src/pages/(pm)/alignment/alignmentGeometryHelpers.ts'),split=load('src/pages/(pm)/alignment/alignmentSplitHelpers.ts',{'./data':{SEGMENT_COLORS:['#C9A227']}}),segments=load('src/pages/(pm)/alignment/useAlignmentSegmentsState.ts',{react,'./data':{SEGMENT_COLORS:['#C9A227']},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split})
+ const model={submissionReady:true,submissionLoading:false,submissionError:'',submission:null,projects:[],error:'',draftId:dto.id,draft:{data:{...dto,sourceCrs:32648},etag:'"AAAAAAAAAAE="'},context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road'}]},geometry:null}
+ const workflow={form:{sectionId:'road',origin:'0',widths:'0, 100, 6'},busy:false,conflict:false,setForm:next=>workflow.form=typeof next==='function'?next(workflow.form):next}
+ const hook=load('src/pages/(pm)/alignment/useAlignmentState.ts',{react,'react-router-dom':{useNavigate:()=>()=>{},useParams:()=>({id:'p'})},'maplibre-gl':{},'../../../types/enums':{RoleCode:roles},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split,'./useGeometryReadModel':{useGeometryReadModel:()=>model},'./useGeometryDraftWorkflow':{useGeometryDraftWorkflow:()=>workflow},'./useAlignmentSegmentsState':segments,'./useAlignmentMapState':{useAlignmentMapState:()=>({syncMap(){},handleFitBounds(){},mapRef:{current:null}})},'./useAlignmentImportState':{useAlignmentImportState:()=>({manualCoordsText:'',setManualCoordsText(){}})}}).useAlignmentState
+ const render=()=>{slot=0;view=hook();effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})};for(let i=0;i<4;i++)render();assert.equal(view.activeSegments[0].roadWidthM,6)
+ view.setRightTab('SLABS');render();render();assert.equal(view.toastMessage,null)
+ for(const [field,setter] of [['stripWidthMeters','setStripWidthMeters'],['slabLengthM','setSlabLengthM'],['slabThicknessCm','setSlabThicknessCm'],['contractionSpacingM','setContractionSpacingM'],['expansionSpacingM','setExpansionSpacingM'],['expansionGapMm','setExpansionGapMm']]) {
+  for(const text of ['','-','1.','0','-2','20.12567']) { view[setter](text);render();render();assert.equal(view[field],text);assert.equal(view.toastMessage,null) }
+ }
+ view.segmentsState.setSegments(old=>old.map(s=>({...s,roadWidthM:12})));view.markWidthDraft();render();render();assert.equal(workflow.form.widths,'0, 100, 12')
+ workflow.busy=true;model.draft={data:{...dto,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:20}]}};render();render();assert.equal(view.activeSegments[0].roadWidthM,12)
+ workflow.busy=false;workflow.conflict=true;render();render();assert.equal(view.activeSegments[0].roadWidthM,12);assert.equal(workflow.form.widths,'0, 100, 12');assert.equal(view.localDraftDirty,true)
+ workflow.conflict=false;render();render();assert.equal(view.activeSegments[0].roadWidthM,12);assert.equal(workflow.form.widths,'0, 100, 12');effects.forEach(e=>e?.cleanup?.())
+})
+await test('UI restore header keeps status/retry in its existing toolbar and does not invent zero length for a server draft',async()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+ const C=load('src/pages/(pm)/alignment/AlignmentHeader.tsx',{react:{__esModule:true,default:React,...React},'react-router-dom':{useNavigate:()=>()=>{}},'../../../components/ui/Icon':{Icon:()=>null}}).AlignmentHeader
+ const html=renderToStaticMarkup(React.createElement(C,{serverDraftStatus:'DRAFT',alignmentStatus:'DRAFT',activeProject:{},assignedProjects:[],currentCoords:[],importedLengthKm:0,isSupervisor:false,loading:true,statusMessage:'Lỗi đọc hồ sơ; hãy thử lại.',workflowActions:React.createElement('button',null,'Tải lại')}))
+ for(const text of ['Breadcrumb','Đang tải hồ sơ tuyến','Lỗi đọc hồ sơ','Tải lại','Chưa có chiều dài đã xác nhận'])assert.ok(html.includes(text),text);assert.ok(!html.includes('0.00 km'));assert.ok(!html.includes('Chưa có tim tuyến'))
+})
+await test('UI restore unverified file cannot reuse a previous valid profile to send a mutation',async()=>{
+ const h=hydrateHarness(true);await h.prepare();assert.match(h.view.saveReason,/chưa có mapping/);await h.view.save();assert.equal(h.writes.length,0);assert.equal(h.view.form.origin,'0');h.unmount()
+})
+await test('UI restore local segment edits require real origin/distance, keep unknown width/lanes and never manufacture slabs',async()=>{
+ const React=require('react');let slot=0,view;const values=[];const react={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]}}
+ const geometry=load('src/pages/(pm)/alignment/alignmentGeometryHelpers.ts'),split=load('src/pages/(pm)/alignment/alignmentSplitHelpers.ts',{'./data':{SEGMENT_COLORS:['#C9A227']}})
+ const hook=load('src/pages/(pm)/alignment/useAlignmentSegmentsState.ts',{react,'./data':{SEGMENT_COLORS:['#C9A227']},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split}).useAlignmentSegmentsState
+ const params={initialSegments:[],currentCoords:[],currentKmPoints:[],importedLengthKm:0.1,stationOriginKm:NaN,roadWidthM:NaN,showToast(){},syncMap(){},mapRef:{current:null},popupRef:{current:null},handleFitBounds(){}}
+ const render=()=>{slot=0;view=hook(params)};render();view.handleApplyAutoSplit();render();assert.equal(view.segments.length,0);view.setSplitDistance(.05);render();view.handleApplyAutoSplit();render();assert.equal(view.segments.length,0)
+ params.stationOriginKm=1;render();view.handleApplyAutoSplit();render();assert.equal(view.segments.length,2);assert.equal(view.segments[0].startKm,1);assert.equal(view.segments[1].endKm,1.1);assert.ok(view.segments.every(s=>Number.isNaN(s.roadWidthM)&&Number.isNaN(s.laneCount)&&!s.surfaceMaterial));assert.equal(view.slabs.length,0)
+ view.handleUpdateSegmentWidth(view.segments[0].id,12);render();assert.equal(view.segments[0].roadWidthM,12);assert.equal(view.slabs.length,0)
+})
+await test('UI restore context retry clears its error without dropping the draft and old context cannot replace a new project',async()=>{
+ const React=require('react');let slot=0,id='a',view,failContext=true;const values=[],effects=[],calls=[];let query=new URLSearchParams('draftId=11111111-1111-4111-8111-111111111111')
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const api={fetchCrsProfiles:async()=>[],getGeometryDraft:async(projectId,draftId)=>({data:{id:draftId,projectId,version:'AAAAAAAAAAE='},etag:'"AAAAAAAAAAE="'}),readDraftReadiness:async()=>({ready:false}),readProjectContext:async projectId=>{calls.push(projectId);if(failContext)throw Error('test503');return{projectId,roadSections:[]}}}
+ const hook=load('src/pages/(pm)/alignment/useGeometryReadModel.ts',{react:hooks,'react-router-dom':{useSearchParams:()=>[query,next=>query=next]},'../../../api/client':{apiClient:{get:async()=>ok({items:[{projectId:'a'},{projectId:'b'}]})}},'../../../api/services/alignmentService':{alignmentService:api}}).useGeometryReadModel
+ const render=()=>{slot=0;view=hook(id);effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})},flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
+ render();await flush();await flush();assert.ok(view.contextError);assert.equal(view.draft.data.projectId,'a');failContext=false;view.retry();render();await flush();await flush();assert.equal(view.contextError,'');assert.equal(view.context.projectId,'a');assert.equal(view.draft.data.projectId,'a');assert.ok(calls.length>=2)
+ id='b';render();await flush();await flush();assert.equal(view.context.projectId,'b');assert.equal(view.draft.data.projectId,'b');effects.forEach(e=>e?.cleanup?.())
+})
+await test('confirmed read model route switch/F5 rejects reversed responses and wrong source draft without writes',async()=>{
+ let slot=0,view,query=new URLSearchParams('roadSectionId=road&routeVersionId=v1'),id='p';const values=[],effects=[],requests=[]
+ const hooks={useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],v=>values[i]=typeof v==='function'?v(values[i]):v]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
+ const api={fetchCrsProfiles:async()=>[],readProjectContext:async p=>({projectId:p,roadSections:[]}),readConfirmedGeometry:(p,r,v)=>new Promise(resolve=>requests.push({p,r,v,resolve}))}
+ const hook=load('src/pages/(pm)/alignment/useGeometryReadModel.ts',{react:hooks,'react-router-dom':{useSearchParams:()=>[query,v=>query=v]},'../../../api/client':{apiClient:{get:async()=>({data:{items:[],nextCursor:null}})}},'../../../api/services/alignmentService':{alignmentService:api}}).useGeometryReadModel
+ function render(){slot=0;view=hook(id);for(const e of effects)if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.fn()}}
+ const flush=async()=>{for(let i=0;i<12;i++){await Promise.resolve();render()}}
+ render();await flush();const first=requests.at(-1);query=new URLSearchParams('roadSectionId=road&routeVersionId=v2');render();const second=requests.at(-1)
+ second.resolve({projectId:'p',roadSectionId:'road',routeVersionId:'v2'});await flush();first.resolve({projectId:'p',roadSectionId:'road',routeVersionId:'v1'});await flush();assert.equal(view.geometry.routeVersionId,'v2')
+ query=new URLSearchParams('roadSectionId=road&routeVersionId=v3&draftId=11111111-1111-4111-8111-111111111111');api.getGeometryDraft=async()=>({data:{id:dto.id,projectId:'p',version:'AAAAAAAAAAE='},etag:'"AAAAAAAAAAE="'});api.readDraftReadiness=async()=>({ready:false,missingFields:[],errors:[]});render();requests.at(-1).resolve({projectId:'p',roadSectionId:'road',routeVersionId:'v3',sourceDraftId:'wrong'});await flush();assert.equal(view.geometry,null);assert.ok(view.geometryError)
+ id='q';query=new URLSearchParams();render();await flush();assert.equal(view.geometry,null);effects.forEach(e=>e?.cleanup?.())
+})
+await test('UI restore renders original import tabs without technical form; sidebar unknown values stay unknown and valid values calculate',async()=>{
+ const React=require('react'),{renderToStaticMarkup:render}=require('react-dom/server'),react={__esModule:true,default:React,...React},icons=new Proxy({},{get:()=>()=>null})
+ const component=(name,extra={})=>load(`src/pages/(pm)/alignment/${name}.tsx`,{react,'lucide-react':icons,...extra})[name]
+ const ImportPanel=component('ImportPanel'),Modal=component('AlignmentImportModal',{'./ImportPanel':{ImportPanel}})
+ const modal=tab=>render(React.createElement(Modal,{isOpen:true,importTab:tab,manualCoordsText:'',activeProject:{defaultManualText:''},importStatus:'Đã đọc tệp, chưa lưu'}))
+ for(const tab of ['FILE','MANUAL']){const html=modal(tab);assert.ok(html.includes('Thiết Lập Tim Tuyến'));assert.ok(html.includes('Đã đọc tệp, chưa lưu'));for(const text of ['Hồ sơ hệ tọa độ nguồn','Lý trình gốc (m)','Bề rộng khảo sát (m)','Lý do thay đổi'])assert.ok(!html.includes(text),text);assert.ok(!html.includes('<select'))}
+ assert.ok(modal('FILE').includes('type="file"'));assert.ok(modal('MANUAL').includes('<textarea'))
+ const width=component('SidebarWidthProfileTab'),slab=component('SidebarSlabsTab'),card=component('SidebarSegmentCard'),edit=component('AlignmentEditModal'),add=component('AlignmentAddModal')
+ // Supply current required segments/stripWidth props; invalid values must still never render NaN/Infinity.
+ const segment={id:'s',code:'S',startKm:1,endKm:1.1,lengthKm:0.1,roadWidthM:NaN,laneCount:NaN,surfaceMaterial:'',statusText:'BẢN CHỈNH',color:'#C9A227'}
+ for(const invalid of [NaN,null,undefined,Infinity,-Infinity]){
+   const unknown={...segment,roadWidthM:invalid,laneCount:invalid};const props={segments:[unknown],selectedSegmentId:'ALL',stripWidthMeters:invalid,slabLengthM:invalid,slabThicknessCm:invalid,contractionSpacingM:invalid,expansionSpacingM:invalid,expansionGapMm:invalid,slabs:[]}
+   for(const html of [render(React.createElement(width,{segments:[unknown]})),render(React.createElement(slab,props)),render(React.createElement(card,{segment:unknown})),render(React.createElement(edit,{segment:unknown,colors:[]})),render(React.createElement(add,{isOpen:true,newSegForm:unknown,segmentsCount:0,colors:[]}))]){for(const bad of ['NaN','Infinity','±4.0m'])assert.ok(!html.includes(bad),bad+' '+html.match(/.{0,100}(?:Infinity|NaN).{0,100}/)?.[0]);assert.ok(html.includes('Chưa có'))}
+ }
+ const SegmentTab=component('SidebarSegmentsTab',{'./SidebarSegmentCard':{SidebarSegmentCard:card}})
+ const submittedHtml=render(React.createElement(SegmentTab,{segments:[segment],branches:[],alignmentStatus:'SUBMITTED',selectedTargetType:'MAINLINE',currentCoords:[[105,10],[105.1,10]],importedLengthKm:.1,splitDistance:.05}))
+ assert.ok(submittedHtml.includes('Đã trình — chờ Giám sát xác nhận'));assert.ok(submittedHtml.includes('HỒ SƠ ĐÃ TRÌNH'));assert.ok(!submittedHtml.includes('Bản chỉnh 1'));assert.ok(!submittedHtml.includes('Áp dụng chia đoạn tự động'))
+ for(const html of [render(React.createElement(edit,{segment,colors:[]})),render(React.createElement(add,{isOpen:true,newSegForm:segment,segmentsCount:0,colors:[]})),render(React.createElement(card,{segment}))]){assert.ok(!html.includes('Số làn xe'));assert.ok(!html.includes('Vật liệu mặt đường'));assert.ok(!html.includes('Chưa có số làn'));assert.ok(!html.includes('Chưa có vật liệu'))}
+ const valid=render(React.createElement(width,{segments:[{...segment,roadWidthM:12}]}));assert.ok(valid.includes('1,200 m²'));assert.ok(valid.includes('12.0 m'));assert.ok(valid.includes('Trái ±6.0m'))
+ const Sidebar=component('AlignmentSidebar',{'./SidebarSegmentsTab':{SidebarSegmentsTab:()=>null},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:width},'./SidebarSlabsTab':{SidebarSlabsTab:slab},'./SidebarFooterKpis':{SidebarFooterKpis:()=>null}})
+ const sidebar=(isSupervisor,editingDisabled=false)=>render(React.createElement(Sidebar,{rightTab:'SLABS',alignmentStatus:'DRAFT',isSupervisor,editingDisabled,segments:[],slabs:[]}))
+ assert.ok(!sidebar(false).includes('<fieldset disabled'));assert.ok(sidebar(true).includes('<fieldset disabled'));assert.ok(sidebar(false,true).includes('<fieldset disabled'));for(const tab of ['Phân đoạn','Bề rộng (m)','Tấm &amp; Khe'])assert.ok(sidebar(true).includes(tab))
+})
+await test('draft switch isolates dirty A from delayed or failed B while same-draft refresh preserves local edits',async()=>{
+ const React=require('react');let slot=0,view,rerender=false,pending=[];const values=[],effects=[]
+ const react={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>{const value=typeof next==='function'?next(values[i]):next;if(!Object.is(value,values[i])){values[i]=value;rerender=true}}]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useMemo:fn=>fn(),useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||!deps||deps.some((d,j)=>!Object.is(d,old.deps[j])))pending.push({i,setup,deps})}}
+ const geometry=load('src/pages/(pm)/alignment/alignmentGeometryHelpers.ts'),split=load('src/pages/(pm)/alignment/alignmentSplitHelpers.ts',{'./data':{SEGMENT_COLORS:['#C9A227']}}),segments=load('src/pages/(pm)/alignment/useAlignmentSegmentsState.ts',{react,'./data':{SEGMENT_COLORS:['#C9A227']},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split})
+ const a={...dto,id:'a'},b={...dto,id:'b',widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:9}]}
+ // Restore now validates the server ETag, project engineering CRS and section membership.
+ const model={submissionReady:true,submissionLoading:false,submissionError:'',submission:null,projects:[],error:'',draftId:'a',draft:{data:a,etag:'"AAAAAAAAAAE="'},context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road'}]},geometry:null,draftLoading:false,draftError:''},writes=[]
+ const workflow={form:{sectionId:'road',origin:'0',widths:'0, 100, 6'},busy:false,conflict:false,setForm:next=>{workflow.form=typeof next==='function'?next(workflow.form):next;writes.push(workflow.form.widths)}}
+ let text='';const imports={get manualCoordsText(){return text},setManualCoordsText:next=>text=next}
+ const hook=load('src/pages/(pm)/alignment/useAlignmentState.ts',{react,'react-router-dom':{useNavigate:()=>()=>{},useParams:()=>({id:'p'})},'maplibre-gl':{},'../../../types/enums':{RoleCode:roles},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split,'./useGeometryReadModel':{useGeometryReadModel:()=>model},'./useGeometryDraftWorkflow':{useGeometryDraftWorkflow:()=>workflow},'./useAlignmentSegmentsState':segments,'./useAlignmentMapState':{useAlignmentMapState:()=>({syncMap(){},handleFitBounds(){},mapRef:{current:null}})},'./useAlignmentImportState':{useAlignmentImportState:()=>imports}}).useAlignmentState
+ // React flushes state changes from effects too; settle before inspecting B.
+ const render=()=>{let tries=0;do{assert.ok(++tries<20);rerender=false;pending=[];slot=0;view=hook();for(const e of pending){effects[e.i]?.cleanup?.();effects[e.i]={deps:e.deps,cleanup:e.setup()}}}while(rerender)}
+ for(let i=0;i<4;i++)render();assert.equal(view.activeSegments[0].roadWidthM,6)
+ view.segmentsState.setSegments(old=>old.map(s=>({...s,roadWidthM:12})));view.markWidthDraft();view.segmentsState.setSelectedSegmentId('a-selection');view.segmentsState.setEditingSegment(view.activeSegments[0]);view.segmentsState.setSplitModalSegment(view.activeSegments[0]);view.segmentsState.setNewSegForm(old=>({...old,code:'A draft'}));view.setSlabLengthM(7);text='A input';render();render();assert.equal(workflow.form.widths,'0, 100, 12')
+ model.draftLoading=true;model.draft=null;render();render();assert.equal(view.activeSegments[0].roadWidthM,12);assert.equal(view.localDraftDirty,true);assert.equal(text,'A input')
+ model.draftLoading=false;model.draft={data:{...a,widthProfile:b.widthProfile},etag:'"AAAAAAAAAAE="'};render();render();assert.equal(view.activeSegments[0].roadWidthM,12)
+ const writesBefore=writes.length;model.draftId='b';model.draftLoading=true;model.geometry={projectId:'p',sourceDraftId:'a',metadataStatus:'COMPLETE',lengthMeters:100,wgs84Centerline:{type:'LineString',coordinates:[[108,16],[108.1,16.1]]}};render();assert.equal(view.activeSegments.length,0);assert.equal(view.segmentsState.selectedSegmentId,null);assert.equal(view.segmentsState.editingSegment,null);assert.equal(view.segmentsState.splitModalSegment,null);assert.equal(view.segmentsState.newSegForm.code,'');assert.ok(Number.isNaN(view.slabLengthM));assert.equal(view.localDraftDirty,false);assert.equal(text,'');assert.equal(writes.length,writesBefore);assert.equal(view.currentCoords.length,0);assert.equal(view.importedLengthKm,0)
+ model.draft=null;render();model.draftLoading=false;model.draftError='read failed';render();render();assert.equal(view.activeSegments.length,0);assert.equal(writes.length,writesBefore)
+ model.draftError='';model.draft={data:b,etag:'"AAAAAAAAAAE="'};render();render();assert.equal(view.activeSegments[0].roadWidthM,9);assert.deepEqual(JSON.parse(JSON.stringify(view.activeSegments.map(s=>[s.startKm,s.endKm,s.roadWidthM]))),[[0,.1,9]]);assert.deepEqual(JSON.parse(JSON.stringify(view.fileDraft.widthProfile)),b.widthProfile);assert.deepEqual(JSON.parse(JSON.stringify(view.fileDraft.coordinates)),b.originalCoordinates);assert.equal(workflow.form.widths,'0, 100, 9') // After valid B arrives, hydrate B source; never retain A's local width in B.
+ model.draft={data:{...b,status:'SUBMITTED'},etag:'\"AAAAAAAAAAE=\"'};model.submission={draftId:'b',status:'SUBMITTED'};render();render();assert.equal(view.alignmentStatus,'SUBMITTED');assert.equal(view.activeSegments[0].statusText,'HỒ SƠ ĐÃ TRÌNH');assert.equal(view.draftContentSaved,false);assert.deepEqual(JSON.parse(JSON.stringify(view.fileDraft.coordinates)),b.originalCoordinates);assert.equal(view.currentCoords.length,b.originalCoordinates.length)
+ effects.forEach(e=>e?.cleanup?.())
+})
+await test('import modal closes only after applied preview and ignores cancelled, superseded or old-scope readers',async()=>{
+ let slot=0,view,inputScope='p:d',reader,applied=[],notices=[],accept=true;const values=[],effects=[]
+ const react={useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ class Reader{constructor(){reader=this}readAsText(){}}
+ const parser=load('src/pages/(pm)/alignment/alignmentImportHelpers.ts',{'./data':{SEGMENT_COLORS:[]},'./alignmentGeometryHelpers':{}})
+ const hook=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react,'maplibre-gl':{},'./alignmentImportHelpers':parser,__FileReader:Reader}).useAlignmentImportState
+ const render=()=>{slot=0;view=hook({inputScope,defaultManualText:'',contextReady:false,showToast:m=>notices.push(m),onRoadGuardDraft:(draft,preview)=>{if(!accept)return false;applied.push({draft,preview});return preview.length>=2}});effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const text=JSON.stringify({type:'LineString',coordinates:[[105,10],[105.001,10]]}),done=(r,value=text)=>{r.onload({target:{result:value}});render()}
+ render();view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});const first=reader;assert.equal(view.isImportModalOpen,true);done(first);assert.equal(view.isImportModalOpen,false);assert.equal(applied.length,1);assert.equal(applied[0].preview.length,2);assert.match(view.readMessage,/Đã đọc tệp, chưa lưu/)
+ view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});done(reader,'{bad');assert.equal(view.isImportModalOpen,true);assert.equal(applied.length,1)
+ accept=false;view.processGeoJSONFile({});done(reader);assert.equal(view.isImportModalOpen,true);assert.equal(applied.length,1);accept=true
+ view.processGeoJSONFile({});const cancelled=reader;view.setIsImportModalOpen(false);view.setIsImportModalOpen(true);render();const before=notices.length;done(cancelled);assert.equal(view.isImportModalOpen,true);assert.equal(applied.length,1);assert.equal(notices.length,before)
+ view.processGeoJSONFile({});const oldFile=reader;view.processGeoJSONFile({});const latest=reader;done(oldFile);assert.equal(applied.length,1);assert.equal(view.isImportModalOpen,true);done(latest);assert.equal(applied.length,2);assert.equal(view.isImportModalOpen,false)
+ view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});const oldScope=reader;inputScope='q:d2';render();done(oldScope);assert.equal(applied.length,2);assert.equal(view.isImportModalOpen,true)
+ const draft=JSON.stringify({sourceKind:'COORDINATES',roadCode:'TEST-SOURCE',roadName:'Tuyến nguồn kiểm thử',sourceCrs:32648,coordinates:[{x:500000,y:1200000},{x:500100,y:1200000}],stationOriginMeters:0,changeReason:'Nguồn thiết kế',surveyWidthMeters:7,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:7}]})
+ view.processGeoJSONFile({});done(reader,draft);assert.equal(view.isImportModalOpen,false);assert.equal(applied.at(-1).draft.sourceCrs,32648);assert.equal(applied.at(-1).preview.length,2);assert.match(view.readMessage,/chưa lưu/);assert.match(view.readMessage,/context/)
+ view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});done(reader,draft.replace('32648','32649'));assert.equal(view.isImportModalOpen,true);assert.match(view.readMessage,/Chưa hỗ trợ preview/)
+ effects.forEach(e=>e?.cleanup?.())
+})
+console.log(`${count} Step 3 scoped scenarios PASS (mock/hooks/static; NOT E2E).`)
+})().catch(e=>{console.error(e);process.exitCode=1})

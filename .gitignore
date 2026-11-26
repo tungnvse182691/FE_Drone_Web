@@ -33,3 +33,9 @@ dist-ssr
 
 # Vite cache
 .vite
+
+# Scratch directory
+scratch/
+
+# dữ liệu tiến độ của tools/seed-test-data.mjs
+tools/.seed-state.json

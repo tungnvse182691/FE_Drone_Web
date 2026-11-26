@@ -24,7 +24,6 @@ export interface ReviewCasesTableProps {
   onOpenLinkReportsModal: () => void
   onUnlinkReport: (childId: string, e: React.MouseEvent) => void
   onOpenMergeModal: (c: TriageCase) => void
-  onResetTriageData: () => void
   onClearSelectedReports: () => void
   onBulkVerify?: () => void
   onBulkNeedSurvey?: () => void
@@ -50,7 +49,6 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
   onOpenLinkReportsModal,
   onUnlinkReport,
   onOpenMergeModal,
-  onResetTriageData,
   onClearSelectedReports,
   onBulkVerify,
   onBulkNeedSurvey
@@ -58,18 +56,17 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
   return (
     <div className="flex-1 w-full bg-white rounded-2xl border border-[#E2E5E9] shadow-2xs p-4 flex flex-col justify-between">
       <div className="space-y-4">
-        {/* Floating Batch Action Bar when items selected (Chỉ dành cho PM phân luồng tác nghiệp) */}
-        {!isSupervisor && (
-          <BatchActionBar
-            selectedReportIds={selectedReportIds}
-            cases={cases}
-            onOpenLinkReportsModal={onOpenLinkReportsModal}
-            onOpenTriageProject={onOpenTriageProject}
-            onClearSelectedReports={onClearSelectedReports}
-            onBulkVerify={onBulkVerify}
-            onBulkNeedSurvey={onBulkNeedSurvey}
-          />
-        )}
+        {/* Floating Batch Action Bar when items selected */}
+        <BatchActionBar
+          selectedReportIds={selectedReportIds}
+          cases={cases}
+          isSupervisor={isSupervisor}
+          onOpenLinkReportsModal={onOpenLinkReportsModal}
+          onOpenTriageProject={onOpenTriageProject}
+          onClearSelectedReports={onClearSelectedReports}
+          onBulkVerify={onBulkVerify}
+          onBulkNeedSurvey={onBulkNeedSurvey}
+        />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
           <div>
@@ -94,16 +91,6 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
                     />
                     <span>Gộp báo cáo trùng theo cây</span>
                   </label>
-                  <span>•</span>
-                  <button
-                    type="button"
-                    onClick={onResetTriageData}
-                    className="text-slate-500 hover:text-brand-dark hover:underline flex items-center gap-1 cursor-pointer font-medium"
-                    title="Đặt lại dữ liệu mẫu ban đầu qua API"
-                  >
-                    <Icon name="refresh" size={13} />
-                    <span>Đặt lại dữ liệu</span>
-                  </button>
                 </>
               )}
             </div>
@@ -142,37 +129,23 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-100 text-xs">
         <span className="text-slate-500">
-          Trang 1 / 3 (Tổng số {filteredCases.length} bản ghi)
+          Tổng số {filteredCases.length} hồ sơ khiếm khuyết từ CSDL
         </span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             disabled
-            className="p-1.5 rounded-lg text-slate-300 hover:bg-slate-100 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded-lg text-slate-300 transition-colors disabled:opacity-40"
           >
             <Icon name="chevron_left" size={16} />
           </button>
-          <button
-            type="button"
-            className="w-7 h-7 rounded-lg text-xs font-bold bg-brand-gold text-white shadow-2xs"
-          >
+          <span className="w-7 h-7 rounded-lg text-xs font-bold bg-brand-gold text-white shadow-2xs flex items-center justify-center">
             1
-          </button>
+          </span>
           <button
             type="button"
-            className="w-7 h-7 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            2
-          </button>
-          <button
-            type="button"
-            className="w-7 h-7 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            3
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            disabled
+            className="p-1.5 rounded-lg text-slate-300 transition-colors disabled:opacity-40"
           >
             <Icon name="chevron_right" size={16} />
           </button>

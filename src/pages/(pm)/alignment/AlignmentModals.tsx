@@ -18,6 +18,8 @@ export const SEGMENT_COLORS = [
 ]
 
 export interface AlignmentModalsProps {
+  importDisabled?: boolean
+  importStatus?: string
   // Import Modal
   isImportModalOpen: boolean
   onCloseImportModal: () => void
@@ -62,6 +64,8 @@ export interface AlignmentModalsProps {
 
 export const AlignmentModals: React.FC<AlignmentModalsProps> = ({
   isImportModalOpen,
+  importStatus = '',
+  importDisabled = false,
   onCloseImportModal,
   importTab,
   onSetImportTab,
@@ -95,6 +99,8 @@ export const AlignmentModals: React.FC<AlignmentModalsProps> = ({
       {/* 1. Modal nạp file GeoJSON / KML / Chuỗi tọa độ thủ công (WF-02) */}
       <AlignmentImportModal
         isOpen={isImportModalOpen}
+        importStatus={importStatus}
+        importDisabled={importDisabled}
         onClose={onCloseImportModal}
         importTab={importTab}
         onSetImportTab={onSetImportTab}

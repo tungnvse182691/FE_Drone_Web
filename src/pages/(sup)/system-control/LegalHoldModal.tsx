@@ -25,6 +25,7 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
   const [reason, setReason] = useState('')
   const [authority, setAuthority] = useState('')
   const [reference, setReference] = useState('')
+  const [releaseReason, setReleaseReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isEnabling = project ? !project.is_legal_hold : true
@@ -40,6 +41,7 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
       setAuthority('')
       setReference('')
     }
+    setReleaseReason('')
   }, [project, isOpen])
 
   if (!isOpen || !project) return null
@@ -66,9 +68,13 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
         setIsSubmitting(false)
       }
     } else {
+      if (!releaseReason.trim()) {
+        toast.warning('Vui lòng nhập lý do gỡ phong tỏa (BE bắt buộc).')
+        return
+      }
       try {
         setIsSubmitting(true)
-        await onConfirm({ enabled: false })
+        await onConfirm({ enabled: false, reason: releaseReason.trim() })
         onClose()
       } finally {
         setIsSubmitting(false)
@@ -222,6 +228,25 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
                 <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-200">
                   Cơ quan: {project.hold_authority || 'N/A'} • VB: {project.hold_reference || 'N/A'}
                 </div>
+              </div>
+
+              {/* LÝ DO GỠ PHONG TỎA — BE: POST /retention/holds/{id}/release {reason} */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-800" htmlFor="legal-hold-release-reason">
+                  Lý do gỡ phong tỏa: <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  id="legal-hold-release-reason"
+                  aria-label="Lý do gỡ phong tỏa"
+                  required
+                  rows={2}
+                  maxLength={2000}
+                  value={releaseReason}
+                  onChange={(e) => setReleaseReason(e.target.value)}
+                  placeholder="Nhập lý do gỡ (ví dụ: Cơ quan thanh tra đã có văn bản kết thúc thanh tra số …)"
+                  className="w-full p-2.5 rounded-lg border border-slate-300 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                  disabled={isSubmitting}
+                />
               </div>
             </>
           )}

@@ -1,3 +1,4 @@
+import { projectExportService, exportError } from '../../api/services/projectExportService'
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Icon } from '../../components/ui/Icon'
@@ -22,6 +23,8 @@ export const ProposalApprovalDetail: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const {
+    loading,
+    loadError,
     packageCode,
     packageName,
     routeDisplay,
@@ -40,34 +43,32 @@ export const ProposalApprovalDetail: React.FC = () => {
     totalPages,
     filteredItems,
     displayedItems,
-    activeModalItem,
-    setActiveModalItem,
-    modalFeedbackType,
-    setModalFeedbackType,
-    modalNotes,
-    setModalNotes,
-    modalDirectives,
-    setModalDirectives,
     viewingPhotoItem,
     setViewingPhotoItem,
-    isDispatchModalOpen,
-    setIsDispatchModalOpen,
-    dispatchDeadline,
-    setDispatchDeadline,
-    dispatchNotice,
-    setDispatchNotice,
     isBatchApproveConfirmOpen,
     setIsBatchApproveConfirmOpen,
     toastMessage,
     setToastMessage,
     showToast,
     handleQuickApproveItem,
-    handleOpenDecisionModal,
-    handleSubmitDecisionModal,
     handleBatchApproveAll,
-    handleCrewChange,
-    handleConfirmDispatch
+    activeProjectId,
+    activePackageId
   } = useProposalApprovalState(id)
+
+  // Xuất hồ sơ theo gói: POST /projects/{p}/exports {kind:DOSSIER, repairPackageIds:[gói]} → poll SUCCEEDED → tải (BE bản mới, mục 12).
+  const handleExportPackage = async () => {
+    if (!activeProjectId || !activePackageId) { showToast('Chưa xác định dự án/gói để xuất hồ sơ.'); return }
+    try {
+      const created = await projectExportService.create(activeProjectId, { kind: 'DOSSIER', format: 'PDF', includeOriginalFiles: false, repairPackageIds: [activePackageId] })
+      let job = created
+      for (let i = 0; i < 60 && !['SUCCEEDED', 'FAILED'].includes(job.status); i++) { await new Promise((r) => setTimeout(r, 2000)); job = await projectExportService.detail(activeProjectId, created.id) }
+      if (job.status !== 'SUCCEEDED') throw new Error(job.status === 'FAILED' ? `Máy chủ không tạo được hồ sơ (${job.errorCode || 'FAILED'}).` : 'Hồ sơ chưa hoàn tất sau 120 giây.')
+      const file = await projectExportService.content(activeProjectId, created.id)
+      const url = URL.createObjectURL(file.blob); const a = document.createElement('a'); a.href = url; a.download = file.fileName; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000)
+      showToast(`Đã tạo và tải hồ sơ gói${job.completeness === 'PARTIAL' ? ' — chưa đầy đủ: ' + (job.missingSections || []).join(', ') : ''}.`)
+    } catch (e: any) { showToast(exportError(e)) }
+  }
 
   return (
     <div className="space-y-6 pb-20 text-[#1F2937] font-body">
@@ -85,6 +86,13 @@ export const ProposalApprovalDetail: React.FC = () => {
         </div>
       )}
 
+      {loadError && (
+        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+          Không đọc được gói sửa chữa từ máy chủ: {loadError}
+        </p>
+      )}
+      {loading && <p role="status" className="text-xs text-slate-500">Đang đọc gói và hạng mục từ máy chủ...</p>}
+
       {/* Header section with Breadcrumb and Actions */}
       <ApprovalDetailHeader
         packageCode={packageCode}
@@ -100,8 +108,8 @@ export const ProposalApprovalDetail: React.FC = () => {
         onNavigateHome={() => navigate(`${basePath}/dashboard`)}
         onNavigateProposals={() => navigate(`${basePath}/proposals`)}
         onOpenBatchApprove={() => setIsBatchApproveConfirmOpen(true)}
-        onExportPdf={() => showToast(`Đang kết xuất hồ sơ thẩm duyệt gói [${packageCode}] sang tệp PDF tiêu chuẩn...`)}
-        onOpenDispatch={() => setIsDispatchModalOpen(true)}
+        onExportPdf={() => { void handleExportPackage() }}
+        onOpenDispatch={() => navigate('/pm/repair-batches/assign')}
       />
 
       {/* Technical volume summary bar */}
@@ -127,36 +135,15 @@ export const ProposalApprovalDetail: React.FC = () => {
           stats={stats}
           onViewPhoto={(item) => setViewingPhotoItem(item)}
           onQuickApprove={handleQuickApproveItem}
-          onOpenDecisionModal={handleOpenDecisionModal}
-          onCrewChange={handleCrewChange}
           isSupervisor={isSupervisor}
         />
       </div>
 
       {/* Decision, Dispatch, Batch Approve, and Lightbox Modals */}
       <ApprovalModals
-        activeModalItem={activeModalItem}
-        onCloseDecisionModal={() => setActiveModalItem(null)}
-        modalFeedbackType={modalFeedbackType}
-        setModalFeedbackType={setModalFeedbackType}
-        modalNotes={modalNotes}
-        setModalNotes={setModalNotes}
-        modalDirectives={modalDirectives}
-        setModalDirectives={setModalDirectives}
-        onSubmitDecisionModal={handleSubmitDecisionModal}
-        onViewPhoto={(item) => setViewingPhotoItem(item)}
-
-        isDispatchModalOpen={isDispatchModalOpen}
-        onCloseDispatchModal={() => setIsDispatchModalOpen(false)}
         packageCode={packageCode}
-        items={items}
         stats={stats}
-        dispatchDeadline={dispatchDeadline}
-        setDispatchDeadline={setDispatchDeadline}
-        dispatchNotice={dispatchNotice}
-        setDispatchNotice={setDispatchNotice}
-        onConfirmDispatch={handleConfirmDispatch}
-
+        onViewPhoto={(item) => setViewingPhotoItem(item)}
         isBatchApproveConfirmOpen={isBatchApproveConfirmOpen}
         onCloseBatchApproveConfirm={() => setIsBatchApproveConfirmOpen(false)}
         onBatchApproveAll={handleBatchApproveAll}

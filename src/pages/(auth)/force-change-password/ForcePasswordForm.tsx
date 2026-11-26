@@ -19,6 +19,7 @@ export interface ForcePasswordFormProps {
   allRulesPassed: boolean
   isConfirmMatched: boolean
   isConfirmMismatched: boolean
+  isSubmitting?: boolean
   isForceSuccess: boolean
   onSubmit: (e: React.FormEvent) => void
 }
@@ -42,6 +43,7 @@ export const ForcePasswordForm: React.FC<ForcePasswordFormProps> = ({
   isConfirmMatched,
   isConfirmMismatched,
   isForceSuccess,
+  isSubmitting = false,
   onSubmit
 }) => {
   return (
@@ -228,7 +230,7 @@ export const ForcePasswordForm: React.FC<ForcePasswordFormProps> = ({
         <div className="pt-2">
           <button
             type="submit"
-            disabled={!allRulesPassed || !isConfirmMatched}
+            disabled={!allRulesPassed || !isConfirmMatched || isSubmitting || isForceSuccess}
             className="aurora-btn-gold flex items-center justify-center gap-2 cursor-pointer"
           >
             {isForceSuccess ? (

@@ -3,12 +3,14 @@ import { Link2Off, LogIn } from 'lucide-react'
 
 export interface ExpiredInvitationViewProps {
   onBackToLogin: () => void
-  onSwitchToValidDemo: () => void
+  onSwitchToValidDemo?: () => void
+  /** Lý do do máy chủ/đường dẫn (preview trả 404 hoặc thiếu mã). */
+  reason?: string
 }
 
 export const ExpiredInvitationView: React.FC<ExpiredInvitationViewProps> = ({
   onBackToLogin,
-  onSwitchToValidDemo
+  reason
 }) => {
   return (
     <div
@@ -29,25 +31,9 @@ export const ExpiredInvitationView: React.FC<ExpiredInvitationViewProps> = ({
         <h2 className="text-2xl font-bold tracking-tight text-slate-900 mb-2 font-headline">
           Liên kết lời mời không còn hiệu lực
         </h2>
-        <p className="text-sm text-slate-500 max-w-md mb-6 leading-relaxed">
-          Mã lời mời token <code className="font-mono bg-slate-100 px-2 py-0.5 rounded text-rose-600 font-semibold">inv_tok_98f21e892c</code> này đã hết hạn sau 48 giờ hoặc đã được kích hoạt trước đó.
+        <p className="text-sm text-slate-500 max-w-md mb-6 leading-relaxed" role="alert">
+          {reason || 'Lời mời không hợp lệ, đã hết hạn, bị thu hồi hoặc đã được sử dụng.'}
         </p>
-
-        {/* Detailed Info Card */}
-        <div className="w-full bg-slate-50 rounded-xl p-4 text-left mb-6 space-y-2 border border-slate-200 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Dự án liên kết:</span>
-            <span className="font-semibold text-slate-900">QL1A - Giai đoạn 2 (PRJ-QL1A-02)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Người gửi lời mời:</span>
-            <span className="font-semibold text-slate-900">Nguyễn Văn An (Ban QLDA)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500">Thời gian gửi thư:</span>
-            <span className="font-mono text-slate-500">28/09/2026 - 08:30:14</span>
-          </div>
-        </div>
 
         <p className="text-xs text-slate-500 mb-6">
           Vui lòng liên hệ <strong className="text-slate-800">Giám sát trưởng</strong> hoặc Quản trị viên hệ thống Hoàng Hải RoadGuard để được tái cấp liên kết truy cập mới.
@@ -61,12 +47,6 @@ export const ExpiredInvitationView: React.FC<ExpiredInvitationViewProps> = ({
           >
             <LogIn className="w-4 h-4" />
             <span>Quay về màn hình đăng nhập</span>
-          </button>
-          <button
-            onClick={onSwitchToValidDemo}
-            className="w-full py-2.5 px-4 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer"
-          >
-            Xem lại màn hình thư mời hợp lệ (Demo)
           </button>
         </div>
       </div>

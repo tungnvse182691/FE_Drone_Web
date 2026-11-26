@@ -4,6 +4,7 @@ import type { TriageCase, ActiveTabFilter } from './types'
 
 export interface ReviewFilterBarProps {
   cases: TriageCase[]
+  projectsList?: Array<{ id: string; code: string; name: string }>
   activeTab: ActiveTabFilter
   setActiveTab: (tab: ActiveTabFilter) => void
   pendingCount: number
@@ -24,6 +25,7 @@ export interface ReviewFilterBarProps {
 
 export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
   cases,
+  projectsList,
   activeTab,
   setActiveTab,
   pendingCount,
@@ -50,7 +52,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'ALL'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
@@ -61,13 +63,13 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer border ${
             activeTab === 'PENDING'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          <span>Chờ xác minh</span>
+          <span>Chưa kết luận</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            activeTab === 'PENDING' ? 'bg-amber-400 text-slate-900' : 'bg-amber-100 text-amber-800'
+            activeTab === 'PENDING' ? 'bg-amber-100 text-amber-900' : 'bg-amber-100 text-amber-800'
           }`}>
             {pendingCount}
           </span>
@@ -77,7 +79,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'MERGED'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
@@ -88,7 +90,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'NEED_SURVEY'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
@@ -99,7 +101,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer border ${
             activeTab === 'CRITICAL'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
@@ -120,8 +122,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             onChange={(e) => setSourceFilter(e.target.value)}
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
-            <option value="ALL">Tất cả nguồn</option>
-            <option value="DRONE_AI">Drone AI quét tự động</option>
+            <option value="ALL">Tất cả nguồn tiếp nhận</option>
             <option value="CITIZEN">Người dân phản ánh</option>
             <option value="PATROL">Đội tuần tra hiện trường</option>
           </select>
@@ -136,8 +137,8 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
             <option value="ALL">Tất cả phạm vi</option>
-            <option value="MAIN_LINE">[Trục chính] Tuyến QL1A</option>
-            <option value="BRANCH_LINE">[Tuyến nhánh] Nhánh Hải Vân</option>
+            <option value="MAIN_LINE">Tuyến trục chính</option>
+            <option value="BRANCH_LINE">Tuyến nhánh phụ</option>
           </select>
         </div>
 
@@ -166,9 +167,24 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
             <option value="ALL">Tất cả dự án</option>
-            <option value="QL1A - Giai đoạn 2 (Km 1020 - Km 1045)">QL1A - Giai đoạn 2</option>
-            <option value="Cao tốc Bắc Nam">Cao tốc Bắc Nam</option>
-            <option value="QL1A - Tuyến mở rộng">QL1A - Tuyến mở rộng</option>
+            {/* 1. Danh sách dự án thực tế từ CSDL */}
+            {projectsList && projectsList.length > 0
+              ? projectsList.map((p) => (
+                  <option key={p.id} value={p.name}>
+                    {p.name} ({p.code})
+                  </option>
+                ))
+              : Array.from(
+                  new Set(
+                    cases
+                      .map((c) => c.project_name)
+                      .filter((name) => name && name !== 'Chưa phân công dự án')
+                  )
+                ).map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
           </select>
         </div>
 

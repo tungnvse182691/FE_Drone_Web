@@ -1,283 +1,357 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import type { PolicyThresholdConfig, PolicyHistoryItem } from './types'
+import { policyRuleRange, policyRuleText, policyRuleSupported, policyRuleHasBounds } from '../../../api/services/fastTrackPolicyRules'
+import type { PolicyThresholdConfig, PolicyHistoryItem, RoadCoverageFact, AuditLogItem } from './types'
 
 export interface PolicySectionProps {
-  currentPolicy: PolicyThresholdConfig
+  onSelectCoverageScope?:(id:string)=>void
+  onReadPolicy?: (id:string)=>void
+  currentPolicy: PolicyThresholdConfig | null
   policyHistory: (PolicyHistoryItem | any)[]
+  auditLogs?: AuditLogItem[]
   isSupervisor?: boolean
-  onActivateDraft: (item: any) => void
-  onOpenAuditModal: () => void
+  roadCoverage: RoadCoverageFact | null
+  onOpenRoadCoverageModal?: () => void
+  onActivateDraft?: (item: any) => void
+  onOpenPolicyModal?: () => void
+}
+
+function formatDefectTypeVi(code?: string): string {
+  if (!code) return 'Không xác định'
+  const c = code.toUpperCase()
+  if (c.includes('POTHOLE')) return 'Ổ gà'
+  if (c.includes('CRACK')) return 'Nứt mặt đường'
+  if (c.includes('RUT')) return 'Vệt lún bánh xe'
+  if (c.includes('RAVEL')) return 'Bong bật cốt liệu'
+  return code
+}
+
+function formatStopConditionVi(cond: string): string {
+  return cond
 }
 
 export const PolicySection: React.FC<PolicySectionProps> = ({
+  onSelectCoverageScope,
+  onReadPolicy,
   currentPolicy,
   policyHistory,
+  auditLogs = [],
   isSupervisor = false,
-  onActivateDraft,
-  onOpenAuditModal,
+  roadCoverage,
+  onOpenRoadCoverageModal,
+  onOpenPolicyModal
 }) => {
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'audit' | 'history'>('audit')
+
+  const areaRule=currentPolicy?.rules?.find(r=>r.code==='Area'),depthRule=currentPolicy?.rules?.find(r=>r.code==='DepressionDepth')
+  const totalLogs = auditLogs.length + policyHistory.length
 
   return (
     <>
       <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-200 space-y-5">
-        {/* 1. HEADER SECTION: THÔNG TIN PHIÊN BẢN & PHÂN QUYỀN */}
+        {/* 1. HEADER SECTION: THÔNG TIN QUY CHUẨN KỸ THUẬT */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold shrink-0">
-              <Icon name="verified_user" size={20} className="text-brand-gold" />
+              <Icon name="verified_user" size={20} className="text-[#C9A227]" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-bold text-brand-dark tracking-tight">
-                  Quy chuẩn chính sách xử lý nhanh áp dụng
+                  Chính sách xử lý nhanh đã đọc
                 </h2>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                  {currentPolicy.version} (HIỆU LỰC)
-                </span>
+                {currentPolicy ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    {currentPolicy.version} ({currentPolicy.status==='DRAFT'?'DỰ THẢO':currentPolicy.status==='REVOKED'?'ĐÃ THU HỒI':'ĐÃ XUẤT BẢN'})
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                    CHƯA CÓ THAM CHIẾU CHÍNH SÁCH
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Chính sách do Ban Giám Sát / CĐT phê duyệt ban hành • Áp dụng toàn tuyến QL1A (Km 1000 - Km 1080)
+                Bản đang xem độc lập với policy ghim trong lệnh; xuất bản không tự xác nhận độ phủ hoặc cấp quyền thi công.
               </p>
             </div>
           </div>
 
+          {/* Nút hành động trên Header: Đã dọn dẹp các nhãn chế độ thừa thãi */}
           <div className="flex items-center gap-2 flex-wrap self-start md:self-center">
-            {isSupervisor ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
-                <Icon name="check_circle" size={14} className="text-brand-gold" />
-                <span>Quyền phê duyệt: Giám sát / Ban QLDA</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
-                <Icon name="lock" size={14} className="text-slate-400" />
-                <span>Chỉ huy trưởng tuân thủ thực thi (Chế độ Xem)</span>
-              </span>
+            {!isSupervisor && onOpenPolicyModal && (
+              <button
+                onClick={onOpenPolicyModal}
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C9A227] hover:bg-[#b08d20] text-white text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors"
+                title="Chỉnh sửa hoặc lập dự thảo quy chuẩn kỹ thuật xử lý nhanh mới"
+              >
+                <Icon name="tune" size={14} />
+                <span>Điều chỉnh chính sách</span>
+              </button>
+            )}
+
+            {/* GỘP DUY NHẤT 1 NÚT: NHẬT KÝ & LỊCH SỬ THAY ĐỔI */}
+            <button
+              onClick={() => setIsActivityModalOpen(true)}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 cursor-pointer transition-colors shadow-2xs"
+              title="Tra cứu toàn bộ nhật ký kiểm toán hệ thống và lịch sử các lần sửa đổi chính sách"
+            >
+              <Icon name="history_edu" size={15} className="text-[#C9A227]" />
+              <span>Nhật ký &amp; Lịch sử ({totalLogs})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2. SUB-CARD PHẠM VI TUYẾN ĐƯỜNG BẢO HÀNH */}
+        {roadCoverage ? (
+          <div className="bg-slate-50 rounded-xl p-3.5 sm:p-4 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-white border border-slate-200 text-slate-700 shrink-0 mt-0.5">
+                <Icon name="map" size={18} className="text-[#C9A227]" />
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                    Phạm vi nghĩa vụ đang đọc
+                  </span>
+                  <span className="font-mono text-[11px] text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200">
+                    {roadCoverage.scopes?.length===1 ? `Lý trình: Km ${roadCoverage.fromKm} - Km ${roadCoverage.toKm}` : `${roadCoverage.scopes?.length || 0} phạm vi nghĩa vụ — chọn trong hồ sơ độ phủ`}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${
+                      roadCoverage.status === 'CONFIRMED'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-900 border border-amber-300'
+                    }`}
+                  >
+                    <Icon
+                      name={roadCoverage.status === 'CONFIRMED' ? 'verified' : 'pending_actions'}
+                      size={12}
+                    />
+                    {roadCoverage.coverageMessage || 'Chưa có kết quả xác nhận theo phạm vi'}
+                  </span>
+                </div>
+                {onSelectCoverageScope && <select aria-label="Phạm vi độ phủ đang xem" value={roadCoverage.scopeObligationId} onChange={e=>onSelectCoverageScope(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"><option value="">Chọn phạm vi, không suy toàn tuyến</option>{roadCoverage.scopes?.map((s,i)=><option key={s.obligationId} value={s.obligationId}>Phạm vi {i+1}: {s.from}–{s.to} m · lệch {s.offsetFrom}–{s.offsetTo} m</option>)}</select>}
+                <div className="text-[11px] text-slate-600 flex items-center gap-3 flex-wrap">
+                  <span>Căn cứ pháp lý: <strong className="text-slate-800">{roadCoverage.sourceId ? (roadCoverage.sourceKind === 'WARRANTY' ? 'Hợp đồng bảo hành' : 'Bảo dưỡng thường xuyên') : 'Chưa có căn cứ đã xác nhận'}</strong></span>
+                  <span>•</span>
+                  <span>Số hiệu văn bản: <strong className="font-mono text-slate-800">{roadCoverage.documentNo || 'Chưa có hồ sơ bàn giao'}</strong></span>
+                  <span>•</span>
+                  <span>Hiệu lực áp dụng: <strong className="text-slate-800">{!roadCoverage.applicableFromUtc || roadCoverage.applicableFromUtc === '—' ? 'Chưa xác lập ngày' : `${roadCoverage.applicableFromUtc} → ${roadCoverage.applicableToUtc}`}</strong></span>
+                  {roadCoverage.confirmedBy && (
+                    <>
+                      <span>•</span>
+                      <span>Người phê duyệt: <strong className="text-emerald-700">{roadCoverage.confirmedBy}</strong> ({roadCoverage.confirmedAt})</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Nút phê duyệt độ phủ tuyến duy nhất dành cho Giám sát */}
+            {isSupervisor && roadCoverage.status !== 'CONFIRMED' && onOpenRoadCoverageModal && (
+              <button
+                onClick={onOpenRoadCoverageModal}
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#C9A227] hover:bg-[#b08d20] text-white text-xs font-bold rounded-lg shadow-2xs shrink-0 cursor-pointer transition-colors"
+              >
+                <Icon name="verified" size={14} />
+                <span>Phê duyệt độ phủ tuyến</span>
+              </button>
             )}
           </div>
-        </div>
+        ) : (
+          <div className="p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500 text-center">
+            Chưa có thông tin độ phủ tuyến đường bảo hành cho dự án này trong CSDL.
+          </div>
+        )}
 
-        {/* 2. BODY: 4 THẺ CHỈ SỐ KỸ THUẬT ĐỐI XỨNG CÂN ĐỐI (1 HÀNG 4 CỘT) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Ngưỡng Diện Tích */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Ngưỡng diện tích tối đa
+        {/* 3. GRID CHỈ SỐ NGƯỠNG KỸ THUẬT (CHUẨN 100% TIẾNG VIỆT & SPEC 17_10) */}
+        {currentPolicy ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            {/* Cột 1: Diện tích tối đa */}
+            <div className="bg-slate-50/70 p-3 sm:p-4 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Diện tích mặt đường tối đa
               </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-gold shrink-0">
-                <Icon name="tune" size={16} />
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-brand-dark">
+                  {policyRuleRange(areaRule)}
+                </span>
+                <span className="text-xs font-bold text-slate-500">{policyRuleHasBounds(areaRule) ? areaRule.unit : ''}</span>
               </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                ≤ {currentPolicy.maxAreaM2} <span className="text-sm font-normal text-slate-500 font-sans">m²</span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Chu vi biên dạng khép kín &lt; {currentPolicy.maxPerimeterM} m
+              <p className="text-[10px] text-slate-500">
+                {areaRule && !policyRuleSupported(areaRule) ? 'Đơn vị đang lưu không khớp số đo Area: runtime lưu m². Không tự chuyển m2 thành m².' : policyRuleHasBounds(areaRule) ? 'Vượt ngưỡng: Không cấp quyền thi công Fast Track' : 'Chưa cấu hình quy tắc diện tích.'}
               </p>
             </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                <Icon name="check_circle" size={12} className="text-sky-600" />
-                AI &amp; Tuần tra xác thực
-              </span>
-            </div>
-          </div>
 
-          {/* Card 2: Ngưỡng Độ Sâu */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Ngưỡng độ sâu tối đa
+            {/* Cột 2: Độ sâu tối đa */}
+            <div className="bg-slate-50/70 p-3 sm:p-4 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Độ sâu hư hỏng tối đa
               </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-gold shrink-0">
-                <Icon name="balance" size={16} />
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-brand-dark">
+                  {policyRuleRange(depthRule)}
+                </span>
+                <span className="text-xs font-bold text-slate-500">{policyRuleHasBounds(depthRule) ? depthRule.unit : ''}</span>
               </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                ≤ {currentPolicy.maxDepthCm} <span className="text-sm font-normal text-slate-500 font-sans">cm</span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Độ lệch mặt đường đo laser/thước
+              <p className="text-[10px] text-slate-500">
+                {depthRule && !policyRuleSupported(depthRule) ? 'Đơn vị đang lưu không khớp số đo độ dài. Không tự quy đổi.' : policyRuleHasBounds(depthRule) ? 'Ngưỡng theo đúng đơn vị đã cấu hình.' : 'Chưa cấu hình quy tắc độ sâu.'}
               </p>
             </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                <Icon name="check_circle" size={12} className="text-sky-600" />
-                Kiểm tra đo đạc thước
-              </span>
-            </div>
-          </div>
 
-          {/* Card 3: Mức Nghiêm Trọng */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Mức độ cho phép
+            {/* Cột 3: Loại hư hỏng áp dụng & Điều kiện dừng */}
+            <div className="bg-slate-50/70 p-3 sm:p-4 rounded-xl border border-slate-200 space-y-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Hư hỏng áp dụng
               </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-amber-600 shrink-0">
-                <Icon name="warning" size={16} />
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold rounded">
+                  {formatDefectTypeVi(currentPolicy.defectTypeCode)}
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  (Lần ban hành {currentPolicy.revision || 1})
+                </span>
               </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                Thấp / Trung bình
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Hư hỏng nhẹ, không gây ách tắc
+              <p className="text-[10px] text-slate-500">
+                Điều kiện dừng: {currentPolicy.stopConditions && currentPolicy.stopConditions.length > 0
+                  ? currentPolicy.stopConditions.map(formatStopConditionVi).join(', ')
+                  : 'Chưa cấu hình điều kiện dừng; không suy thành không có nguy cơ'}
               </p>
             </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                <Icon name="lock" size={12} className="text-amber-600" />
-                Cấm tự duyệt lỗi Nặng
-              </span>
-            </div>
           </div>
-
-          {/* Card 4: Cam Kết Thời Gian SLA */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Thời hạn hoàn tất SLA
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shrink-0">
-                <Icon name="schedule" size={16} />
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                ≤ {currentPolicy.slaHours} <span className="text-sm font-normal text-slate-500 font-sans">giờ</span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Từ phát lệnh đến vá nguội hoàn tất
-              </p>
-            </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <Icon name="schedule" size={12} className="text-emerald-600" />
-                SLA SLA-FT-24H
-              </span>
-            </div>
+        ) : (
+          <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200 text-center space-y-2">
+            <Icon name="info" size={24} className="text-[#C9A227] mx-auto" />
+            <p className="text-xs font-medium text-slate-700">
+              Chưa đọc được chính sách trong phạm vi hiện tại. Không suy thành chưa có chính sách.
+            </p>
+            {!isSupervisor && onOpenPolicyModal && (
+              <button
+                onClick={onOpenPolicyModal}
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C9A227] hover:bg-[#b08d20] text-white text-xs font-bold rounded-lg cursor-pointer transition-colors shadow-2xs"
+              >
+                <Icon name="add" size={14} />
+                <span>Lập dự thảo chính sách mới</span>
+              </button>
+            )}
           </div>
-        </div>
-
-        {/* 3. FOOTER BAR: CĂN CỨ PHÁP LÝ & CÁC NÚT XEM LỊCH SỬ / AUDIT */}
-        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-600 min-w-0">
-            <Icon name="info" size={16} className="text-brand-gold shrink-0" />
-            <span className="truncate">
-              Căn cứ pháp lý: <strong className="text-slate-800">TCVN 8819:2011</strong> &amp; Phụ lục HĐ bảo dưỡng thường xuyên Q4/2026 • Ràng buộc bất biến <strong className="text-slate-800">BR-04 &amp; BR-08</strong>.
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setIsHistoryModalOpen(true)}
-              type="button"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg border border-slate-200 shadow-2xs cursor-pointer transition-colors"
-            >
-              <Icon name="history" size={14} className="text-brand-gold" />
-              <span>Lịch sử phiên bản ({policyHistory.length})</span>
-            </button>
-            <button
-              onClick={onOpenAuditModal}
-              type="button"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg border border-slate-200 shadow-2xs cursor-pointer transition-colors"
-            >
-              <Icon name="description" size={14} className="text-brand-gold" />
-              <span>Nhật ký kiểm toán</span>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* MODAL LỊCH SỬ PHIÊN BẢN CHÍNH SÁCH */}
-      {isHistoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      {/* MODAL TÍCH HỢP: NHẬT KÝ KIỂM TOÁN & LỊCH SỬ CHÍNH SÁCH */}
+      {isActivityModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Icon name="history" size={20} className="text-brand-gold" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-[#C9A227]">
+                  <Icon name="history_edu" size={18} />
+                </div>
                 <div>
-                  <h3 className="text-base font-bold text-brand-dark">Lịch sử các phiên bản chính sách xử lý nhanh</h3>
-                  <p className="text-[11px] text-slate-500">
-                    Hồ sơ quy chuẩn kỹ thuật áp dụng theo từng giai đoạn dự án
-                  </p>
+                  <h3 className="font-bold text-slate-900 text-base">Nhật Ký Hoạt Động &amp; Lịch Sử Chính Sách</h3>
+                  <p className="text-[10px] text-slate-500">Hồ sơ kiểm toán điện tử bất biến và lịch sử các lần ban hành quy chuẩn</p>
                 </div>
               </div>
               <button
-                onClick={() => setIsHistoryModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                onClick={() => setIsActivityModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
-                <Icon name="close" size={20} />
+                <Icon name="close" size={18} />
               </button>
             </div>
 
-            <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
-              {policyHistory.map((item, idx) => (
-                <div
-                  key={item.id || idx}
-                  className={`p-3 rounded-xl border text-xs space-y-1.5 transition-all ${
-                    item.status === 'ACTIVE'
-                      ? 'bg-amber-50/30 border-amber-300 shadow-2xs'
-                      : item.status === 'DRAFT'
-                      ? 'bg-amber-50/70 border-amber-200'
-                      : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-brand-dark text-sm">{item.version}</span>
-                      {item.status === 'ACTIVE' && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          Hiệu lực hiện hành
-                        </span>
-                      )}
-                      {item.status === 'DRAFT' && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                          Dự thảo
-                        </span>
-                      )}
-                      {item.status === 'ARCHIVED' && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
-                          Đã đóng / Lưu trữ
-                        </span>
-                      )}
-                    </div>
-
-                    {isSupervisor && item.status === 'DRAFT' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onActivateDraft(item)
-                          setIsHistoryModalOpen(false)
-                        }}
-                        className="px-2.5 py-1 text-[11px] font-bold text-white bg-brand-gold hover:bg-[#B38E1F] rounded-lg transition-colors cursor-pointer shadow-xs"
-                      >
-                        Kích hoạt ngay
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="text-[11px] text-slate-500">
-                    Phê duyệt bởi: <strong>{item.activatedBy}</strong> • {item.activatedAt}
-                  </p>
-                  <div className="text-[11px] text-[#8F7212] font-semibold">{item.route}</div>
-                  <div className="text-[11px] text-slate-600 font-mono bg-white p-2 rounded-lg border border-slate-200/80">
-                    Ngưỡng: Diện tích ≤ {item.maxArea}m² • Sâu ≤ {item.maxDepth}cm • SLA {item.slaHours}h
-                  </div>
-                </div>
-              ))}
+            {/* TAB CHUYỂN ĐỔI: NHẬT KÝ KIỂM TOÁN vs LỊCH SỬ PHIÊN BẢN */}
+            <div className="flex border-b border-slate-200 gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('audit')}
+                className={`pb-2.5 px-3 text-xs font-bold cursor-pointer transition-colors border-b-2 flex items-center gap-1.5 ${
+                  activeTab === 'audit'
+                    ? 'border-[#C9A227] text-[#C9A227]'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon name="fact_check" size={14} />
+                <span>Nhật ký thao tác hệ thống ({auditLogs.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className={`pb-2.5 px-3 text-xs font-bold cursor-pointer transition-colors border-b-2 flex items-center gap-1.5 ${
+                  activeTab === 'history'
+                    ? 'border-[#C9A227] text-[#C9A227]'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon name="history" size={14} />
+                <span>Lịch sử các phiên bản quy chuẩn ({policyHistory.length})</span>
+              </button>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-100">
+            {/* NỘI DUNG TAB 1: NHẬT KÝ THAO TÁC (AUDIT TRAIL) */}
+            {activeTab === 'audit' && (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {auditLogs.length > 0 ? (
+                  auditLogs.map((log, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">{log.title}</span>
+                        <span className="font-mono text-slate-400 text-[10px]">{log.time}</span>
+                      </div>
+                      <p className="text-slate-600">
+                        Người thực hiện: <strong className="text-slate-800">{log.user}</strong> • Mã băm xác thực:{' '}
+                        <code className="bg-white px-1.5 py-0.5 rounded text-[10px] text-amber-700 border border-slate-200 font-mono">
+                          {log.hash}
+                        </code>
+                      </p>
+                      <div className="text-[11px] text-slate-500 pt-0.5">
+                        {log.note}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-xs text-slate-500">
+                    Chưa có nhật ký kiểm toán nào được ghi nhận.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* NỘI DUNG TAB 2: LỊCH SỬ PHIÊN BẢN (POLICY HISTORY) */}
+            {activeTab === 'history' && (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {policyHistory.length > 0 ? (
+                  policyHistory.map((h, idx) => (
+                    <div key={idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">{h.version} · {h.status==='DRAFT'?'Dự thảo':h.status==='REVOKED'?'Đã thu hồi':`Lần ban hành ${h.revision ?? '—'}`}</span>
+                        <span className="text-[11px] text-slate-500">{h.activatedAt}</span>
+                      </div>
+                      {h.id && onReadPolicy && <button type="button" onClick={()=>{onReadPolicy(h.id!);setIsActivityModalOpen(false)}} className="px-3 py-1.5 border rounded-lg bg-white text-slate-700">{h.status==='DRAFT'?'Đọc / Tiếp tục draft':'Chi tiết / Thu hồi'}</button>}
+                      <div className="text-slate-600 flex items-center gap-3">
+                        <span>Diện tích: {policyRuleText(h.rules?.find((r: any)=>r.code==='Area'))}</span>
+                        <span>•</span>
+                        <span>Độ sâu: {policyRuleText(h.rules?.find((r: any)=>r.code==='DepressionDepth'))}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-xs text-slate-500">
+                    Chưa có tham chiếu lịch sử đã đọc; không suy thành CSDL rỗng.
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
               <button
-                onClick={() => setIsHistoryModalOpen(false)}
+                onClick={() => setIsActivityModalOpen(false)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
               >
                 Đóng

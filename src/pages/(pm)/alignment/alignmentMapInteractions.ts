@@ -1,7 +1,9 @@
+import { slabPopupValues } from './alignmentSlabPopup'
 import * as maplibregl from 'maplibre-gl'
 
 // Biến lưu trữ marker ghim vị trí toàn cục trong tương tác bản đồ
 let activePinMarker: maplibregl.Marker | null = null
+let lastHandledClickTimestamp = 0
 
 export function setupAlignmentMapInteractions(
   map: maplibregl.Map,
@@ -10,6 +12,7 @@ export function setupAlignmentMapInteractions(
   isPickingRef?: React.RefObject<boolean>,
   onSelectSegmentRef?: React.RefObject<((id: string, branchId?: string, feature?: any) => void) | null>
 ) {
+  let lastPavementEvent: Event | undefined
   const triggerSelectSegment = (id: string, branchId?: string, feature?: any) => {
     if (onSelectSegmentRef?.current) {
       onSelectSegmentRef.current(id, branchId, feature)
@@ -22,7 +25,8 @@ export function setupAlignmentMapInteractions(
   const pinAndFocusFeature = (
     lngLat: maplibregl.LngLat,
     feature: any,
-    labelCode: string
+    labelCode: string,
+    targetMaxZoom?: number
   ) => {
     // 1. Cắm ghim Pin Marker nổi bật phong cách Hoàng Hải (Vàng đồng #C9A227 & Đỏ viền trắng)
     if (activePinMarker) {
@@ -53,7 +57,7 @@ export function setupAlignmentMapInteractions(
       .setLngLat(lngLat)
       .addTo(map)
 
-    // 2. Tính Bounding Box và Zoom mượt mà (fitBounds / flyTo) tới chính xác đoạn đường được ấn
+    // 2. Tính Bounding Box và Zoom mượt mà tới đoạn đường được ấn
     try {
       const geom = feature?.geometry
       const bounds = new maplibregl.LngLatBounds()
@@ -71,24 +75,30 @@ export function setupAlignmentMapInteractions(
         extractCoords(geom.coordinates)
       }
 
-      if (!bounds.isEmpty()) {
+      const sw = bounds.getSouthWest()
+      const ne = bounds.getNorthEast()
+      const isSinglePointOrTiny =
+        bounds.isEmpty() ||
+        (Math.abs(sw.lng - ne.lng) < 0.0003 && Math.abs(sw.lat - ne.lat) < 0.0003)
+
+      if (!bounds.isEmpty() && !isSinglePointOrTiny) {
         map.fitBounds(bounds, {
-          padding: { top: 90, bottom: 90, left: 100, right: 100 },
-          maxZoom: 18.2,
-          duration: 900
+          padding: { top: 70, bottom: 70, left: 80, right: 80 },
+          maxZoom: targetMaxZoom || 15.2,
+          duration: 700
         })
       } else {
         map.flyTo({
           center: lngLat,
-          zoom: 17.5,
-          duration: 800
+          zoom: targetMaxZoom || (isSinglePointOrTiny ? 16.5 : 14.8),
+          duration: 650
         })
       }
     } catch {
       map.flyTo({
         center: lngLat,
-        zoom: 17.5,
-        duration: 800
+        zoom: targetMaxZoom || 14.8,
+        duration: 650
       })
     }
   }
@@ -97,6 +107,9 @@ export function setupAlignmentMapInteractions(
   const handleFeatureClick = (e: maplibregl.MapLayerMouseEvent) => {
     if (isPickingRef?.current) return
     if (!e.features || e.features.length === 0) return
+    if (e.originalEvent && e.originalEvent === lastPavementEvent) return
+
+    lastHandledClickTimestamp = Date.now()
 
     const f = e.features[0]
     const p = f.properties || {}
@@ -114,39 +127,67 @@ export function setupAlignmentMapInteractions(
     if (segId) {
       triggerSelectSegment(segId, branchId, f)
 
-      // Cắm ghim và phóng to tới đoạn đường vừa click
-      pinAndFocusFeature(e.lngLat, f, `${branchTitle}${segCode}`)
+      // Cắm ghim và phóng to tới đoạn đường vừa click với maxZoom 15.2 hợp lý
+      pinAndFocusFeature(e.lngLat, f, `${branchTitle}${segCode}`, 15.2)
 
-      // Mở Popup thông số kỹ thuật chi tiết
+      const formatStationKm = (km: number) => {
+        const k = Math.floor(km)
+        const m = Math.round((km - k) * 1000)
+        return `Km ${k}+${String(m).padStart(3, '0')}`
+      }
+
+      const formatDistText = (km: number) => {
+        const num = Number(km)
+        if (num < 1.0) {
+          return `${Math.round(num * 1000)}m`
+        }
+        return `${num.toFixed(2)} km`
+      }
+
+      // Mở Popup thông số kỹ thuật chi tiết phong cách RoadGuard Dark sang trọng
       if (popupRef.current) popupRef.current.remove()
-      popupRef.current = new maplibregl.Popup({ offset: 18, closeButton: true })
+      popupRef.current = new maplibregl.Popup({ offset: 18, closeButton: true, className: 'roadguard-maplibre-popup' })
         .setLngLat(e.lngLat)
         .setHTML(`
-          <div class="p-2.5 text-xs font-sans min-w-[250px]">
-            <div class="flex items-center justify-between border-b border-slate-200 pb-1.5">
-              <span class="font-bold text-slate-900">${branchTitle}${segCode}</span>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                isBranch ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'
+          <div class="bg-slate-900 text-slate-100 p-3 text-xs font-sans min-w-[270px]">
+            <div class="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block shadow-sm"></span>
+                <span class="font-bold text-white text-sm tracking-tight">${branchTitle}${segCode}</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                isBranch ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
               }">${isBranch ? 'Tuyến Nhánh' : 'Trục Chính'}</span>
             </div>
-            <div class="text-[#8F7212] font-mono font-semibold mt-1.5">
-              Km ${Number(segStart).toFixed(3)} - Km ${Number(segEnd).toFixed(3)} (Dài: ${Number(segLen).toFixed(2)} km)
+
+            <div class="text-amber-400 font-mono font-semibold text-xs mb-2.5 flex items-center gap-1.5">
+              <span>📍</span>
+              <span>${formatStationKm(Number(segStart))} → ${formatStationKm(Number(segEnd))}</span>
+              <span class="text-slate-400 text-[11px] font-normal">(${formatDistText(Number(segLen))})</span>
             </div>
-            <div class="mt-2 space-y-1 text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-200">
-              <div class="font-bold text-slate-900 flex items-center gap-1">
-                <span>🛣️ Thông số 2 mép đường:</span>
+
+            <div class="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-slate-400">Bề rộng mặt đường (W):</span>
+                <span class="font-mono font-bold text-amber-400 text-xs">${Number(segWidth).toFixed(1)}m</span>
               </div>
-              <div class="flex items-center justify-between font-mono text-[11px] pt-0.5">
-                <span class="text-sky-600 font-bold">Mép Trái: -${halfWidth}m</span>
-                <span class="text-slate-400">|</span>
-                <span class="text-amber-600 font-bold">Mép Phải: +${halfWidth}m</span>
-              </div>
-              <div class="text-slate-700 pt-1 border-t border-slate-200 font-mono">
-                Tổng bề rộng (W): <strong class="text-amber-600 font-bold">${Number(segWidth).toFixed(1)}m</strong>
+
+              <div class="flex items-center justify-between font-mono text-[11px] pt-1.5 border-t border-slate-800/80">
+                <span class="text-sky-400 font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block"></span>
+                  Mép Trái: -${halfWidth}m
+                </span>
+                <span class="text-slate-600">|</span>
+                <span class="text-amber-400 font-bold flex items-center gap-1">
+                  Mép Phải: +${halfWidth}m
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
+                </span>
               </div>
             </div>
-            <div class="mt-2 text-[11px] text-slate-500">
-              🧱 <strong>Lưới tấm BTXM:</strong> 5.0m × ${halfWidth}m • Khe co 5m • Khe giãn 50m
+
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center gap-1.5 text-[11px] text-slate-300">
+              <span>🧱</span>
+              <span><strong>Tấm BTXM:</strong> 5.0m × ${halfWidth}m • Khe co 5m • Khe giãn 50m</span>
             </div>
           </div>
         `)
@@ -155,52 +196,68 @@ export function setupAlignmentMapInteractions(
   }
 
   // Click vào tấm bê tông để kích hoạt chọn phân đoạn & xem popup kỹ thuật
-  map.on('click', 'slabs-outline-layer', (e) => {
+  let lastSlabEvent: Event | undefined
+  const openSlabPopup = (e: maplibregl.MapLayerMouseEvent) => {
     if (isPickingRef?.current) return
     if (!e.features || e.features.length === 0) return
+    if (e.originalEvent && e.originalEvent === lastSlabEvent) return
+    lastSlabEvent = e.originalEvent
+    lastPavementEvent = e.originalEvent
+
+    lastHandledClickTimestamp = Date.now()
+
     const f = e.features[0]
     const p = f.properties || {}
     if (!p) return
 
     const targetSegId = p.segmentId || p.id
     const targetBranchId = p.branchId
-    const displayLabel = p.branchCode
-      ? `[${p.branchCode}] ${p.segmentCode || p.code}`
-      : (p.segmentCode || p.code)
+    const content = slabPopupValues(p)
 
     // 1. Kích hoạt chọn phân đoạn và chuyển đúng tuyến (Trục chính hoặc Nhánh)
     triggerSelectSegment(targetSegId, targetBranchId, f)
 
-    // 2. Cắm ghim và zoom tới vị trí tấm vừa ấn
-    pinAndFocusFeature(e.lngLat, f, displayLabel)
+    // Keep close inspection zoom; do not hide labels by zooming out after a cell click.
+    pinAndFocusFeature(e.lngLat, f, content.code, Math.max(map.getZoom(), 18.5))
 
-    // 3. Mở popup chi tiết tấm
+    // 3. Mở popup chi tiết tấm phong cách RoadGuard Dark
     if (popupRef.current) popupRef.current.remove()
-    popupRef.current = new maplibregl.Popup({ offset: 12, closeButton: true })
+    popupRef.current = new maplibregl.Popup({ offset: 14, closeButton: true, className: 'roadguard-maplibre-popup' })
       .setLngLat(e.lngLat)
       .setHTML(`
-        <div class="p-2.5 text-xs font-sans min-w-[220px]">
-          <div class="flex items-center justify-between pb-1.5 border-b border-slate-200">
-            <span class="font-bold text-slate-900 text-sm">🧱 ${p.code}</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${
-              p.status === 'GOOD' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-            }">${p.status === 'GOOD' ? 'Đạt chuẩn' : 'Cần theo dõi'}</span>
+        <div class="bg-slate-900 text-slate-100 p-3 text-xs font-sans min-w-[240px]">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-700/80 mb-2">
+            <span class="font-bold text-white text-sm flex items-center gap-1.5">
+              <span>🧱</span>
+              <span>${content.code}</span>
+            </span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">${content.status}</span>
           </div>
-          <div class="mt-2 space-y-1 text-slate-600">
-            <div>📍 <strong>Lý trình:</strong> <span class="font-mono">${p.station}</span> (${p.lane})</div>
-            <div>📐 <strong>Kích thước tấm:</strong> <span class="font-mono font-bold text-slate-800">${p.lengthM}m × ${p.widthM}m × 26cm</span></div>
-            <div>🛣️ <strong>Cự ly mép đường:</strong> <span class="font-mono text-[#8F7212] font-semibold">${p.edgeOffset}</span></div>
-            <div>⚡ <strong>Khe co kề bên:</strong> <span class="font-mono text-slate-700 font-semibold">Khoảng cách 5.0m (Dowel bar phi 25)</span></div>
+          <div class="space-y-1.5 text-slate-300">
+            <div>📍 <strong>Lý trình:</strong> <span class="font-mono text-amber-400">${content.station}</span> (${content.lane})</div>
+            <div>📐 <strong>Kích thước tấm:</strong> <span class="font-mono font-bold text-white">${content.dimensions}</span></div>
+            ${p.layoutKind === 'AS_BUILT' ? `<div><strong>Nguồn ghi nhận:</strong> ${content.captureSource}</div><div><strong>Trạng thái nguồn từ máy chủ:</strong> ${content.provenance}</div>` : ''}
+            ${p.layoutKind === 'AS_BUILT' && p.dimensionUnknownReason ? `<div><strong>Lý do chưa biết kích thước:</strong> ${content.dimensionReason}</div>` : ''}
+            <div>🛣️ <strong>${content.lateralLabel}:</strong> <span class="font-mono text-sky-400 font-semibold">${content.edgeOffset}</span></div>
+            <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">⚡ <strong>Khe co kề bên:</strong> Cự ly ${content.contraction}</div>
           </div>
         </div>
       `)
       .addTo(map)
-  })
+  }
+  for (const layer of ['slabs-fill-layer', 'slabs-outline-layer', 'slabs-label-layer']) map.on('click', layer, openSlabPopup)
 
-  // Click vào khe giãn nở để kích hoạt chọn phân đoạn & xem popup kỹ thuật
-  map.on('click', 'joints-expansion-layer', (e) => {
+  // Popup cho feature khe co/khe giãn thực và nhãn tương ứng.
+  let lastJointEvent: Event | undefined
+  const openJointPopup = (e: maplibregl.MapLayerMouseEvent) => {
     if (isPickingRef?.current) return
     if (!e.features || e.features.length === 0) return
+    if (e.originalEvent && e.originalEvent === lastJointEvent) return
+    lastJointEvent = e.originalEvent
+    lastPavementEvent = e.originalEvent
+
+    lastHandledClickTimestamp = Date.now()
+
     const f = e.features[0]
     const p = f.properties || {}
     if (!p) return
@@ -208,26 +265,29 @@ export function setupAlignmentMapInteractions(
     const targetSegId = p.segmentId || p.id
     const targetBranchId = p.branchId
     triggerSelectSegment(targetSegId, targetBranchId, f)
-    pinAndFocusFeature(e.lngLat, f, p.label || p.name || p.id)
+    pinAndFocusFeature(e.lngLat, f, p.label || p.name || p.id, Math.max(map.getZoom(), 18.5))
 
     if (popupRef.current) popupRef.current.remove()
-    popupRef.current = new maplibregl.Popup({ offset: 12, closeButton: true })
+    popupRef.current = new maplibregl.Popup({ offset: 14, closeButton: true, className: 'roadguard-maplibre-popup' })
       .setLngLat(e.lngLat)
       .setHTML(`
-        <div class="p-2.5 text-xs font-sans min-w-[230px]">
-          <div class="font-bold text-amber-600 flex items-center gap-1 border-b border-amber-200 pb-1">
-            <span>⚡ ${p.name}</span>
+        <div class="bg-slate-900 text-slate-100 p-3 text-xs font-sans min-w-[240px]">
+          <div class="font-bold ${p.isExpansion ? 'text-orange-400' : 'text-red-400'} flex items-center gap-1.5 border-b border-slate-700/80 pb-2 mb-2 text-sm">
+            <span>⚡</span>
+            <span>${p.name} — ${p.code || p.id}</span>
           </div>
-          <div class="mt-2 space-y-1 text-slate-600">
-            <div>📍 <strong>Vị trí:</strong> <span class="font-mono font-bold text-slate-800">${p.station}</span></div>
-            <div>📏 <strong>Độ mở khe giãn nở:</strong> <span class="font-mono font-bold text-amber-700">20 mm (±2mm)</span></div>
-            <div>🛡️ <strong>Cấu tạo kỹ thuật:</strong> ${p.description}</div>
-            <div>🛣️ <strong>Bề rộng mặt đường tại khe:</strong> <span class="font-mono font-semibold">${p.roadWidthM}m</span></div>
+          <div class="space-y-1.5 text-slate-300">
+            <div class="text-sky-300">Preview — chưa lưu/chưa xác nhận</div>
+            <div>📍 <strong>Vị trí:</strong> <span class="font-mono font-bold text-white">${p.station}</span></div>
+            <div>📏 <strong>Cự ly ${p.isExpansion ? 'khe giãn' : 'khe co'}:</strong> <span class="font-mono font-bold">${Number.isFinite(p.spacingMeters) ? p.spacingMeters + 'm' : 'Chưa có dữ liệu'}</span></div>
+            ${p.isExpansion ? `<div><strong>Độ hở:</strong> ${Number.isFinite(p.gapMm) ? p.gapMm + 'mm' : 'Chưa có dữ liệu'}</div>` : ''}
+            <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">🛣️ <strong>Bề rộng mặt đường tại khe:</strong> <span class="font-mono font-semibold text-sky-400">${p.roadWidthM}m</span></div>
           </div>
         </div>
       `)
       .addTo(map)
-  })
+  }
+  for (const layer of ['joints-contraction-layer', 'joints-expansion-layer', 'joints-contraction-label-layer', 'joints-expansion-label-layer']) map.on('click', layer, openJointPopup)
 
   // Đăng ký sự kiện click cho Trục chính & Tuyến nhánh
   map.on('click', 'segments-surface-layer', handleFeatureClick)
@@ -240,14 +300,20 @@ export function setupAlignmentMapInteractions(
   map.on('mouseleave', 'segments-surface-layer', () => { map.getCanvas().style.cursor = '' })
   map.on('mouseenter', 'branches-surface-layer', () => { map.getCanvas().style.cursor = 'pointer' })
   map.on('mouseleave', 'branches-surface-layer', () => { map.getCanvas().style.cursor = '' })
-  map.on('mouseenter', 'slabs-outline-layer', () => { map.getCanvas().style.cursor = 'pointer' })
-  map.on('mouseleave', 'slabs-outline-layer', () => { map.getCanvas().style.cursor = '' })
-  map.on('mouseenter', 'joints-expansion-layer', () => { map.getCanvas().style.cursor = 'pointer' })
-  map.on('mouseleave', 'joints-expansion-layer', () => { map.getCanvas().style.cursor = '' })
+  for (const layer of ['slabs-fill-layer', 'slabs-outline-layer', 'slabs-label-layer']) {
+    map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
+    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
+  }
+  for (const layer of ['joints-contraction-layer', 'joints-expansion-layer', 'joints-contraction-label-layer', 'joints-expansion-label-layer']) {
+    map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
+    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
+  }
 
-  // Click toàn cục trên bản đồ (vùng lân cận con trỏ chuột) để bắt trúng 100% khi click vào bất kỳ vị trí nào trên tuyến
+  // Click toàn cục trên bản đồ (vùng lân cận con trỏ chuột) để bắt trúng khi click vào bất kỳ vị trí nào trên tuyến
   map.on('click', (e) => {
     if (isPickingRef?.current) return
+    // Nếu sự kiện click đã được xử lý bởi layer handler thì bỏ qua
+    if (Date.now() - lastHandledClickTimestamp < 150) return
 
     const bbox: [maplibregl.PointLike, maplibregl.PointLike] = [
       [e.point.x - 8, e.point.y - 8],
@@ -276,7 +342,7 @@ export function setupAlignmentMapInteractions(
 
     if (segId || branchId) {
       triggerSelectSegment(segId, branchId, f)
-      pinAndFocusFeature(e.lngLat, f, displayLabel)
+      pinAndFocusFeature(e.lngLat, f, displayLabel, 15.2)
     }
   })
 }

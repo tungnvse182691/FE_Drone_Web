@@ -1,14 +1,161 @@
 import { apiClient } from '../client'
+import { defectRecurrenceService, type RecurrenceInput } from './defectRecurrenceService'
+import { projectService } from './projectService'
+import { aiApiErrorText } from './aiRunDetailService'
+import { useAuthStore } from '../../store/authStore'
 import { ProjectRouteConfig, AvailablePilot } from '../../pages/(pm)/create-survey/types'
 import { AIDetectionItem } from '../../pages/(pm)/drone-review/types'
-import { INITIAL_DETECTIONS } from '../../pages/(pm)/drone-review/mockData'
 
 export type { ProjectRouteConfig, AvailablePilot, AIDetectionItem }
 
+export interface AiCandidateFactsDto {
+  schemaVersion?: string
+  detectionId: string
+  projectId: string
+  datasetVersionId: string
+  modelVersionId: string
+  runId: string
+  jobId: string
+  attemptId: string
+  resultId: string
+  manifestHash: string
+  resultHash: string
+  fixtureVersion: string
+  mode: string
+  sourceVideoFileId: string
+  sourceVideoFileVersion: string
+  frameFileId: string
+  frameFileVersion: string
+  frameSha256: string
+  frameSizeBytes: number
+  frameMediaType: string
+  timestampMs: number
+  typeCode: 'CRACK' | 'POTHOLE' | string
+  confidence: number
+  boundingBox: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  routeVersionId: string
+  segmentSetId: string
+  segmentId: string | null
+  geometryVersion: string
+  positionStatus: string
+  sourceVersion: string
+  disposition: {
+    decisionId: string
+    version: string
+  } | null
+  dispositionVersion: string | null
+}
+
+export interface CandidateDecisionDto {
+  id: string
+  sourceKind: 'AI_DETECTION' | 'REPORT' | 'FIELD_OBSERVATION'
+  sourceId: string
+  decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'
+  defectId: string | null
+  version: string
+  supersedesDecisionId: string | null
+}
+
+export interface CandidateMatchItemDto {
+  defectId: string
+  version: string
+  segmentId: string | null
+  priorityGroup: number
+  distanceMeters: number | null
+  accuracyMeters: number | null
+  reasonCodes: string[]
+  evidenceRefs?: string[]
+  historySummary?: {
+    sourceLinkCount: number
+  }
+}
+
+export interface CandidateMatchPageDto {
+  source: {
+    kind: string
+    id: string
+    version: string
+  }
+  geometryVersion: string
+  algorithmVersion: string
+  items: CandidateMatchItemDto[]
+  nextCursor: string | null
+}
+
+export interface BackendDefectDto {
+  id: string
+  projectId: string
+  roadSectionVersionId: string
+  segmentId: string | null
+  defectTypeCode: 'POTHOLE' | 'CRACK' | string
+  causeCategoryCode: string | null
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  status: 'OPEN' | 'VERIFIED' | 'REJECTED' | 'CLOSED' | string
+  geometry?: unknown
+  version: string
+}
+
+export interface FileMetadataDto {
+  id: string
+  status: string
+  checksumSha256: string
+  mediaType: string
+  sizeBytes: number
+  version: string
+}
+
+const fileBlobUrlCache = new Map<string, string>()
+const fileContentErrors = new Map<string, string>()
+
+export const DEFECT_TYPE_LABELS: Record<string, string> = {
+  CRACK: 'Vết nứt mặt đường',
+  POTHOLE: 'Ổ gà mặt đường',
+  LONGITUDINAL_CRACK: 'Nứt dọc mặt đường',
+  TRANSVERSE_CRACK: 'Nứt ngang mặt đường',
+  ALLIGATOR_CRACK: 'Nứt mạng lưới (da cá sấu)',
+  RUTTING: 'Lún vệt bánh xe',
+  RAVELING: 'Bong bật cốt liệu'
+}
+
+export interface AiCandidateOverride {
+  bbox?: { x: number; y: number; width: number; height: number }
+  rawTypeCode?: string
+  customTypeLabel?: string
+}
+
+export function formatDefectTypeLabel(typeCode?: string | null, customLabel?: string | null): string {
+  if (customLabel && customLabel.trim()) return customLabel.trim()
+  if (!typeCode) return 'Vết nứt mặt đường'
+  const upper = typeCode.toUpperCase()
+  if (DEFECT_TYPE_LABELS[upper]) return DEFECT_TYPE_LABELS[upper]
+  return typeCode
+}
+
 export interface SurveyMissionItem {
+  /** Nhiệm vụ thuộc kế hoạch này (survey-tasks.planId) — dùng để gắn lần chạy AI theo surveyTaskId. */
+  task_ids?: string[]
+  scope_summary?: string
+  read_error?: string
+  serverRecordKind?: 'PLAN' | 'TASK'
+  serverStatus?: string
+  /** Mã rút gọn hiển thị (KH-/NV- + 8 ký tự đầu của ID); ID đầy đủ vẫn là `id`. */
+  short_code?: string
+  /** Hạn hoàn thành (nhiệm vụ) đã định dạng; lịch bay của kế hoạch nằm ở `flight_date`. */
+  due_label?: string
+  /** Quan hệ do BE trả: kế hoạch của nhiệm vụ (planId), nhiệm vụ bổ sung con (supplementTaskId của nhiệm vụ gốc), nhiệm vụ gốc suy từ danh sách. */
+  plan_id?: string | null
+  supplement_task_id?: string | null
+  parent_task_id?: string | null
   id: string
   code: string
   title: string
+  survey_type: 'BASELINE' | 'PERIODIC' | 'AD_HOC' | null
+  survey_type_label: string
   project_id: string
   project_name: string
   start_km: string
@@ -20,474 +167,11 @@ export interface SurveyMissionItem {
   gsd_resolution: string
   ai_defects_count: number
   ai_pending_count: number
+  approved_count?: number
+  reviewed_count?: number
   coverage_percent: number
-  status: 'PENDING_AI_REVIEW' | 'BASELINE_LOCKED' | 'SCHEDULED' | 'PROCESSING_AI'
+  status?: 'PENDING_AI_REVIEW' | 'BASELINE_LOCKED' | 'SCHEDULED' | 'PROCESSING_AI'
   status_label: string
-}
-
-export const INITIAL_SURVEY_MISSIONS: SurveyMissionItem[] = [
-  {
-    id: 'srv-01',
-    code: '#MS-2026-0924',
-    title: 'Bay quét Baseline định kỳ đợt 4 & Tầm soát nứt lún',
-    project_id: 'prj-ql1a-02',
-    project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-    start_km: 'Km 1024+000',
-    end_km: 'Km 1030+000',
-    flight_date: '24/09/2026',
-    pilot_name: 'Hoàng Quốc Bảo (Phi công RTK cấp 3)',
-    drone_model: 'DJI Matrice 300 RTK + Zenmuse P1',
-    total_photos: 1920,
-    gsd_resolution: '1.12 cm/pixel',
-    ai_defects_count: 8,
-    ai_pending_count: 8,
-    coverage_percent: 87,
-    status: 'PENDING_AI_REVIEW',
-    status_label: 'Chờ thẩm định AI Canvas (WF-09)'
-  },
-  {
-    id: 'srv-02',
-    code: '#MS-2026-0810',
-    title: 'Bay kiểm định mốc bàn giao lý trình Km 1030 – Km 1036',
-    project_id: 'prj-ql1a-02',
-    project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-    start_km: 'Km 1030+000',
-    end_km: 'Km 1036+500',
-    flight_date: '10/08/2026',
-    pilot_name: 'Lê Hoàng Long (Phi công thiết bị bay)',
-    drone_model: 'DJI Matrice 300 RTK + Zenmuse P1',
-    total_photos: 1450,
-    gsd_resolution: '1.20 cm/pixel',
-    ai_defects_count: 14,
-    ai_pending_count: 0,
-    coverage_percent: 98,
-    status: 'BASELINE_LOCKED',
-    status_label: 'Đã khóa Baseline'
-  },
-  {
-    id: 'srv-03',
-    code: '#MS-2026-0705',
-    title: 'Bay lập Baseline dữ liệu ban đầu toàn tuyến 21.5 km',
-    project_id: 'prj-ql1a-02',
-    project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-    start_km: 'Km 1024+000',
-    end_km: 'Km 1045+500',
-    flight_date: '05/07/2026',
-    pilot_name: 'Trần Quang Khải (Phi công RTK)',
-    drone_model: 'DJI Matrice 350 RTK',
-    total_photos: 3120,
-    gsd_resolution: '1.05 cm/pixel',
-    ai_defects_count: 22,
-    ai_pending_count: 0,
-    coverage_percent: 100,
-    status: 'BASELINE_LOCKED',
-    status_label: 'Đã khóa Baseline'
-  },
-  {
-    id: 'srv-04',
-    code: '#MS-2026-1002',
-    title: 'Nhiệm vụ bay bổ sung kiểm tra sụt lún sau mưa bão',
-    project_id: 'prj-ql1a-02',
-    project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-    start_km: 'Km 1033+000',
-    end_km: 'Km 1038+000',
-    flight_date: 'Hôm nay (Chờ thực hiện)',
-    pilot_name: 'Lê Hoàng Long (Đội bay Hoàng Hải 01)',
-    drone_model: 'DJI Matrice 350 RTK + Zenmuse P1',
-    total_photos: 0,
-    gsd_resolution: '~1.15 cm/pixel',
-    ai_defects_count: 0,
-    ai_pending_count: 0,
-    coverage_percent: 0,
-    status: 'SCHEDULED',
-    status_label: 'Đang lên lịch bay (Sẵn sàng cất cánh)'
-  },
-  {
-    id: 'srv-05',
-    code: '#MS-2026-0918',
-    title: 'Bay khảo sát nhánh đèo kiểm tra độ ổn định mái taluy',
-    project_id: 'br-01-haivan',
-    project_name: 'Nhánh rẽ Đèo Hải Vân (BR-01)',
-    start_km: 'Km 0+000',
-    end_km: 'Km 1+850',
-    flight_date: '18/09/2026',
-    pilot_name: 'Hoàng Quốc Bảo (Phi công RTK cấp 3)',
-    drone_model: 'DJI Matrice 300 RTK + Zenmuse P1',
-    total_photos: 960,
-    gsd_resolution: '1.08 cm/pixel',
-    ai_defects_count: 5,
-    ai_pending_count: 5,
-    coverage_percent: 92,
-    status: 'PENDING_AI_REVIEW',
-    status_label: 'Chờ thẩm định AI Canvas'
-  },
-  {
-    id: 'srv-06',
-    code: '#MS-2026-1015',
-    title: 'Bay lập Baseline phân đoạn Km 12 – Km 25 cao tốc La Sơn',
-    project_id: 'prj-lstl-05',
-    project_name: 'Cao tốc La Sơn - Túy Loan (PRJ-LSTL-05)',
-    start_km: 'Km 12+000',
-    end_km: 'Km 25+000',
-    flight_date: '02/10/2026',
-    pilot_name: 'Trần Quang Khải (Phi công RTK)',
-    drone_model: 'DJI Matrice 350 RTK',
-    total_photos: 2480,
-    gsd_resolution: '1.10 cm/pixel',
-    ai_defects_count: 18,
-    ai_pending_count: 0,
-    coverage_percent: 96,
-    status: 'BASELINE_LOCKED',
-    status_label: 'Đã khóa Baseline'
-  }
-]
-
-// Mock Store danh sách Tuyến chính & Tuyến phụ (Gắn liền với từng dự án mẹ)
-export const INITIAL_SURVEY_ROUTES: ProjectRouteConfig[] = [
-  // === DỰ ÁN 1: QUỐC LỘ 1A - GIAI ĐOẠN 2 ===
-  {
-    id: 'prj-ql1a-02',
-    code: 'PRJ-QL1A-02',
-    name: 'QL1A - Giai đoạn 2',
-    type: 'MAINLINE',
-    parentProjectId: 'prj-ql1a-02',
-    parentProjectCode: 'PRJ-QL1A-02',
-    parentProjectName: 'QL1A - Giai đoạn 2',
-    lengthKm: 25.0,
-    startKm: 1020.0,
-    endKm: 1045.0,
-    defaultCoords: [
-      [108.0825, 16.2731], // P0 - Km 1020+000
-      [108.1054, 16.2589], // P1 - Km 1022+500
-      [108.1287, 16.2415], // P2 - Km 1025+000
-      [108.1492, 16.2238], // P3 - Km 1027+500
-      [108.1695, 16.2085], // P4 - Km 1030+000
-      [108.1884, 16.1843], // P5 - Km 1035+000
-      [108.2152, 16.1521], // P6 - Km 1040+000
-      [108.2418, 16.1215]  // P7 - Km 1045+000
-    ],
-    defaultKmPoints: [1020, 1022.5, 1025, 1027.5, 1030, 1035, 1040, 1045]
-  },
-  {
-    id: 'br-01-haivan',
-    code: 'BR-01',
-    name: 'Nhánh rẽ Đèo Hải Vân',
-    type: 'BRANCH',
-    parentProjectId: 'prj-ql1a-02',
-    parentProjectCode: 'PRJ-QL1A-02',
-    parentProjectName: 'QL1A - Giai đoạn 2',
-    branchStationKm: 1024.5,
-    branchStationText: 'Tách từ Km 1024+500 trên QL1A',
-    directionText: 'Rẽ phải (hướng đèo Hải Vân)',
-    lengthKm: 1.85,
-    startKm: 0.0,
-    endKm: 1.85,
-    defaultCoords: [
-      [108.1245, 16.2450], // Điểm nối tim tuyến chính Km 1024+500
-      [108.1380, 16.2520],
-      [108.1490, 16.2610]  // Đỉnh nhánh rẽ đèo
-    ],
-    defaultKmPoints: [0, 0.9, 1.85]
-  },
-  {
-    id: 'br-02-langco',
-    code: 'BR-02',
-    name: 'Tuyến tránh đô thị Lăng Cô',
-    type: 'BRANCH',
-    parentProjectId: 'prj-ql1a-02',
-    parentProjectCode: 'PRJ-QL1A-02',
-    parentProjectName: 'QL1A - Giai đoạn 2',
-    branchStationKm: 1030.0,
-    branchStationText: 'Tách từ Km 1030+000 trên QL1A',
-    directionText: 'Rẽ trái (tuyến tránh đô thị)',
-    lengthKm: 3.20,
-    startKm: 0.0,
-    endKm: 3.20,
-    defaultCoords: [
-      [108.1695, 16.2085], // Điểm nối tim tuyến chính Km 1030+000
-      [108.1780, 16.2160],
-      [108.1920, 16.2110],
-      [108.2040, 16.1980]
-    ],
-    defaultKmPoints: [0, 1.0, 2.2, 3.2]
-  },
-  {
-    id: 'br-03-eastgom',
-    code: 'BR-03',
-    name: 'Đường gom kết nối dân sinh phía Đông',
-    type: 'BRANCH',
-    parentProjectId: 'prj-ql1a-02',
-    parentProjectCode: 'PRJ-QL1A-02',
-    parentProjectName: 'QL1A - Giai đoạn 2',
-    branchStationKm: 1038.0,
-    branchStationText: 'Tách từ Km 1038+000 trên QL1A',
-    directionText: 'Rẽ phải (đường gom khu dân cư)',
-    lengthKm: 2.10,
-    startKm: 0.0,
-    endKm: 2.10,
-    defaultCoords: [
-      [108.2045, 16.1650], // Điểm nối tim tuyến chính Km 1038+000
-      [108.2120, 16.1730],
-      [108.2250, 16.1810]
-    ],
-    defaultKmPoints: [0, 1.05, 2.1]
-  },
-
-  // === DỰ ÁN 2: CAO TỐC LA SƠN - TÚY LOAN ===
-  {
-    id: 'prj-lstl-05',
-    code: 'PRJ-LSTL-05',
-    name: 'Cao tốc La Sơn - Túy Loan',
-    type: 'MAINLINE',
-    parentProjectId: 'prj-lstl-05',
-    parentProjectCode: 'PRJ-LSTL-05',
-    parentProjectName: 'Cao tốc La Sơn - Túy Loan',
-    lengthKm: 66.0,
-    startKm: 0.0,
-    endKm: 66.0,
-    defaultCoords: [
-      [107.6521, 16.2912],
-      [107.7214, 16.2105],
-      [107.8102, 16.1423],
-      [107.9056, 16.0821],
-      [108.0124, 16.0354],
-      [108.1189, 15.9876]
-    ],
-    defaultKmPoints: [0, 15, 30, 45, 55, 66]
-  },
-  {
-    id: 'br-lstl-01',
-    code: 'BR-LSTL-01',
-    name: 'Nhánh rẽ nút giao Khe Tre',
-    type: 'BRANCH',
-    parentProjectId: 'prj-lstl-05',
-    parentProjectCode: 'PRJ-LSTL-05',
-    parentProjectName: 'Cao tốc La Sơn - Túy Loan',
-    branchStationKm: 24.0,
-    branchStationText: 'Tách từ Km 24+000 trên Cao tốc La Sơn - Túy Loan',
-    directionText: 'Rẽ phải (nút giao Khe Tre)',
-    lengthKm: 2.40,
-    startKm: 0.0,
-    endKm: 2.40,
-    defaultCoords: [
-      [107.7214, 16.2105],
-      [107.7350, 16.2180],
-      [107.7520, 16.2290]
-    ],
-    defaultKmPoints: [0, 1.2, 2.4]
-  },
-  {
-    id: 'br-lstl-02',
-    code: 'BR-LSTL-02',
-    name: 'Nhánh rẽ nút giao Nam Đông',
-    type: 'BRANCH',
-    parentProjectId: 'prj-lstl-05',
-    parentProjectCode: 'PRJ-LSTL-05',
-    parentProjectName: 'Cao tốc La Sơn - Túy Loan',
-    branchStationKm: 36.5,
-    branchStationText: 'Tách từ Km 36+500 trên Cao tốc La Sơn - Túy Loan',
-    directionText: 'Rẽ trái (trung tâm huyện Nam Đông)',
-    lengthKm: 3.10,
-    startKm: 0.0,
-    endKm: 3.10,
-    defaultCoords: [
-      [107.8102, 16.1423],
-      [107.8250, 16.1350],
-      [107.8420, 16.1210]
-    ],
-    defaultKmPoints: [0, 1.5, 3.1]
-  },
-  {
-    id: 'br-lstl-03',
-    code: 'BR-LSTL-03',
-    name: 'Tuyến nối nút giao Túy Loan - QL14B',
-    type: 'BRANCH',
-    parentProjectId: 'prj-lstl-05',
-    parentProjectCode: 'PRJ-LSTL-05',
-    parentProjectName: 'Cao tốc La Sơn - Túy Loan',
-    branchStationKm: 64.2,
-    branchStationText: 'Tách từ Km 64+200 trên Cao tốc La Sơn - Túy Loan',
-    directionText: 'Rẽ phải (kết nối Quốc lộ 14B)',
-    lengthKm: 4.20,
-    startKm: 0.0,
-    endKm: 4.20,
-    defaultCoords: [
-      [108.1050, 15.9920],
-      [108.1189, 15.9876],
-      [108.1340, 15.9750]
-    ],
-    defaultKmPoints: [0, 2.1, 4.2]
-  },
-
-  // === DỰ ÁN 3: CAO TỐC BẮC NAM - ĐOẠN DIỄN CHÂU ===
-  {
-    id: 'prj-ctbn-01',
-    code: 'PRJ-CTBN-01',
-    name: 'Cao tốc Bắc Nam - Đoạn Diễn Châu',
-    type: 'MAINLINE',
-    parentProjectId: 'prj-ctbn-01',
-    parentProjectCode: 'PRJ-CTBN-01',
-    parentProjectName: 'Cao tốc Bắc Nam - Đoạn Diễn Châu',
-    lengthKm: 49.3,
-    startKm: 430.0,
-    endKm: 479.3,
-    defaultCoords: [
-      [105.5821, 18.9823],
-      [105.6120, 18.9145],
-      [105.6450, 18.8450],
-      [105.6812, 18.7654]
-    ],
-    defaultKmPoints: [430, 445, 462, 479.3]
-  },
-  {
-    id: 'br-dc-01',
-    code: 'BR-DC-01',
-    name: 'Nhánh rẽ nút giao Quốc lộ 7',
-    type: 'BRANCH',
-    parentProjectId: 'prj-ctbn-01',
-    parentProjectCode: 'PRJ-CTBN-01',
-    parentProjectName: 'Cao tốc Bắc Nam - Đoạn Diễn Châu',
-    branchStationKm: 445.2,
-    branchStationText: 'Tách từ Km 445+200 trên Cao tốc Bắc Nam',
-    directionText: 'Rẽ phải (hướng Đô Lương - QL7)',
-    lengthKm: 2.80,
-    startKm: 0.0,
-    endKm: 2.80,
-    defaultCoords: [
-      [105.6120, 18.9145],
-      [105.5980, 18.9050],
-      [105.5810, 18.8920]
-    ],
-    defaultKmPoints: [0, 1.4, 2.8]
-  },
-  {
-    id: 'br-dc-02',
-    code: 'BR-DC-02',
-    name: 'Đường gom kết nối KCN VSIP Nghệ An',
-    type: 'BRANCH',
-    parentProjectId: 'prj-ctbn-01',
-    parentProjectCode: 'PRJ-CTBN-01',
-    parentProjectName: 'Cao tốc Bắc Nam - Đoạn Diễn Châu',
-    branchStationKm: 462.0,
-    branchStationText: 'Tách từ Km 462+000 trên Cao tốc Bắc Nam',
-    directionText: 'Rẽ trái (Khu công nghiệp VSIP)',
-    lengthKm: 3.50,
-    startKm: 0.0,
-    endKm: 3.50,
-    defaultCoords: [
-      [105.6450, 18.8450],
-      [105.6580, 18.8520],
-      [105.6720, 18.8610]
-    ],
-    defaultKmPoints: [0, 1.75, 3.5]
-  },
-
-  // === DỰ ÁN 4: ĐƯỜNG TỈNH ĐT-741 (BÌNH DƯƠNG) ===
-  {
-    id: 'prj-dt741-04',
-    code: 'PRJ-DT741-04',
-    name: 'Đường tỉnh ĐT-741 (Bình Dương)',
-    type: 'MAINLINE',
-    parentProjectId: 'prj-dt741-04',
-    parentProjectCode: 'PRJ-DT741-04',
-    parentProjectName: 'Đường tỉnh ĐT-741 (Bình Dương)',
-    lengthKm: 32.8,
-    startKm: 0.0,
-    endKm: 32.8,
-    defaultCoords: [
-      [106.6854, 11.0821],
-      [106.7215, 11.1620],
-      [106.7620, 11.2450],
-      [106.7950, 11.3120]
-    ],
-    defaultKmPoints: [0, 10, 20, 32.8]
-  },
-  {
-    id: 'br-741-01',
-    code: 'BR-741-01',
-    name: 'Tuyến nhánh KCN Tân Bình',
-    type: 'BRANCH',
-    parentProjectId: 'prj-dt741-04',
-    parentProjectCode: 'PRJ-DT741-04',
-    parentProjectName: 'Đường tỉnh ĐT-741 (Bình Dương)',
-    branchStationKm: 12.5,
-    branchStationText: 'Tách từ Km 12+500 trên ĐT-741',
-    directionText: 'Rẽ phải (Khu công nghiệp Tân Bình)',
-    lengthKm: 2.15,
-    startKm: 0.0,
-    endKm: 2.15,
-    defaultCoords: [
-      [106.7215, 11.1620],
-      [106.7350, 11.1710],
-      [106.7480, 11.1820]
-    ],
-    defaultKmPoints: [0, 1.1, 2.15]
-  },
-  {
-    id: 'br-741-02',
-    code: 'BR-741-02',
-    name: 'Tuyến tránh đô thị Bến Cát',
-    type: 'BRANCH',
-    parentProjectId: 'prj-dt741-04',
-    parentProjectCode: 'PRJ-DT741-04',
-    parentProjectName: 'Đường tỉnh ĐT-741 (Bình Dương)',
-    branchStationKm: 22.8,
-    branchStationText: 'Tách từ Km 22+800 trên ĐT-741',
-    directionText: 'Rẽ trái (trung tâm Bến Cát)',
-    lengthKm: 3.40,
-    startKm: 0.0,
-    endKm: 3.40,
-    defaultCoords: [
-      [106.7620, 11.2450],
-      [106.7780, 11.2580],
-      [106.7920, 11.2710]
-    ],
-    defaultKmPoints: [0, 1.7, 3.4]
-  }
-]
-
-// Mock Store danh sách phi công drone có chứng chỉ
-export const INITIAL_PILOTS: AvailablePilot[] = [
-  {
-    id: 'pilot-01',
-    name: 'Lê Hoàng Long',
-    roleLabel: 'Phi công thiết bị bay — Đội bay Hoàng Hải 01',
-    phone: '0988.123.456',
-    license: 'Cục Tác Chiến #TC-UAV-2024-089',
-    device: 'DJI Matrice 350 RTK + Zenmuse P1'
-  },
-  {
-    id: 'pilot-02',
-    name: 'Trần Quang Khải',
-    roleLabel: 'Phi công thiết bị bay — Đội bay Hoàng Hải 02',
-    phone: '0972.555.888',
-    license: 'Cục Tác Chiến #TC-UAV-2025-112',
-    device: 'DJI Mavic 3 Enterprise RTK'
-  },
-  {
-    id: 'pilot-03',
-    name: 'Nguyễn Thành Đạt',
-    roleLabel: 'Phi công thiết bị bay — Chuyên gia bay địa hình & SfM',
-    phone: '0915.777.999',
-    license: 'Cục Tác Chiến #TC-UAV-2025-240',
-    device: 'DJI Matrice 300 RTK + Zenmuse H20T'
-  },
-  {
-    id: 'pilot-04',
-    name: 'Phạm Minh Tuấn',
-    roleLabel: 'Phi công thiết bị bay — Đội bay dự phòng khẩn cấp',
-    phone: '0903.444.222',
-    license: 'Cục Tác Chiến #TC-UAV-2026-031',
-    device: 'DJI Phantom 4 RTK'
-  }
-]
-
-// In-memory Mock State (KHÔNG dùng localStorage)
-let surveyStore: SurveyMissionItem[] = JSON.parse(JSON.stringify(INITIAL_SURVEY_MISSIONS))
-let surveyRoutesStore: ProjectRouteConfig[] = JSON.parse(JSON.stringify(INITIAL_SURVEY_ROUTES))
-let surveyPilotsStore: AvailablePilot[] = JSON.parse(JSON.stringify(INITIAL_PILOTS))
-let surveyDetectionsStore: Record<string, AIDetectionItem[]> = {
-  'srv-01': JSON.parse(JSON.stringify(INITIAL_DETECTIONS))
 }
 
 export interface CreateSurveyPayload {
@@ -498,239 +182,716 @@ export interface CreateSurveyPayload {
   pilot_name: string
   drone_model?: string
   flight_date?: string
+  survey_type?: 'PERIODIC' | 'AD_HOC' | 'BASELINE'
   notes?: string
 }
 
+// Fallback types exported for type-checking and initial states
+export const INITIAL_SURVEY_MISSIONS: SurveyMissionItem[] = []
+export const INITIAL_SURVEY_ROUTES: ProjectRouteConfig[] = []
+export const INITIAL_PILOTS: AvailablePilot[] = []
+
+/**
+ * Đảm bảo có Bearer Token cho các endpoint Candidate3 yêu cầu xác thực JWT Bearer
+ */
+async function ensureBearerToken(): Promise<null> {
+  // Web uses the current cookie session. Never sign in another actor or restore Bearer storage.
+  return null
+}
+
+const candidateWrites = new Set<string>()
+
+interface RunDetection {
+  detectionId: string
+  typeCode: string
+  confidence: number
+  bbox: [number, number, number, number]
+  frameFileId: string
+  timestampMs: number
+}
+
+const SEVERITY_VI: Record<string, string> = {
+  CRITICAL: 'Khẩn cấp',
+  HIGH: 'Nghiêm trọng',
+  MEDIUM: 'Trung bình',
+  LOW: 'Nhẹ'
+}
+
+// Dựng một phát hiện AI hoàn toàn từ dữ liệu BE (kết quả run + ai-candidates + candidate-decisions + defects)
+/** Mã hiển thị ổn định của một phát hiện: suy ra từ detectionId, không phụ thuộc thứ tự/phạm vi tải (danh sách và chi tiết luôn cùng mã). */
+export const detectionDisplayCode = (detectionId: string) => `DET-${String(detectionId).replace(/-/g, '').slice(-6).toUpperCase()}`
+
+/**
+ * Đọc lại trạng thái thẩm định của MỘT phát hiện từ BE: ai-candidates/{id} → disposition.decisionId → candidate-decisions/{id}.
+ * Lỗi của phát hiện này chỉ ảnh hưởng chính nó (không chặn cả phiên, không nhớ trạng thái "blocked"); tải lại là thử lại thật.
+ * "Chưa có quyết định" (disposition rỗng) khác "không đọc được" (error).
+ */
+async function readCandidateState(projectId: string, detectionId: string): Promise<{ facts: AiCandidateFactsDto | null; decision: CandidateDecisionDto | null; error?: string }> {
+  let facts: AiCandidateFactsDto
+  try { facts = await surveyService.getAiCandidateFacts(projectId, detectionId) } catch (e: any) {
+    if (e?.name === 'CanceledError') throw e
+    return { facts: null, decision: null, error: aiApiErrorText(e, `Không đọc được ứng viên AI ${detectionDisplayCode(detectionId)} (GET ai-candidates)`) }
+  }
+  if (!facts.disposition?.decisionId) return { facts, decision: null }
+  try { return { facts, decision: await surveyService.getCandidateDecision(projectId, facts.disposition.decisionId) } } catch (e: any) {
+    if (e?.name === 'CanceledError') throw e
+    return { facts, decision: null, error: aiApiErrorText(e, `Không đọc được quyết định đã lưu của ${detectionDisplayCode(detectionId)} (GET candidate-decisions, chỉ PM đọc được)`) }
+  }
+}
+
+async function buildDetectionItem(
+  projectId: string,
+  runId: string,
+  d: RunDetection,
+  defectMap: Map<string, BackendDefectDto>
+): Promise<AIDetectionItem> {
+  // Khi không đọc được ứng viên, dựng phần hiển thị từ chính kết quả run (loại, độ tin cậy, khung, ảnh) và đánh dấu stateUnknown — không coi là chưa duyệt.
+  const read = await readCandidateState(projectId, d.detectionId)
+  const stateUnknown = !!read.error
+  const x = d as any
+  const candFacts: AiCandidateFactsDto = read.facts || { typeCode: x.typeCode, confidence: x.confidence, timestampMs: x.timestampMs, frameFileId: x.frameFileId, frameFileVersion: x.frameFileVersion, sourceVideoFileId: x.sourceVideoFileId, segmentId: x.segmentId, positionStatus: x.positionStatus, boundingBox: Array.isArray(x.bbox) ? { x: x.bbox[0], y: x.bbox[1], width: x.bbox[2], height: x.bbox[3] } : undefined } as unknown as AiCandidateFactsDto
+  const decisionDto = read.decision
+  const decisionKind = decisionDto?.decision || null
+  const defectId = decisionDto?.defectId || null
+  const status: AIDetectionItem['status'] = decisionKind === 'REJECT' ? 'REJECTED'
+    : decisionKind === 'KEEP_NEW' || decisionKind === 'LINK_EXISTING' ? 'APPROVED' : 'PENDING'
+  let linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
+  if (defectId && !linkedDbDefect) linkedDbDefect = (await surveyService.getDefectById(projectId, defectId).catch(() => null))?.defect
+  const bboxX = candFacts.boundingBox?.x ?? d.bbox[0]
+  const bboxY = candFacts.boundingBox?.y ?? d.bbox[1]
+  const bboxW = candFacts.boundingBox?.width ?? d.bbox[2]
+  const bboxH = candFacts.boundingBox?.height ?? d.bbox[3]
+  const topPct = (bboxY * 100).toFixed(1) + '%'
+  const leftPct = (bboxX * 100).toFixed(1) + '%'
+  const widthPct = (bboxW * 100).toFixed(1) + '%'
+  const heightPct = (bboxH * 100).toFixed(1) + '%'
+  const typeCode = linkedDbDefect?.defectTypeCode || candFacts.typeCode || d.typeCode
+  const typeLabel = formatDefectTypeLabel(typeCode)
+  const confVal = candFacts.confidence ?? d.confidence
+  const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
+  const tsMs = candFacts.timestampMs ?? d.timestampMs
+  const severityLabel = (linkedDbDefect?.severity && SEVERITY_VI[linkedDbDefect.severity]) || 'Chưa được PM phân loại'
+
+  return {
+    id: d.detectionId,
+    code: detectionDisplayCode(d.detectionId),
+    defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
+    defectId,
+    stationing: 'Chưa có lý trình từ server',
+    lane: '',
+    type: typeLabel,
+    severityLevel: severityLabel,
+    confidence: confPct,
+    description: `Khung hình trích xuất tại mốc ${tsMs}ms${stateUnknown ? ' · Chưa xác định được trạng thái thẩm định (không đọc được từ máy chủ)' : ''}`,
+    stateUnknown,
+    stateError: read.error,
+    metrics: {},
+    status,
+    kmValue: Number.NaN,
+    bbox: {
+      top: topPct,
+      left: leftPct,
+      width: widthPct,
+      height: heightPct,
+      label: `${typeLabel} • ${confPct}%`,
+      dims: `Khung bao: ${widthPct} × ${heightPct}`,
+      borderColor: typeCode === 'POTHOLE' ? '#F59E0B' : '#EF4444'
+    },
+    projectId,
+    runId,
+    datasetVersionId: candFacts.datasetVersionId,
+    modelVersionId: candFacts.modelVersionId,
+    fixtureVersion: candFacts.fixtureVersion,
+    sourceVideoFileId: candFacts.sourceVideoFileId,
+    frameFileId: candFacts.frameFileId,
+    frameFileVersion: candFacts.frameFileVersion,
+    frameSha256: candFacts.frameSha256,
+    frameSizeBytes: candFacts.frameSizeBytes,
+    frameMediaType: candFacts.frameMediaType,
+    timestampMs: tsMs,
+    rawTypeCode: typeCode,
+    rawBbox: { x: bboxX, y: bboxY, width: bboxW, height: bboxH },
+    routeVersionId: candFacts.routeVersionId,
+    segmentSetId: candFacts.segmentSetId,
+    segmentId: candFacts.segmentId,
+    geometryVersion: candFacts.geometryVersion,
+    positionStatus: candFacts.positionStatus,
+    sourceVersion: candFacts.sourceVersion,
+    disposition: candFacts.disposition,
+    decisionKind
+  }
+}
+
 export const surveyService = {
-  /**
-   * Lấy danh sách nhiệm vụ bay khảo sát qua Mock API chuẩn RESTful
-   */
-  async getSurveys(): Promise<SurveyMissionItem[]> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.get<SurveyMissionItem[]>('/surveys')
-      return res.data
-    }
+/** Đọc lại đúng một phát hiện (nút "Thử lại"): không gọi lại KEEP_NEW, chỉ GET candidate → decision → defect. */
+async refreshDetection(item: AIDetectionItem): Promise<AIDetectionItem> {
+    if (!item.projectId || !item.runId) throw new Error('Phát hiện thiếu projectId/runId để đọc lại.')
+    const defectMap = new Map<string, BackendDefectDto>()
+    for (const df of await this.getProjectDefects(item.projectId)) defectMap.set(df.id.toLowerCase(), df)
+    const b = item.rawBbox || { x: 0, y: 0, width: 0, height: 0 }
+    const raw = { detectionId: item.id, typeCode: item.rawTypeCode || '', confidence: item.confidence, bbox: [b.x, b.y, b.width, b.height], frameFileId: item.frameFileId, timestampMs: item.timestampMs } as unknown as RunDetection
+    return buildDetectionItem(item.projectId, item.runId, raw, defectMap)
+  },
 
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    return JSON.parse(JSON.stringify(surveyStore))
+async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
+    const epoch = useAuthStore.getState().authEpoch
+    const items: any[] = [], seen = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const response = await apiClient.get(path, { params: { limit: 100, cursor }, signal })
+      if (signal?.aborted || epoch !== useAuthStore.getState().authEpoch) throw new Error('Phiên khảo sát đã thay đổi.')
+      if (!Array.isArray(response.data?.items)) throw new Error('Collection khảo sát trả sai contract.')
+      items.push(...response.data.items)
+      cursor = response.data.nextCursor || undefined
+      if (cursor && seen.has(cursor)) throw new Error('Cursor khảo sát bị lặp.')
+      if (cursor) seen.add(cursor)
+    } while (cursor)
+    return items
   },
 
   /**
-   * Lấy danh sách Tuyến chính & Tuyến phụ để bay khảo sát qua Mock API
+   * Lấy danh sách nhiệm vụ bay khảo sát trực tiếp từ CSDL Backend Candidate3 (W05 / ADD-05 / ADD-06)
+   * Nghiêm cấm trả về mock data giả mạo. CSDL rỗng trả về [].
    */
-  async getSurveyRoutes(): Promise<ProjectRouteConfig[]> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.get<ProjectRouteConfig[]>('/surveys/routes')
-      return res.data
+  async getSurveys(targetProjectId?: string): Promise<SurveyMissionItem[]> {
+    await ensureBearerToken()
+
+    let projects = await projectService.fetchProjects()
+    if (targetProjectId) {
+      projects = projects.filter((p) => p.id === targetProjectId || p.code === targetProjectId)
     }
+    if (!projects || projects.length === 0) return []
 
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    return JSON.parse(JSON.stringify(INITIAL_SURVEY_ROUTES))
-  },
+    const allMissions: SurveyMissionItem[] = []
 
-  /**
-   * Lấy danh sách phi công khả dụng qua Mock API
-   */
-  async getAvailablePilots(): Promise<AvailablePilot[]> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.get<AvailablePilot[]>('/surveys/pilots')
-      return res.data
-    }
+    for (const project of projects) {
+      const [plans, tasks, aiRuns, baselines, members] = await Promise.all([
+        this.readSurveyPage(`/projects/${project.id}/survey-plans`) as Promise<Array<{
+          id: string; projectId: string; plannedAt?: string; status?: string; surveyType?: string | number
+        }>>,
+        this.readSurveyPage(`/projects/${project.id}/survey-tasks`) as Promise<Array<{
+          id: string; projectId: string; operatorId?: string; planId?: string
+        }>>,
+        this.readSurveyPage(`/projects/${project.id}/ai-mock-runs`) as Promise<Array<{ id: string; status: string; surveyTaskId?: string | null }>>,
+        this.readSurveyPage(`/projects/${project.id}/baseline-selections`).catch((err) => {
+          // Chỉ ảnh hưởng nhãn khóa Baseline trong danh sách; trạng thái khóa coi là chưa xác định, không bịa.
+          console.warn('[surveyService] Không đọc được baseline-selections:', err?.message)
+          return [] as any[]
+        }),
+        this.readSurveyPage(`/projects/${project.id}/members`).catch(() => [] as any[])
+      ])
+      const memberName = new Map<string, string>()
+      for (const m of members) if (m?.userId) memberName.set(String(m.userId).toLowerCase(), m.displayName || '')
 
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    return JSON.parse(JSON.stringify(surveyPilotsStore))
-  },
-
-  /**
-   * Lấy chi tiết nhiệm vụ khảo sát theo ID hoặc Code
-   */
-  async getSurveyById(id: string): Promise<SurveyMissionItem | undefined> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.get<SurveyMissionItem>(`/surveys/${id}`)
-      return res.data
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    return surveyStore.find((s) => s.id === id || s.code === id)
-  },
-
-  /**
-   * Tạo nhiệm vụ bay mới (Mock POST API)
-   */
-  async createSurvey(data: CreateSurveyPayload): Promise<SurveyMissionItem> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.post<SurveyMissionItem>('/surveys', data)
-      return res.data
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    const missionCode = `#MS-2026-${String(surveyStore.length + 10).padStart(4, '0')}`
-    const newSurvey: SurveyMissionItem = {
-      id: `srv-${Date.now()}`,
-      code: missionCode,
-      title: `Bay khảo sát trắc địa đoạn ${data.start_km} - ${data.end_km}`,
-      project_id: data.project_id,
-      project_name: data.project_name,
-      start_km: data.start_km,
-      end_km: data.end_km,
-      flight_date: data.flight_date || 'Hôm nay',
-      pilot_name: data.pilot_name,
-      drone_model: data.drone_model || 'DJI Matrice 350 RTK',
-      total_photos: 0,
-      gsd_resolution: '~1.15 cm/pixel',
-      ai_defects_count: 0,
-      ai_pending_count: 0,
-      coverage_percent: 0,
-      status: 'SCHEDULED',
-      status_label: 'Đang lên lịch bay (Sẵn sàng cất cánh)'
-    }
-
-    surveyStore = [newSurvey, ...surveyStore]
-    return JSON.parse(JSON.stringify(newSurvey))
-  },
-
-  /**
-   * TRIGGER MÔ PHỎNG DRONE BAY XONG (Mock API Endpoint)
-   */
-  async simulateDroneFlightCompletion(surveyId: string): Promise<SurveyMissionItem | null> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.post<SurveyMissionItem>(`/surveys/${surveyId}/simulate-complete`)
-      return res.data
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    let completedItem: SurveyMissionItem | null = null
-
-    surveyStore = surveyStore.map((item) => {
-      if (item.id === surveyId || item.code === surveyId) {
-        completedItem = {
-          ...item,
-          total_photos: 1920,
-          gsd_resolution: '1.12 cm/pixel',
-          ai_defects_count: 8,
-          ai_pending_count: 8,
-          coverage_percent: 98,
-          status: 'PENDING_AI_REVIEW',
-          status_label: 'Chờ thẩm định AI Canvas (WF-09)'
-        }
-        return completedItem
-      }
-      return item
-    })
-
-    return completedItem ? JSON.parse(JSON.stringify(completedItem)) : null
-  },
-
-  /**
-   * Lấy danh sách phát hiện AI của đợt bay qua Mock API
-   */
-  async getSurveyDetections(surveyId: string): Promise<AIDetectionItem[]> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.get<AIDetectionItem[]>(`/surveys/${surveyId}/detections`)
-      return res.data
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 180))
-    const list = surveyDetectionsStore[surveyId] || surveyDetectionsStore['srv-01'] || INITIAL_DETECTIONS
-    return JSON.parse(JSON.stringify(list))
-  },
-
-  /**
-   * Cập nhật thẩm định phát hiện AI (Duyệt / Từ chối / Chỉnh sửa)
-   */
-  async updateSurveyDetection(
-    surveyId: string,
-    detectionId: string,
-    updates: Partial<AIDetectionItem>
-  ): Promise<AIDetectionItem | null> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.patch<AIDetectionItem>(`/surveys/${surveyId}/detections/${detectionId}`, updates)
-      return res.data
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    const list = surveyDetectionsStore[surveyId] || surveyDetectionsStore['srv-01'] || []
-    let updatedItem: AIDetectionItem | null = null
-
-    const updatedList = list.map((item) => {
-      if (item.id === detectionId) {
-        updatedItem = {
-          ...item,
-          ...updates,
-          metrics: {
-            ...item.metrics,
-            ...(updates.metrics || {})
+      // BE bản mới: run có surveyTaskId → gắn kết quả AI theo từng kế hoạch (qua nhiệm vụ của kế hoạch). Kết quả/ứng viên đọc một lần cho mỗi run.
+      const succeededRuns = aiRuns.filter((r) => r.status === 'SUCCEEDED')
+      const runDetections = new Map<string, string[]>()
+      const detectionState = new Map<string, 'APPROVED' | 'REJECTED' | 'PENDING' | 'UNKNOWN'>()
+      try {
+        for (const run of succeededRuns) {
+          const resultRes = await apiClient.get<{ detections?: Array<{ detectionId: string }> }>(
+            `/projects/${project.id}/ai-mock-runs/${run.id}/result`
+          )
+          const ids = (resultRes.data?.detections || []).map((d) => d.detectionId)
+          runDetections.set(run.id, ids)
+          for (const id of ids) {
+            if (detectionState.has(id)) continue
+            // Mỗi phát hiện đọc độc lập: một lỗi chỉ làm phát hiện đó "chưa xác định", không chặn các phát hiện khác.
+            const st = await readCandidateState(project.id, id)
+            if (st.error) { detectionState.set(id, 'UNKNOWN'); continue }
+            detectionState.set(id, !st.decision ? 'PENDING' : st.decision.decision === 'REJECT' ? 'REJECTED' : 'APPROVED')
           }
         }
-        return updatedItem
+      } catch (err: any) {
+        // Số liệu AI của danh sách chưa đọc được: để trống (không bịa); màn chi tiết sẽ báo lỗi rõ khi tải phát hiện AI.
+        console.warn('[surveyService] Không đọc được kết quả AI của dự án:', err?.message)
+        runDetections.clear(); detectionState.clear()
       }
-      return item
-    })
 
-    surveyDetectionsStore[surveyId] = updatedList
-    if (surveyId !== 'srv-01' && !surveyDetectionsStore['srv-01']) {
-      surveyDetectionsStore['srv-01'] = updatedList
+      for (const plan of plans) {
+        const associatedTasks = tasks.filter((t) => t.planId === plan.id)
+        const planTaskIds = new Set(associatedTasks.map((t) => String(t.id).toLowerCase()))
+        const planRuns = succeededRuns.filter((r) => r.surveyTaskId && planTaskIds.has(String(r.surveyTaskId).toLowerCase()) && runDetections.has(r.id))
+        const planDetectionIds = [...new Set(planRuns.flatMap((r) => runDetections.get(r.id) || []))]
+        const detectionsCount = planDetectionIds.length
+        const approvedCount = planDetectionIds.filter((d) => detectionState.get(d) === 'APPROVED').length
+        const rejectedCount = planDetectionIds.filter((d) => detectionState.get(d) === 'REJECTED').length
+        const shortId = plan.id.replace(/-/g, '').slice(0, 8).toUpperCase()
+        const missionCode = `#MS-2026-${shortId.slice(0, 4)}`
+
+        const rawType = String(plan.surveyType ?? '').toUpperCase()
+        const survey_type: 'BASELINE' | 'PERIODIC' | 'AD_HOC' | null =
+          rawType === '1' || rawType === 'BASELINE' ? 'BASELINE'
+          : rawType === '2' || rawType === 'PERIODIC' ? 'PERIODIC'
+          : rawType === '3' || rawType === 'AD_HOC' ? 'AD_HOC'
+          : null
+        const survey_type_label =
+          survey_type === 'BASELINE' ? 'Khảo sát cơ sở (Baseline)'
+          : survey_type === 'AD_HOC' ? 'Khảo sát đột xuất'
+          : survey_type === 'PERIODIC' ? 'Khảo sát định kỳ'
+          : ''
+
+        // Kết quả AI của kế hoạch = các run SUCCEEDED gắn với nhiệm vụ của kế hoạch (surveyTaskId do BE trả)
+        const hasAiResults = planRuns.length > 0
+        const planDetectionsCount = hasAiResults ? detectionsCount : 0
+        const planReviewedCount = hasAiResults ? approvedCount + rejectedCount : 0
+        const planPendingCount = hasAiResults ? Math.max(0, detectionsCount - planReviewedCount) : 0
+        const isLocked = survey_type === 'BASELINE' && baselines.length > 0
+
+        let status: SurveyMissionItem['status'] = 'SCHEDULED'
+        let status_label = 'Kế hoạch lên lịch'
+        if (isLocked) {
+          status = 'BASELINE_LOCKED'
+          status_label = 'Đã khóa Baseline'
+        } else if (hasAiResults) {
+          status = 'PENDING_AI_REVIEW'
+          status_label = planReviewedCount >= planDetectionsCount && planDetectionsCount > 0 ? 'Đã thẩm định 100%' : 'Chờ thẩm định AI'
+        }
+
+        const operatorId = associatedTasks.find((t) => t.operatorId)?.operatorId
+        allMissions.push({
+          id: plan.id,
+          task_ids: associatedTasks.map((t) => t.id),
+          code: missionCode,
+          title: `${survey_type_label || 'Khảo sát'} (${project.name})`,
+          survey_type,
+          survey_type_label,
+          project_id: project.id,
+          project_name: project.name,
+          start_km: project.start_km == null ? '' : String(project.start_km),
+          end_km: project.end_km == null ? '' : String(project.end_km),
+          flight_date: plan.plannedAt ? new Date(plan.plannedAt).toLocaleDateString('vi-VN') : '',
+          pilot_name: operatorId ? memberName.get(operatorId.toLowerCase()) || '' : '',
+          drone_model: '',
+          total_photos: 0,
+          gsd_resolution: '',
+          ai_defects_count: planDetectionsCount,
+          ai_pending_count: planPendingCount,
+          approved_count: hasAiResults ? approvedCount : 0,
+          reviewed_count: planReviewedCount,
+          coverage_percent: 0,
+          status,
+          status_label
+        })
+      }
     }
 
-    return updatedItem ? JSON.parse(JSON.stringify(updatedItem)) : null
+    return allMissions
   },
 
   /**
-   * Yêu cầu bay bổ sung để bù độ phủ trắc địa
+   * Lấy chi tiết nhiệm vụ khảo sát theo ID hoặc Code từ CSDL thật
    */
-  async requestReFlight(
+  async getSurveyById(id: string): Promise<SurveyMissionItem | undefined> {
+    const list = await this.getSurveys()
+    return list.find((s) => s.id === id || s.code === id) || list.find((s) => s.task_ids?.some((t) => t.toLowerCase() === id.toLowerCase()))
+  },
+
+  /**
+   * Lấy danh sách phát hiện AI từ kết quả run AI thật trên Backend Candidate3
+   * Kết hợp SWG-053 (/ai-mock-runs/{runId}/result), SWG-005 (/ai-candidates/{detectionId}) và SWG-020 (/candidate-decisions/{decisionId})
+   */
+  async getSurveyDetections(
     surveyId: string,
-    payload: { note: string; targetKm?: string }
-  ): Promise<{ success: boolean; newCoverage: number }> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.post<{ success: boolean; newCoverage: number }>(`/surveys/${surveyId}/re-flight`, payload)
-      return res.data
-    }
+    preloadedMission?: SurveyMissionItem,
+    preloadedProjectId?: string,
+    // Ngữ cảnh mở từ "Mở kết quả" của lần chạy AI vừa tạo: chỉ đọc đúng lần chạy (và bản nộp) đó; không có thì giữ hành vi cũ (mọi lần chạy SUCCEEDED của nhiệm vụ).
+    scope?: { runId?: string; datasetId?: string }
+  ): Promise<AIDetectionItem[]> {
+    await ensureBearerToken()
 
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    // Cập nhật coverage lên 98% cho survey
-    surveyStore = surveyStore.map((s) => (s.id === surveyId ? { ...s, coverage_percent: 98 } : s))
-    return { success: true, newCoverage: 98 }
+    let target = preloadedMission
+    if (!target) {
+      const missions = await this.getSurveys()
+      target = missions.find((m) => m.id === surveyId || m.code === surveyId) || missions.find((m) => m.task_ids?.some((t) => t.toLowerCase() === String(surveyId).toLowerCase()))
+    }
+    const projectId = preloadedProjectId || target?.project_id
+    if (!projectId) throw new Error('Không xác định được dự án của nhiệm vụ khảo sát từ máy chủ.')
+
+    // Chỉ lấy lần chạy gắn với nhiệm vụ của đợt đang xem (BE trả surveyTaskId; lọc phía FE trên danh sách đã đọc).
+    const taskIds = new Set((target?.task_ids?.length ? target.task_ids : [surveyId]).map((t) => String(t).toLowerCase()))
+    const taskRuns = (await this.readSurveyPage(`/projects/${projectId}/ai-mock-runs`)).filter((r) => r.surveyTaskId && taskIds.has(String(r.surveyTaskId).toLowerCase()))
+    if (scope?.runId) {
+      const wanted = taskRuns.find((r) => String(r.id).toLowerCase() === scope.runId!.toLowerCase())
+      if (!wanted) throw new Error('Lần chạy AI được chọn không thuộc nhiệm vụ khảo sát này (hoặc máy chủ không còn trả về).')
+      if (scope.datasetId && (wanted as { datasetId?: string | null }).datasetId && String((wanted as { datasetId?: string | null }).datasetId).toLowerCase() !== scope.datasetId.toLowerCase()) throw new Error('Lần chạy AI được chọn không thuộc bản nộp đã chỉ định.')
+      if (wanted.status !== 'SUCCEEDED') throw new Error(`Lần chạy AI chưa có kết quả để thẩm định (trạng thái ${wanted.status || '—'}).`)
+    }
+    const runs = taskRuns.filter((r) => r.status === 'SUCCEEDED' && (!scope?.runId || String(r.id).toLowerCase() === scope.runId.toLowerCase()))
+    if (runs.length === 0) return []
+    // Đọc kết quả của MỌI lần chạy SUCCEEDED (BE không gắn lần chạy với chuyến bay nên không được chỉ lấy runs[0]);
+    // gộp theo detectionId để phát hiện không bị trùng giữa các lần chạy.
+    const results = await Promise.all(runs.map(async (run) => ({
+      run,
+      detections: (await apiClient.get<{ detections: RunDetection[] }>(`/projects/${projectId}/ai-mock-runs/${run.id}/result`)).data?.detections || []
+    })))
+    const defectMap = new Map<string, BackendDefectDto>()
+    for (const df of await this.getProjectDefects(projectId)) defectMap.set(df.id.toLowerCase(), df)
+
+    const seen = new Set<string>()
+    const flat: { runId: string; d: RunDetection }[] = []
+    for (const r of results) for (const d of r.detections) {
+      const key = String((d as any).detectionId ?? '').toLowerCase()
+      if (key && seen.has(key)) continue
+      if (key) seen.add(key)
+      flat.push({ runId: r.run.id, d })
+    }
+    return Promise.all(flat.map((x) => buildDetectionItem(projectId, x.runId, x.d, defectMap)))
   },
 
   /**
-   * Khóa Baseline đoạn đường sau khi thẩm định 100%
+   * [SWG-005] GET /api/v1/projects/{projectId}/ai-candidates/{detectionId}
+   * Đọc thông tin chuẩn xác (AiCandidateFactsV1) của một phát hiện AI từ CSDL Backend
    */
-  async lockBaseline(surveyId: string): Promise<boolean> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.post<{ success: boolean }>(`/surveys/${surveyId}/lock-baseline`)
-      return res.data.success
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    surveyStore = surveyStore.map((s) =>
-      s.id === surveyId
-        ? { ...s, status: 'BASELINE_LOCKED', status_label: 'Đã khóa Baseline' }
-        : s
+  async getAiCandidateFacts(projectId: string, detectionId: string): Promise<AiCandidateFactsDto> {
+    await ensureBearerToken()
+    const res = await apiClient.get<AiCandidateFactsDto>(
+      `/projects/${projectId}/ai-candidates/${detectionId}`
     )
-    return true
+    return res.data
   },
 
   /**
-   * Đặt lại mock data ban đầu
+   * [SWG-020] GET /api/v1/projects/{projectId}/candidate-decisions/{decisionId}
+   * Đọc quyết định thẩm định (KEEP_NEW / LINK_EXISTING / REJECT) đã lưu trong CSDL
    */
-  async resetSurveys(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    surveyStore = JSON.parse(JSON.stringify(INITIAL_SURVEY_MISSIONS))
-    surveyRoutesStore = JSON.parse(JSON.stringify(INITIAL_SURVEY_ROUTES))
-    surveyPilotsStore = JSON.parse(JSON.stringify(INITIAL_PILOTS))
-    surveyDetectionsStore = {
-      'srv-01': JSON.parse(JSON.stringify(INITIAL_DETECTIONS))
+  async getCandidateDecision(projectId: string, decisionId: string): Promise<CandidateDecisionDto> {
+    await ensureBearerToken()
+    const res = await apiClient.get<CandidateDecisionDto>(
+      `/projects/${projectId}/candidate-decisions/${decisionId}`
+    )
+    return res.data
+  },
+
+  /**
+   * [SWG-018] GET /api/v1/projects/{projectId}/candidates
+   * Tìm danh sách khiếm khuyết ứng viên trùng khớp (CandidateMatchPageDto)
+   */
+  async getCandidateMatches(
+    projectId: string,
+    sourceKind: 'AI_DETECTION' | 'REPORT',
+    sourceId: string
+  ): Promise<CandidateMatchPageDto> {
+    await ensureBearerToken()
+
+    const res = await apiClient.get<CandidateMatchPageDto>(`/projects/${projectId}/candidates`, {
+      params: {
+        sourceKind,
+        sourceId,
+        expand: true
+      }
+    })
+    return res.data
+  },
+
+  /**
+   * [SWG-019] POST /api/v1/projects/{projectId}/candidate-decisions
+   * Ra quyết định thẩm định ứng viên (KEEP_NEW | LINK_EXISTING | REJECT) chuẩn Candidate3
+   */
+  async decideCandidate(projectId: string, payload: {
+    sourceKind: 'AI_DETECTION' | 'REPORT'; sourceId: string;
+    decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'; reason: string;
+    sourceVersion?: string; geometryVersion?: string;
+    supersedesDecisionId?: string | null; previousDecisionVersion?: string | null;
+    targetDefectId?: string | null; targetVersion?: string | null;
+    defectTypeCode?: string; customTypeLabel?: string; severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    roadSectionVersionId?: string; segmentId?: string | null; runId?: string | null
+    recurrence?: RecurrenceInput
+  }): Promise<CandidateDecisionDto> {
+    const actor = useAuthStore.getState().user
+    const epoch = useAuthStore.getState().authEpoch
+    if (!actor || actor.role !== 'PROJECT_MANAGER') throw new Error('Chỉ PM được quyết định Candidate.')
+    if (!payload.reason.trim()) throw new Error('Cần nhập lý do quyết định.')
+    if (payload.recurrence && (payload.decision !== 'KEEP_NEW' || !payload.recurrence.evidenceFileIds.length || !/^[0-9a-f]{64}$/.test(payload.recurrence.expectedLifecycleVersion))) throw new Error('Tái phát cần quyết định KEEP_NEW, bằng chứng và phiên bản vòng đời hợp lệ.')
+    // sourceVersion/geometryVersion: đọc lại từ BE (GET /candidates) ngay trước khi quyết định.
+    if (!payload.sourceVersion || !payload.geometryVersion) {
+      const m = await this.getCandidateMatches(projectId, payload.sourceKind, payload.sourceId)
+      payload = { ...payload, sourceVersion: m.source?.version, geometryVersion: m.geometryVersion }
+      if (!payload.sourceVersion || !payload.geometryVersion) throw new Error('BE không trả snapshot sourceVersion/geometryVersion của ứng viên.')
     }
-  }
+    // KEEP_NEW cần roadSectionVersionId: lấy từ phạm vi bộ dữ liệu của lần chạy AI (run → dataset → scope), khớp segmentId nếu có.
+    if (payload.decision === 'KEEP_NEW' && !payload.roadSectionVersionId && payload.sourceKind === 'AI_DETECTION' && payload.runId) {
+      const run = (await apiClient.get<{ datasetId?: string | null }>(`/projects/${projectId}/ai-mock-runs/${payload.runId}`)).data
+      if (!run?.datasetId) throw new Error('Lần chạy AI chưa gắn bộ dữ liệu nên không xác định được phiên bản tuyến.')
+      const ds = (await apiClient.get<{ scope?: Array<{ routeVersionId: string; segmentIds?: string[] }> }>(`/datasets/${run.datasetId}`)).data
+      const scopes = ds.scope || []
+      const hit = payload.segmentId ? scopes.filter((x) => x.segmentIds?.some((id) => id.toLowerCase() === String(payload.segmentId).toLowerCase())) : scopes
+      const versions = [...new Set(hit.map((x) => x.routeVersionId))]
+      if (versions.length !== 1) throw new Error('Không xác định duy nhất phiên bản tuyến của phát hiện từ phạm vi bộ dữ liệu.')
+      payload = { ...payload, roadSectionVersionId: versions[0] }
+    }
+    if (payload.decision === 'KEEP_NEW' && (!payload.defectTypeCode || !payload.severity || !payload.roadSectionVersionId)) throw new Error('Thiếu classification có căn cứ cho KEEP_NEW.')
+    if (payload.decision === 'LINK_EXISTING' && (!payload.targetDefectId || !payload.targetVersion)) throw new Error('Thiếu Defect ID/version đích đã đọc.')
+    const body = { sourceKind: payload.sourceKind, sourceId: payload.sourceId, sourceVersion: payload.sourceVersion,
+      geometryVersion: payload.geometryVersion, decision: payload.decision, reason: payload.reason.trim(),
+      targetDefectId: payload.decision === 'LINK_EXISTING' ? payload.targetDefectId : null,
+      targetVersion: payload.decision === 'LINK_EXISTING' ? payload.targetVersion : null,
+      classification: payload.decision === 'KEEP_NEW' ? { defectTypeCode: payload.defectTypeCode, severity: payload.severity,
+        roadSectionVersionId: payload.roadSectionVersionId, segmentId: payload.segmentId ?? null, causeCategoryCode: null } : null,
+      supersedesDecisionId: payload.supersedesDecisionId ?? null, previousDecisionVersion: payload.previousDecisionVersion ?? null, recurrence: payload.recurrence ?? null }
+    const fingerprint = JSON.stringify(body)
+    const journalKey = `rg_candidate_command_${actor.id}_${projectId}_${payload.sourceId}`
+    const saved = sessionStorage.getItem(journalKey)
+    const command = saved ? JSON.parse(saved) : { key: crypto.randomUUID(), body, fingerprint }
+    if (command.fingerprint !== fingerprint) throw new Error('Ý định trước chưa đối chiếu xong; không đổi key/body/version để ghi đè.')
+    const current = () => { if (useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== actor.id) throw new Error('Phiên Candidate đã thay đổi.') }
+    if (candidateWrites.has(journalKey)) throw new Error('Đang gửi quyết định này.')
+    candidateWrites.add(journalKey)
+    try {
+      current(); sessionStorage.setItem(journalKey, JSON.stringify(command))
+      if (!command.receipt) {
+        const response = await apiClient.post<CandidateDecisionDto>(`/projects/${projectId}/candidate-decisions`, command.body, {
+          headers: { 'Idempotency-Key': command.key }, transformRequest: [(data: unknown) => { current(); return JSON.stringify(data) }] })
+        current(); command.receipt = response.data; sessionStorage.setItem(journalKey, JSON.stringify(command))
+      }
+      if (!command.receipt.id || !command.receipt.version) throw new Error('BE chưa trả đủ mã và phiên bản biên nhận quyết định.')
+      const decision = await this.getCandidateDecision(projectId, command.receipt.id)
+      current()
+      // Verify the committed receipt through the Web route; this read does not assert the current AI head.
+      if (decision.id !== command.receipt.id || decision.version !== command.receipt.version ||
+          decision.sourceKind !== payload.sourceKind || decision.sourceId !== payload.sourceId ||
+          decision.decision !== payload.decision || decision.defectId !== command.receipt.defectId ||
+          (payload.decision === 'LINK_EXISTING' && decision.defectId !== payload.targetDefectId) ||
+          (payload.decision === 'KEEP_NEW' && !decision.defectId)) throw new Error('Quyết định đọc lại không khớp yêu cầu hoặc biên nhận.')
+      if (command.body.recurrence) {
+        await defectRecurrenceService.confirm(projectId, decision.defectId!, command.body.recurrence)
+        current()
+      }
+      sessionStorage.removeItem(journalKey)
+      return decision
+    } finally { candidateWrites.delete(journalKey) }
+  },
+
+  /**
+   * [SWG-032] GET /api/v1/projects/{projectId}/defects
+   * Lấy danh sách toàn bộ khiếm khuyết mặt đường trong CSDL của dự án
+   */
+  async getProjectDefects(projectId?: string): Promise<BackendDefectDto[]> {
+    await ensureBearerToken()
+
+    let targetProjects: Array<{ id: string }> = []
+    if (projectId) {
+      targetProjects = [{ id: projectId }]
+    } else {
+      const projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
+      targetProjects = projects.length > 0 ? projects : []
+    }
+
+    const allDefects: BackendDefectDto[] = []
+    for (const p of targetProjects) {
+      try {
+        const res = await apiClient.get<{ items: BackendDefectDto[]; nextCursor?: string | null }>(
+          `/projects/${p.id}/defects`
+        )
+        if (res.data?.items) {
+          allDefects.push(...res.data.items)
+        }
+      } catch (err) {
+        if (projectId) throw err
+      }
+    }
+    return allDefects
+  },
+
+  /**
+   * [SWG-033] GET /api/v1/projects/{projectId}/defects/{defectId}
+   * Lấy chi tiết khiếm khuyết kèm ETag chuẩn
+   */
+  async getDefectById(
+    projectId: string,
+    defectId: string
+  ): Promise<{ defect: BackendDefectDto; etag: string }> {
+    await ensureBearerToken()
+    const res = await apiClient.get<BackendDefectDto>(`/projects/${projectId}/defects/${defectId}`)
+    const rawEtag = res.headers?.etag || `"${res.data.version}"`
+    const quotedEtag = rawEtag.startsWith('"') ? rawEtag : `"${rawEtag}"`
+    return { defect: res.data, etag: quotedEtag }
+  },
+
+  /**
+   * [SWG-034] POST /api/v1/projects/{projectId}/defects/{defectId}/assessments
+   * Đánh giá / Cập nhật phân loại và mức độ nghiêm trọng của khiếm khuyết
+   */
+  async assessDefect(
+    projectId: string,
+    defectId: string,
+    payload: {
+      defectTypeCode: string
+      customTypeLabel?: string
+      severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+      reason: string
+      evidenceIds?: string[]
+    }
+  ): Promise<BackendDefectDto> {
+    await ensureBearerToken()
+    const { etag } = await this.getDefectById(projectId, defectId)
+
+    let evidenceIds = payload.evidenceIds || []
+    if (evidenceIds.length === 0) {
+      evidenceIds = await this.resolveDefectEvidenceIds(projectId, defectId)
+    }
+
+    const res = await apiClient.post<BackendDefectDto>(
+      `/projects/${projectId}/defects/${defectId}/assessments`,
+      {
+        defectTypeCode: payload.defectTypeCode,
+        causeCategoryCode: null,
+        severity: payload.severity,
+        reason: payload.reason.trim() || 'Cập nhật phân loại và mức độ nghiêm trọng khiếm khuyết',
+        evidenceIds
+      },
+      {
+        headers: {
+          'Idempotency-Key': crypto.randomUUID(),
+          'If-Match': etag
+        }
+      }
+    )
+    return res.data
+  },
+
+  /**
+   * [SWG-035] POST /api/v1/projects/{projectId}/defects/{defectId}/verification-decisions
+   * Ra quyết định xác minh khiếm khuyết (CONFIRM | REJECT)
+   */
+  async verifyDefect(
+    projectId: string,
+    defectId: string,
+    payload: {
+      decision: 'CONFIRM' | 'REJECT'
+      verificationMethod: 'EXISTING_EVIDENCE' | 'FIELD' | 'DRONE'
+      reason: string
+      evidenceIds?: string[]
+      fieldTaskId?: string | null
+      fieldSubmissionId?: string | null
+      fieldContentHash?: string | null
+    }
+  ): Promise<BackendDefectDto> {
+    await ensureBearerToken()
+    const { etag } = await this.getDefectById(projectId, defectId)
+
+    let evidenceIds = payload.evidenceIds || []
+    if (evidenceIds.length === 0) {
+      evidenceIds = await this.resolveDefectEvidenceIds(projectId, defectId)
+    }
+
+    const res = await apiClient.post<BackendDefectDto>(
+      `/projects/${projectId}/defects/${defectId}/verification-decisions`,
+      {
+        decision: payload.decision,
+        verificationMethod: payload.verificationMethod,
+        evidenceIds,
+        reason: payload.reason.trim() || 'Xác minh tình trạng khiếm khuyết thực tế',
+        fieldTaskId: payload.fieldTaskId || null,
+        fieldSubmissionId: payload.fieldSubmissionId || null,
+        fieldContentHash: payload.fieldContentHash || null
+      },
+      {
+        headers: {
+          'Idempotency-Key': crypto.randomUUID(),
+          'If-Match': etag
+        }
+      }
+    )
+    return res.data
+  },
+
+  /**
+   * Tự động tra cứu evidenceRefs hợp lệ từ nguồn liên kết của Defect (SWG-018)
+   */
+  async resolveDefectEvidenceIds(projectId: string, defectId: string): Promise<string[]> {
+    // Bằng chứng phải đến từ nguồn liên kết thật của defect; không có thì báo lỗi, không dùng ID cứng.
+    const detections = await this.getAllProjectAiDetections(projectId)
+    const evidence = detections
+      .filter((d) => d.defectId && d.defectId.toLowerCase() === defectId.toLowerCase() && d.frameFileId)
+      .map((d) => d.frameFileId as string)
+    if (evidence.length === 0) {
+      throw new Error('Chưa tìm thấy bằng chứng (evidence) của khiếm khuyết này trên máy chủ.')
+    }
+    return Array.from(new Set(evidence))
+  },
+
+  /**
+   * [SWG-242] GET /api/v1/files/{fileId}
+   * Lấy metadata tệp tin (frameFileId / videoFileId) từ CSDL Backend
+   */
+  async getFileMetadata(fileId: string): Promise<FileMetadataDto> {
+    await ensureBearerToken()
+    const res = await apiClient.get<FileMetadataDto>(`/files/${fileId}`)
+    return res.data
+  },
+
+  /**
+   * [SWG-243] GET /api/v1/files/{fileId}/content
+   * Tải nội dung nhị phân của tệp ảnh AI / hiện trường qua Bearer Token và tạo Object URL
+   */
+  async getFileContentUrl(fileId: string): Promise<string | null> {
+    if (!fileId || !/^[0-9a-fA-F-]{36}$/.test(fileId)) return null
+    if (fileBlobUrlCache.has(fileId)) {
+      return fileBlobUrlCache.get(fileId)!
+    }
+    await ensureBearerToken()
+    try {
+      const res = await apiClient.get<Blob>(`/files/${fileId}/content`, {
+        responseType: 'blob'
+      })
+      if (res.data) {
+        const url = URL.createObjectURL(res.data)
+        fileBlobUrlCache.set(fileId, url)
+        fileContentErrors.delete(fileId)
+        return url
+      }
+    } catch (err: any) {
+      // responseType blob: thân lỗi cũng là Blob — đọc lại thành ProblemDetails để có code/correlationId.
+      if (err?.response?.data instanceof Blob) { try { err.response.data = JSON.parse(await err.response.data.text()) } catch { /* không phải JSON */ } }
+      // Lỗi không bị nuốt: lưu status/code/correlationId thật để màn hình hiển thị; không cache lỗi nên bấm thử lại là gọi lại thật.
+      fileContentErrors.set(fileId, aiApiErrorText(err, 'Không tải được ảnh (GET files/{id}/content, phiên Web cookie)'))
+    }
+    return null
+  },
+  /** Lỗi tải ảnh gần nhất của một tệp (undefined nếu chưa lỗi / đã tải được). */
+  fileContentError(fileId: string): string | undefined { return fileContentErrors.get(fileId) },
+
+  /**
+   * Lấy toàn bộ danh sách ứng viên AI từ tất cả các AI Mock Runs SUCCEEDED trong CSDL
+   * Phục vụ Hộp thư tiếp nhận lỗi (/pm/ai-inbox) và Thẩm định chi tiết (/pm/defects/:id/verify-a)
+   */
+  async getAllProjectAiDetections(targetProjectId?: string): Promise<AIDetectionItem[]> {
+    const actor = useAuthStore.getState().user
+
+    let projects = await projectService.fetchProjects()
+    if (targetProjectId) {
+      projects = projects.filter((p) => p.id === targetProjectId || p.code === targetProjectId)
+    }
+    if (!projects || projects.length === 0) {
+      return []
+    }
+
+    const allItems: AIDetectionItem[] = []
+
+    for (const proj of projects) {
+      try {
+        const projectDefects = await this.getProjectDefects(proj.id)
+        const defectMap = new Map<string, BackendDefectDto>()
+        for (const df of projectDefects) {
+          defectMap.set(df.id.toLowerCase(), df)
+        }
+        const runs = await this.readSurveyPage(`/projects/${proj.id}/ai-mock-runs`)
+        for (const run of runs.filter((r) => r.status === 'SUCCEEDED')) {
+          const resultRes = await apiClient.get<{ detections: RunDetection[] }>(
+            `/projects/${proj.id}/ai-mock-runs/${run.id}/result`
+          )
+          for (const d of resultRes.data?.detections || []) {
+            allItems.push(await buildDetectionItem(proj.id, run.id, d, defectMap))
+          }
+        }
+      } catch (err) {
+        throw err
+      }
+    }
+
+    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ danh sách AI cũ.')
+    return Array.from(new Map(allItems.map(item => [`${item.projectId}:${item.id}`.toLowerCase(), item])).values())
+  },
+
 }

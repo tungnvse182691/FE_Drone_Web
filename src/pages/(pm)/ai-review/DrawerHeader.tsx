@@ -3,6 +3,7 @@ import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerHeaderProps {
+  sourceLabel?: string
   selectedCase: TriageCase
   onOpenPhotoZoomModal: () => void
   handleClose?: () => void
@@ -10,9 +11,15 @@ export interface DrawerHeaderProps {
 
 export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
   selectedCase,
+  sourceLabel = selectedCase.source_label,
   onOpenPhotoZoomModal,
   handleClose,
 }) => {
+  const formattedSourceDetail = (selectedCase.source_detail || 'Phản ánh sự cố mặt đường')
+    .replace('EXISTING_EVIDENCE', 'Bằng chứng hiện trường')
+    .replace('FIELD', 'Đo đạc thực địa')
+    .replace('DRONE', 'Khảo sát bay Drone')
+
   return (
     <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white sticky top-0 z-10 shrink-0">
       <div className="flex items-center gap-3.5">
@@ -32,12 +39,12 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
             )}
             {selectedCase.linked_report_ids && selectedCase.linked_report_ids.length > 0 && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
-                Master Case ({selectedCase.linked_report_ids.length})
+                Hồ sơ gốc ({selectedCase.linked_report_ids.length})
               </span>
             )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gửi lúc {selectedCase.created_at} bởi {selectedCase.source_detail} • Thẩm định thông số kỹ thuật và ra quyết định xử lý
+            Tạo hồ sơ lúc {selectedCase.created_at} • {sourceLabel} • {formattedSourceDetail}
           </p>
         </div>
       </div>

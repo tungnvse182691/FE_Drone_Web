@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { TriageCase } from './types'
 
@@ -34,16 +35,41 @@ export const TriageCard: React.FC<TriageCardProps> = ({
   onUnlinkReport
 }) => {
   const [isHovered, setIsHovered] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const basePath = isSupervisor ? '/sup' : '/pm'
+
+  const handleOpenDetail = () => {
+    if (item.source === 'DRONE_AI') {
+      navigate(`${basePath}/defects/${item.id}/verify-a`, {
+        state: { from: location.pathname }
+      })
+    } else {
+      onSelectCase(item)
+    }
+  }
+
   const isSelected = item.id === selectedCaseId
   const isUnassigned = !item.project_id || item.project_id === ''
 
   const isCritical = item.severity === 'CRITICAL' || item.urgency === 'EMERGENCY'
+  const isMerged = item.status === 'MERGED'
   const isVerified = item.status === 'VERIFIED'
   const isNeedSurvey = item.status === 'NEED_SURVEY'
   const isPending = item.status === 'PENDING' || item.severity === 'HIGH'
 
   // Bảng màu viền / thanh gradient / chấm / nền tint (tông trầm, ĐÃ DUYỆT)
   const styleConfig = (() => {
+    if (isMerged) {
+      return {
+        border: '#D8B4FE',
+        gradient: 'linear-gradient(90deg, #7E22CE 0%, #6B21A8 100%)',
+        dot: '#7E22CE',
+        halo: 'rgba(126, 34, 206, 0.15)',
+        bgTint: 'linear-gradient(180deg, #FAF5FF 0%, #ffffff 45%)',
+        hoverShadow: '0 12px 28px rgba(126, 34, 206, 0.15)'
+      }
+    }
     if (isCritical) {
       return {
         border: '#E3B8B8',
@@ -97,6 +123,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
   // Badge mức độ ưu tiên (Bo tròn 999px, font 11px font-weight 700, padding 5px 14px)
   const priorityBadge = (() => {
+    if (item.severity === 'UNKNOWN') return { label: 'Chưa xác định ưu tiên', bg: '#F1F5F9', text: '#475569' }
     if (item.severity === 'CRITICAL') {
       return { bg: '#F3E0E0', text: '#7F1D1D', label: 'Khẩn cấp' }
     }
@@ -118,7 +145,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
       return { bg: '#DDE3EE', text: '#1E3A5F', label: 'Cần đo đạc' }
     }
     if (item.status === 'PENDING') {
-      return { bg: '#F0E8D5', text: '#78350F', label: 'Chờ xác minh' }
+      return { bg: '#F0E8D5', text: '#78350F', label: 'Chưa có quyết định' }
     }
     if (item.status === 'MERGED') {
       return { bg: '#F3E8FF', text: '#6B21A8', label: 'Đã gộp trùng' }
@@ -139,14 +166,15 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
   // Nguồn tiếp nhận chuẩn hóa tiếng Việt (Xóa icon trang trí thừa)
   const sourceLabel = (() => {
+    if (item.source === 'UNKNOWN') return 'Chưa xác định nguồn tiếp nhận'
     if (item.source === 'DRONE_AI') return 'Thiết bị bay quét'
-    if (item.source === 'CITIZEN') return item.reporter_name || 'Người dân báo'
-    return 'Đội tuần tra'
+    if (item.source === 'CITIZEN') return item.reporter_name ? `Người dân: ${item.reporter_name}` : 'Người dân báo'
+    return item.reporter_name ? `Tổ tuần tra: ${item.reporter_name}` : 'Đội tuần tra'
   })()
 
   return (
     <div
-      onClick={() => onSelectCase(item)}
+      onClick={handleOpenDetail}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`rounded-[20px] overflow-hidden flex flex-col justify-between cursor-pointer select-none relative ${
@@ -166,8 +194,8 @@ export const TriageCard: React.FC<TriageCardProps> = ({
       {/* 2. Thân thẻ */}
       <div className="p-[20px_22px] flex flex-col justify-between flex-1 gap-3.5">
         {/* Hàng 1: Chấm màu tròn 10px + Halo 4px + Tên lỗi + Badges (Ưu tiên & Trạng thái) */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 basis-40">
             <span
               className="w-[10px] h-[10px] rounded-full shrink-0"
               style={{
@@ -182,9 +210,9 @@ export const TriageCard: React.FC<TriageCardProps> = ({
               {item.defect_title}
             </h3>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          <div data-testid="card-badges" className="flex items-center gap-1.5 min-w-0 max-w-full flex-wrap justify-end">
             <span
-              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] whitespace-nowrap"
+              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] max-w-full break-words"
               style={{
                 backgroundColor: priorityBadge.bg,
                 color: priorityBadge.text
@@ -193,14 +221,29 @@ export const TriageCard: React.FC<TriageCardProps> = ({
               {priorityBadge.label}
             </span>
             <span
-              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] whitespace-nowrap"
+              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] max-w-full break-words"
               style={{
                 backgroundColor: statusBadge.bg,
                 color: statusBadge.text
               }}
             >
-              {statusBadge.label}
+              {item.case_status ? item.status_label : statusBadge.label}
             </span>
+            {item.reopened_after_conclusion && item.decision_recorded && (
+              <span className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] max-w-full break-words bg-blue-50 text-blue-700" title="Máy chủ đã mở lại hồ sơ khi có bổ sung; kết luận cũ chỉ còn trong lịch sử">
+                Đã mở lại do có bổ sung
+              </span>
+            )}
+            {item.decision_recorded && item.defect_status && (
+              <span className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] max-w-full break-words bg-slate-100 text-slate-600" title="Trạng thái Defect do máy chủ trả, tách khỏi trạng thái hồ sơ">
+                Defect: {item.defect_status}
+              </span>
+            )}
+            {item.decision_read_error && (
+              <span role="alert" className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] bg-rose-50 text-rose-700" title={item.decision_read_error}>
+                Không đọc được quyết định
+              </span>
+            )}
           </div>
         </div>
 
@@ -213,12 +256,6 @@ export const TriageCard: React.FC<TriageCardProps> = ({
           <span className="font-mono text-slate-700">
             {item.stationing || 'Lý trình cập nhật'}
           </span>
-          {item.lane && (
-            <>
-              <span>•</span>
-              <span>{item.lane}</span>
-            </>
-          )}
           <span>•</span>
           <span>{item.time_ago}</span>
         </div>
@@ -226,7 +263,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
         {/* Hàng 3: Mô tả ngắn 1-2 dòng + Thumbnail GPS nhỏ gọn */}
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed flex-1">
-            {item.description || item.pm_notes || 'Ghi nhận hiện trường đang chờ kỹ sư đối chiếu và thẩm định phân cấp.'}
+            {item.description || item.pm_notes || 'Chưa có nội dung; mở hồ sơ để xem từng phản ánh.'}
           </p>
           {item.image_url && (
             <div className="relative w-12 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-200 shrink-0">
@@ -277,7 +314,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
                         {child.code}
                       </div>
                       <div className="text-[10px] text-slate-500 truncate">
-                        {child.source === 'CITIZEN' ? child.reporter_name || 'Người dân báo' : 'Tuần tra'} • {child.defect_title}
+                        {child.reporter_name || 'Tổ tuần tra'} • {child.defect_title}
                       </div>
                     </div>
                     {!isSupervisor && (
@@ -317,15 +354,20 @@ export const TriageCard: React.FC<TriageCardProps> = ({
             <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
               {item.code}
             </span>
-            {isUnassigned && !isSupervisor && (
+            {isUnassigned && isSupervisor && (!item.case_status || item.case_status === 'UNASSIGNED') && (
               <button
                 type="button"
                 onClick={(e) => onOpenTriageProject(item, e)}
                 className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 hover:bg-amber-200 transition-colors cursor-pointer"
-                title="Điều phối gán dự án"
+                title="Điều phối gán phản ánh vào dự án"
               >
-                Gán dự án
+                Điều phối dự án
               </button>
+            )}
+            {isUnassigned && !isSupervisor && (
+              <span className="text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 select-none">
+                Chờ Giám sát điều phối
+              </span>
             )}
           </div>
 
@@ -345,10 +387,13 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
             <button
               type="button"
-              onClick={() => onSelectCase(item)}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-brand-gold text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenDetail()
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             >
-              <span>{isSupervisor ? 'Xem hồ sơ' : 'Thẩm định'}</span>
+              <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>
               <Icon name="arrow_forward" size={13} />
             </button>
           </div>

@@ -82,7 +82,7 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
       </td>
       <td className="py-2 px-2 text-center whitespace-nowrap">
         <span className="text-[10px] font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-          {child.severity === 'CRITICAL'
+          {child.severity === 'UNKNOWN' ? 'Chưa xác định' : child.severity === 'CRITICAL'
             ? 'Khẩn cấp'
             : child.severity === 'HIGH'
             ? 'Cao'
@@ -103,7 +103,7 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
             type="button"
             onClick={(e) => onUnlinkReport(child.id, e)}
             className="px-2 py-1 rounded bg-white hover:bg-red-50 text-red-600 hover:border-red-300 border border-slate-200 text-[10px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-            title="Tách khỏi Master Case thành hồ sơ riêng"
+            title="Tách khỏi hồ sơ gốc thành ca độc lập"
           >
             <Icon name="link_off" size={12} />
             <span>Tách</span>

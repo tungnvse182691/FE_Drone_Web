@@ -11,11 +11,24 @@ import {
 } from '../../api/services'
 import { ResearchHeader } from './research/ResearchHeader'
 import { AsyncValidationJobBanner } from './research/AsyncValidationJobBanner'
+import { TrainingLabelsPanel } from './research/TrainingLabelsPanel'
+import { AiRunDetailPanel } from './research/AiRunDetailPanel'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
+
+const beErrorText = (err: unknown): string => {
+  const e = err as { response?: { status?: number; data?: { detail?: string; title?: string; code?: string } }; message?: string }
+  const status = e?.response?.status
+  const detail = e?.response?.data?.detail || e?.response?.data?.title || e?.response?.data?.code || e?.message || 'Lỗi không xác định'
+  return status ? `HTTP ${status}: ${detail}` : detail
+}
 
 export const ResearchValidation: React.FC = () => {
   // Scope Dự án (Phục vụ PM được giao 1 hoặc nhiều dự án)
-  const [selectedProject, setSelectedProject] = useState<string>('prj-ql1a-02')
-  const projectOptions: ValidationProjectOption[] = VALIDATION_PROJECT_OPTIONS
+  const [selectedProject, setSelectedProject] = useState<string>('')
+  const isPM = useAuthStore((s) => s.user?.role) === RoleCode.PROJECT_MANAGER
+  const [projectOptions, setProjectOptions] = useState<ValidationProjectOption[]>([])
 
   // Loading & In-Memory Data State
   const [loading, setLoading] = useState<boolean>(true)
@@ -27,6 +40,7 @@ export const ResearchValidation: React.FC = () => {
   // Filter & Interaction State
   const [sampleFilter, setSampleFilter] = useState<'ALL' | 'INCLUDED' | 'EXCLUDED' | 'OUTLIER'>('ALL')
   const [isRunningVal, setIsRunningVal] = useState<boolean>(false)
+  const writeGuard = useSubmitGuard()
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -46,8 +60,10 @@ export const ResearchValidation: React.FC = () => {
       setSamples(res.samples)
       setRuns(res.runs)
       setActiveJob(res.activeJob)
-    } catch {
-      showToast('Có lỗi khi tải dữ liệu kiểm định thực nghiệm.')
+      setProjectOptions(res.projects)
+      if (!projId && res.projects.length > 0) setSelectedProject(res.projects[0].id)
+    } catch (err) {
+      showToast('Không tải được dữ liệu kiểm định: ' + beErrorText(err))
     } finally {
       setLoading(false)
     }
@@ -63,43 +79,6 @@ export const ResearchValidation: React.FC = () => {
     const targetProj = projectOptions.find((p) => p.id === newProjId)
     showToast(`Đã chuyển sang tập dữ liệu kiểm nghiệm: ${targetProj?.name || newProjId}`)
   }
-
-  // Tiến trình mô phỏng chạy Async Job tự động (5% -> 35% -> 70% -> 100%)
-  useEffect(() => {
-    if (!activeJob || activeJob.status !== 'RUNNING') return
-
-    const timer = setInterval(() => {
-      setActiveJob((prev) => {
-        if (!prev) return null
-        if (prev.progress >= 100) {
-          clearInterval(timer)
-          return prev
-        }
-        const nextProgress = Math.min(100, prev.progress + 30)
-        if (nextProgress >= 100) {
-          clearInterval(timer)
-
-          // Đồng bộ cập nhật trạng thái đợt chạy sang HOÀN TẤT
-          setActiveRun((r) => (r ? { ...r, status: 'COMPLETED', progress_percent: 100 } : null))
-          setRuns((prevRuns) =>
-            prevRuns.map((r) =>
-              r.status === 'RUNNING' ? { ...r, status: 'COMPLETED', progress_percent: 100 } : r
-            )
-          )
-          validationService.completeValidationRun()
-
-          showToast(`Tiến trình kiểm định ${prev.code} đã hoàn tất ghép cặp 100%! Đợt chạy đã chuyển sang HOÀN TẤT.`)
-          setTimeout(() => {
-            setActiveJob(null)
-          }, 1800)
-          return { ...prev, progress: 100, status: 'COMPLETED' }
-        }
-        return { ...prev, progress: nextProgress }
-      })
-    }, 1200)
-
-    return () => clearInterval(timer)
-  }, [activeJob?.id, activeJob?.status, showToast])
 
   // Đồng bộ 100% số liệu giữa các thẻ chỉ số và danh sách dòng trong bảng đối soát
   const validSamples = useMemo(
@@ -140,59 +119,6 @@ export const ResearchValidation: React.FC = () => {
     return samples.filter((s) => s.inclusion_status === sampleFilter)
   }, [sampleFilter, samples])
 
-  // Xử lý nút Chạy kiểm định mới (HTTP 202 - FR-31)
-  const handleTriggerValidation = async () => {
-    try {
-      setIsRunningVal(true)
-      const { job, run } = await validationService.triggerValidationRun(selectedProject)
-      setActiveJob(job)
-      setActiveRun(run)
-      setRuns((prev) => [run, ...prev])
-      showToast(`Đã khởi tạo đợt kiểm định ${job.code} đối soát mẫu thực địa (HTTP 202)!`)
-    } catch {
-      showToast('Có lỗi khi khởi tạo đợt kiểm định.')
-    } finally {
-      setIsRunningVal(false)
-    }
-  }
-
-  // Xử lý hủy tiến trình nền
-  const handleCancelJob = async () => {
-    if (!activeJob) return
-    try {
-      await validationService.cancelValidationJob(activeJob.id)
-      setActiveJob(null)
-      showToast('Đã dừng an toàn tiến trình kiểm định nền.')
-    } catch {
-      showToast('Không thể hủy tác vụ.')
-    }
-  }
-
-  // Xử lý nút Xuất CSV theo quy chuẩn RPT-09 (RS06)
-  const handleExportGroundTruth = async () => {
-    try {
-      setIsExporting(true)
-      const { fileName, csvContent, totalRows } =
-        await validationService.exportValidationCsv(selectedProject)
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.setAttribute('href', url)
-      link.setAttribute('download', fileName)
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-
-      showToast(`Đã xuất thành công ${totalRows} mẫu đối soát sang file CSV!`)
-    } catch {
-      showToast('Có lỗi khi trích xuất dữ liệu CSV.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   const formatMeasurementType = (type: string) => {
     switch (type) {
       case 'DEPRESSION_DEPTH':
@@ -229,19 +155,11 @@ export const ResearchValidation: React.FC = () => {
         onSelectProject={handleSelectProject}
         projectOptions={projectOptions}
         activeRun={activeRun}
-        isExporting={isExporting}
-        isRunningVal={isRunningVal}
-        onExport={handleExportGroundTruth}
-        onTriggerValidation={handleTriggerValidation}
       />
 
-      {/* 2. Banner Async Job 202 Đang chạy */}
-      {activeJob && (
-        <AsyncValidationJobBanner
-          valProgress={activeJob.progress}
-          onCancel={handleCancelJob}
-        />
-      )}
+      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        Màn này chưa có dữ liệu thật: BE chưa có API liệt kê mẫu đối soát hay các đợt kiểm định (chỉ có tạo theo danh sách cặp id số đo và đọc số liệu theo id, và các API đó chưa mở cho cookie web). Các thẻ bên dưới hiển thị 0 vì chưa có dữ liệu, không phải kết quả kiểm định.
+      </p>
 
       {/* 3. BỘ 4 THẺ CHỈ SỐ SAI SỐ KỸ THUẬT MET-12 CÓ ĐIỂM NHẤN */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -326,7 +244,7 @@ export const ResearchValidation: React.FC = () => {
           </div>
           <div className="text-[11px] text-[#047857] mt-4 pt-3 border-t border-slate-100 font-semibold flex items-center gap-1">
             <span className="material-symbols-outlined text-[15px]">check_circle</span>
-            <span>Đạt nghiệm thu (&lt; 5.0 mm)</span>
+            <span>{totalCount > 0 ? 'Đạt nghiệm thu (< 5.0 mm)' : 'Chưa có dữ liệu kiểm định'}</span>
           </div>
         </div>
 
@@ -599,6 +517,10 @@ export const ResearchValidation: React.FC = () => {
       </div>
 
       {/* 6. Minimalist Floating Toast */}
+      {selectedProject && <AiRunDetailPanel projectId={selectedProject} />}
+
+      {isPM && selectedProject && <TrainingLabelsPanel projectId={selectedProject} />}
+
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900/95 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs flex items-center gap-2 border border-slate-700 pointer-events-auto transition">
           <span className="material-symbols-outlined text-[16px] text-[#C9A227]">check_circle</span>

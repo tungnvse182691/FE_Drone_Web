@@ -1,0 +1,1 @@
+{ "name": "roadguard-fe-e2e", "private": true, "type": "module", "description": "Harness kiểm thử giao diện Web PM/Sup bằng puppeteer-core + Edge", "dependencies": { "puppeteer-core": "^23.0.0" } }

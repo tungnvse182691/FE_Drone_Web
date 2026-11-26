@@ -1,20 +1,63 @@
+import { readEligibleTriageProjects } from './triageProjectEligibility'
+import { CanceledError, isCancel } from 'axios'
+import { apiClient } from '../client'
 import { TriageCase } from '../../types/domain'
-import { mockTriageCases } from '../../data/mockData'
-import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
+import { saveToStorage, STORAGE_KEYS } from './storageHelper'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
+import { reportKeepNewCommands } from './reportKeepNewCommands'
 
-// Mock Data Store đồng bộ qua STORAGE_KEYS.TRIAGE_CASES
-let inMemoryTriageCases: TriageCase[] = getFromStorage(
-  STORAGE_KEYS.TRIAGE_CASES,
-  JSON.parse(JSON.stringify(mockTriageCases))
-)
+// DTO Interfaces theo OpenAPI Candidate3 (docs/contracts/openapi.json)
+export interface InternalCaseDto {
+  id: string // uuid
+  projectId?: string | null
+  status?: string | null
+  version?: string | null
+  reportIds?: string[] | null
+  defectIds?: string[] | null
+  verificationMethod?: string | null
+  warrantyRouting?: string | null
+  conclusion?: {
+    id?: string
+    outcome?: string | null
+    reason?: string | null
+    concludedAt?: string
+    defectIds?: string[] | null
+    evidenceIds?: string[] | null
+  } | null
+  createdAt?: string
+}
 
-// Đảm bảo các ca Drone AI chưa qua đo đạc thực địa trong Hộp thư tiếp nhận không bị gán khống số đo độ sâu
-inMemoryTriageCases = inMemoryTriageCases.map((c) => {
-  if (c.source === 'DRONE_AI' && !c.survey_assignment && c.max_depth_cm > 0) {
-    return { ...c, max_depth_cm: 0, ai_depth_cm: 0 }
-  }
-  return c
-})
+export interface CasePageDto {
+  items?: InternalCaseDto[] | null
+  nextCursor?: string | null
+}
+
+export interface CaseTriageInput {
+  projectId: string
+  verificationMethod?: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' | null
+  reason?: string | null
+  routeVersionId?: string | null
+  segmentSetId?: string | null
+  geometryVersion?: string | null
+  version?: string
+}
+
+export interface CaseConclusionInput {
+  outcome: 'CONFIRMED' | 'NO_DEFECT' | 'NEEDS_EVIDENCE'
+  reason?: string | null
+  defectIds?: string[] | null
+  evidenceIds?: string[] | null
+  version?: string
+}
+
+export interface CasePublicationInput {
+  summary?: string | null
+  reportIds?: string[] | null
+  defectIds?: string[] | null
+  evidenceIds?: string[] | null
+  version?: string
+}
 
 export interface TriageFilterParams {
   source?: string
@@ -22,30 +65,386 @@ export interface TriageFilterParams {
   projectId?: string
   priority?: string
   searchQuery?: string
+  cursor?: string
+  pageSize?: number
+}
+
+// In-Memory Data Store đồng bộ qua STORAGE_KEYS.TRIAGE_CASES
+// KHÔNG nạp mock data mặc định khi đã tích hợp API Candidate3 Backend (Tuân thủ kỷ luật AGENTS.md)
+// Do not restore an unscoped cache belonging to a previous browser session.
+let inMemoryTriageCases: TriageCase[] = []
+
+/**
+ * Chuẩn hóa chuỗi ETag theo quy định Candidate3:
+ * Bắt buộc có dấu nháy kép bọc ngoài chuỗi Base64: ^"[A-Za-z0-9+/]{11}="$
+ */
+function normalizeETag(version?: string): string {
+  if (!version) throw new Error('Thiếu phiên bản hồ sơ; hãy tải lại trước khi gửi lệnh.')
+  const trimmed = version.trim()
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed
+  }
+  return `"${trimmed}"`
+}
+
+/**
+ * Ánh xạ từ InternalCaseDto của Candidate3 sang Domain Model TriageCase của FE
+ */
+function mapBackendCaseToDomain(
+  item: InternalCaseDto,
+  projectMap: Record<string, string>
+): TriageCase {
+  const id = item.id
+  const code = `#CAS-${id.slice(0, 8).toUpperCase()}`
+  const projId = item.projectId || ''
+  const projName = projId ? projectMap[projId] || 'Đã phân công — chưa có tên dự án' : ''
+  const isAssigned = !!projId && item.status !== 'UNASSIGNED'
+
+  let status: TriageCase['status'] = 'PENDING'
+  // Case OPEN chỉ nói hồ sơ đã thuộc dự án; KHÔNG đồng nghĩa 'chờ thẩm định'. Quyết định Report→Defect được đọc riêng từ BE (enrichDecisionState).
+  let status_label = isAssigned ? 'Đã phân công — chưa có quyết định' : 'Chờ Giám sát điều phối'
+  let conclusion: TriageCase['conclusion'] = null
+
+  // Xử lý Candidate3 conclusion (safe navigation vì conclusion có thể bị omit theo AGENTS.md)
+  // BE mở lại Case (CONCLUDED/AWAITING_EVIDENCE → OPEN) khi Reporter bổ sung nhưng vẫn trả kết luận cũ: đó là LỊCH SỬ, không phải kết luận hiện tại.
+  const reopened = item.status === 'OPEN' && !!item.conclusion?.outcome
+  if (reopened) {
+    status = 'PENDING'
+    status_label = 'Đã mở lại do có bổ sung'
+    conclusion = null
+  } else if (item.conclusion?.outcome) {
+    const outcome = item.conclusion.outcome
+    const reasonLower = (item.conclusion.reason || '').toLowerCase()
+    if (outcome === 'CONFIRMED') {
+      status = 'VERIFIED'
+      status_label = 'Đã xác minh (Hợp lệ)'
+      conclusion = 'DEFECT_FOUND'
+    } else if (outcome === 'NO_DEFECT') {
+      status = 'REJECTED'
+      if (reasonLower.includes('ngoài phạm vi') || reasonLower.includes('out_of_scope')) {
+        status_label = 'Ngoài phạm vi'
+        conclusion = 'OUT_OF_SCOPE'
+      } else {
+        status_label = 'Báo sai (Không có lỗi)'
+        conclusion = 'NO_DEFECT'
+      }
+    } else if (outcome === 'NEEDS_EVIDENCE' && item.status === 'AWAITING_EVIDENCE') {
+      status = 'AWAITING_EVIDENCE'
+      status_label = 'Chờ bổ sung bằng chứng'
+      conclusion = 'NEEDS_EVIDENCE'
+    }
+  } else if (item.status === 'AWAITING_EVIDENCE') {
+    status = 'AWAITING_EVIDENCE'
+    status_label = 'Chờ bổ sung bằng chứng'
+  } else if (item.status === 'LINKED') {
+    status = 'MERGED'
+    status_label = 'Hồ sơ nguồn đã chuyển phản ánh'
+  } else if (item.status === 'CONCLUDED') {
+    status = 'VERIFIED'
+    status_label = 'Đã kết luận'
+  } else if (item.status === 'REJECTED') {
+    status = 'REJECTED'
+    status_label = 'Báo sai (Không có lỗi)'
+  }
+
+  if (item.status === 'UNASSIGNED') { status = 'PENDING'; status_label = 'Chờ Giám sát điều phối'; conclusion = null }
+
+  const version = item.version || undefined
+  const etag = version ? normalizeETag(version) : undefined
+
+  // InternalCaseDto describes report intake; verificationMethod is not source provenance.
+
+  return {
+    id,
+    code,
+    source: 'UNKNOWN',
+    case_status: item.status || undefined,
+    source_label: 'Chưa xác định nguồn tiếp nhận',
+    source_detail: item.verificationMethod ? `Phương thức xác minh: ${item.verificationMethod}` : 'Chưa chọn phương thức xác minh',
+    verification_method: item.verificationMethod || undefined,
+    project_id: projId,
+    project_code: undefined,
+    project_name: projName || 'Chưa phân công dự án',
+    stationing: 'Chưa có dữ liệu lý trình',
+    lane: '',
+    defect_title: 'Hồ sơ tiếp nhận',
+    defect_type: '',
+    severity: 'UNKNOWN',
+    urgency: 'UNKNOWN',
+    time_ago: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : 'Chưa có ngày tiếp nhận',
+    created_at: item.createdAt || '',
+    status,
+    status_label,
+    image_url: '',
+    gps: { lat: null, lng: null, altitude_m: 0, resolution_cm_px: 0 },
+    ai_confidence: 0,
+    area_sqm: Number.NaN,
+    ai_area_sqm: 0,
+    max_depth_cm: Number.NaN,
+    ai_depth_cm: 0,
+    pm_notes: reopened ? '' : item.conclusion?.reason || '',
+
+    conclusion,
+    conclusion_reason: reopened ? undefined : item.conclusion?.reason || undefined,
+    reopened_after_conclusion: reopened,
+    previous_conclusion: reopened ? { outcome: String(item.conclusion?.outcome), reason: item.conclusion?.reason || undefined, concluded_at: item.conclusion?.concludedAt || undefined } : null,
+    report_ids: item.reportIds || [],
+    defect_ids: item.defectIds || [],
+    // Report references are evidence membership, not linked child Case records.
+    linked_report_ids: [],
+    is_assigned: isAssigned,
+    is_published: false,
+    version,
+    etag
+  }
+}
+
+// Request ownership belongs to each consumer (AbortSignal). This counter only
+// arbitrates the shared cache; a newer reader must not cancel another reader.
+let caseCacheRequest = 0
+let caseSessionEpoch = 0
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.id !== previous.user?.id || state.user?.role !== previous.user?.role ||
+      state.isAuthenticated !== previous.isAuthenticated || state.authEpoch !== previous.authEpoch || state.token !== previous.token) {
+    caseSessionEpoch += 1
+    caseCacheRequest += 1
+    inMemoryTriageCases = []
+    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, [])
+  }
+})
+
+// Profile updates/renewed cookie DTO objects are not a new authorization session.
+export function getCaseSessionKey(): string {
+  const state = useAuthStore.getState()
+  return JSON.stringify([caseSessionEpoch, state.authEpoch, state.user?.id, state.user?.role, state.isAuthenticated])
+}
+
+function assertCaseReadActive(session: string, signal?: AbortSignal): void {
+  if (signal?.aborted || session !== getCaseSessionKey()) {
+    throw new CanceledError('Case read is no longer active')
+  }
+}
+
+function etagHeaderMismatch(header: unknown, version: string): boolean {
+  return typeof header === 'string' && header !== normalizeETag(version)
+}
+export interface CaseProjectOption { id: string; code: string; name: string }
+export interface PendingTriage { key: string; body: Omit<CaseTriageInput,'version'>; version: string; fingerprint: string; receipt?: InternalCaseDto; received?: boolean; rejected?: boolean; conflict?: boolean }
+function triageJournal(caseId: string) {
+  const actor = useAuthStore.getState().user
+  if (!actor) throw new Error('Chưa có phiên Case.')
+  return `rg_triage_${actor.id}_${caseId}`
+}
+export class CaseListReadError extends Error {
+  constructor(public readonly items: TriageCase[], public readonly failures: Array<{ projectId?: string; status?: string; cause: any }>) {
+    super(`Danh sách chưa đầy đủ: ${failures.map(failure => `${failure.projectId || 'inbox chưa phân dự án'}${failure.status ? ` [${failure.status}]` : ''}: ${failure.cause.response?.data?.code || failure.cause.message}`).join('; ')}`)
+  }
+}
+
+export const isCaseReadCanceled = isCancel
+
+/**
+ * Case OPEN không nói PM đã quyết định hay chưa. Quyết định Report→Defect (KEEP_NEW) được đọc lại từ BE
+ * (GET candidate-decisions/{id} + GET defects/{id}) theo reference PM đã ghi nhận, rồi gắn nhãn RIÊNG:
+ * 'Đã ghi nhận' (quyết định) và defect_status (trạng thái Defect do BE trả). Lỗi đọc được hiện nguyên văn, không nuốt.
+ */
+async function enrichDecisionState(cases: TriageCase[], signal?: AbortSignal): Promise<TriageCase[]> {
+  if (useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER) return cases
+  return Promise.all(cases.map(async (c) => {
+    if (!c.project_id || !c.report_ids?.length) return c
+    try {
+      const ref = c.report_ids.map((id) => reportKeepNewCommands.reference(c.project_id, id)).find(Boolean)
+      if (!ref) return c
+      const result = await reportKeepNewCommands.readDecision(c.project_id, ref.sourceId, ref.decisionId, signal)
+      if (!result) return c
+      // Quyết định mới (KEEP_NEW/LINK_EXISTING/REJECT nguồn Report) là trạng thái chính; 'Đã mở lại do có bổ sung' chỉ là nhãn phụ (reopened_after_conclusion).
+      const kind = result.decision.decision as 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'
+      return {
+        ...c,
+        decision_recorded: true,
+        decision_kind: kind,
+        linked_defect_id: result.decision.defectId,
+        defect_status: result.defect?.status ?? null,
+        status_label: c.status === 'PENDING' ? (kind === 'REJECT' ? 'Đã từ chối nguồn Report' : 'Đã ghi nhận') : c.status_label
+      }
+    } catch (error: any) {
+      if (isCancel(error) || signal?.aborted) throw error
+      const code = error?.response?.data?.code
+      const http = error?.response?.status ? ' (HTTP ' + error.response.status + (code ? ' ' + code : '') + ')' : ''
+      return { ...c, decision_read_error: 'Không đọc được quyết định đã ghi nhận' + http + ': ' + (error?.message || 'lỗi không xác định') }
+    }
+  }))
+}
+const pendingCaseCommands = new Map<string, { key: string; body: unknown; version: string }>()
+
+// D2 preserves intent/key/version across F5. Repeating the same confirmation explicitly replays it.
+const d2Busy = new Set<string>()
+async function caseD2Command(caseId: string, action: string, intent: unknown, prepare: () => Promise<{ body: any; version: string }>) {
+  const actor = useAuthStore.getState().user
+  if (actor?.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM thuộc dự án được thực hiện lệnh Case.')
+  const session = getCaseSessionKey(), journal = `rg_case_d2_${actor.id}_${caseId}_${action}`
+  const active = () => assertCaseReadActive(session)
+  if (d2Busy.has(journal)) throw new Error('Đang xử lý lệnh Case.')
+  d2Busy.add(journal)
+  try {
+    const raw = sessionStorage.getItem(journal), held = raw ? JSON.parse(raw) : null
+    if (held && held.intent !== JSON.stringify(intent)) throw new Error('Lệnh trước chưa rõ kết quả; giữ nguyên lựa chọn/lý do, không tạo key mới.')
+    const command = held || { ...await prepare(), intent: JSON.stringify(intent), key: crypto.randomUUID() }
+    active()
+    if (!/^"[A-Za-z0-9+/]{11}="$/.test(command.version) || !command.key || !command.body) throw new Error('Journal/version Case sai contract; chưa gửi lệnh.')
+    sessionStorage.setItem(journal, JSON.stringify(command))
+    if (!command.received) {
+      try {
+        const response = await apiClient.post(`/cases/${caseId}/${action}`, command.body, {
+          headers: { 'Idempotency-Key': command.key, 'If-Match': command.version },
+          transformRequest: [(body: unknown) => { active(); return JSON.stringify(body) }]
+        })
+        active(); command.received = true; command.data = response.data; command.etag = response.headers?.etag
+        sessionStorage.setItem(journal, JSON.stringify(command))
+      } catch (error: any) {
+        active()
+        // A rejection of a replay does not resolve the outcome of its earlier attempt.
+        if (!held && error.response?.status >= 400 && error.response.status < 500) sessionStorage.removeItem(journal)
+        throw error
+      }
+    }
+    active()
+    return { data: command.data, etag: command.etag, body: command.body, complete: () => { active(); sessionStorage.removeItem(journal) } }
+  } finally { d2Busy.delete(journal) }
 }
 
 export const triageService = {
+  pendingD2(caseId: string, action: 'publications' | 'report-links' | 'report-splits') {
+    const actor = useAuthStore.getState().user
+    if (actor?.role !== RoleCode.PROJECT_MANAGER) return null
+    const raw = sessionStorage.getItem(`rg_case_d2_${actor.id}_${caseId}_${action}`)
+    return raw ? JSON.parse(raw) as { body: any; version: string; received?: boolean } : null
+  },
   /**
-   * Lấy danh sách hồ sơ tiếp nhận Triage (Hộp thư AI & Phản ánh người dân - PA03, AI01-AI08)
+   * API-018: GET /api/v1/cases
+   * Lấy danh sách hồ sơ ca phản ánh từ Backend Candidate3 Docker
    */
-  async getCases(params?: TriageFilterParams): Promise<TriageCase[]> {
-    await new Promise((resolve) => setTimeout(resolve, 150)) // Giả lập độ trễ mạng API
-    let list = [...inMemoryTriageCases]
+  async fetchCasesFromBackend(params?: {
+    projectId?: string
+    status?: string
+    pageSize?: number
+    cursor?: string
+  }, signal?: AbortSignal): Promise<TriageCase[]> {
+    const session = getCaseSessionKey()
+    assertCaseReadActive(session, signal)
+    try {
+      const actor = useAuthStore.getState().user
+      if (!actor || ![RoleCode.SUPERVISOR, RoleCode.PROJECT_MANAGER].includes(actor.role)) {
+        throw new Error('Không có quyền đọc danh sách Case.')
+      }
+      const projects: Array<{ id: string; name: string; code?: string }> = []
+      let projectCursor: string | undefined
+      const seenProjectCursors = new Set<string>()
+      do {
+        const response = await apiClient.get<{ items: Array<{ id?: string; projectId?: string; name: string; projectCode?: string }>; nextCursor?: string }>('/projects', {
+          params: { cursor: projectCursor }, signal
+        })
+        assertCaseReadActive(session, signal)
+        if (!Array.isArray(response.data?.items) || response.data.nextCursor != null && (typeof response.data.nextCursor !== 'string' || !response.data.nextCursor)) throw new Error('Danh sách dự án sai contract; không coi là rỗng.')
+        for (const project of response.data.items) {
+          const id = project.projectId || project.id
+          if (id) projects.push({ id, name: project.name, code: project.projectCode })
+        }
+        projectCursor = response.data.nextCursor || undefined
+        if (projectCursor && seenProjectCursors.has(projectCursor)) throw new Error('Cursor dự án bị lặp.')
+        if (projectCursor) seenProjectCursors.add(projectCursor)
+      } while (projectCursor)
+      assertCaseReadActive(session, signal)
+      const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]))
+      const statusFilter = params?.status && params.status !== 'ALL' ? params.status : undefined
+      const unassigned = params?.projectId === 'UNASSIGNED'
+      if (unassigned && actor.role !== RoleCode.SUPERVISOR) throw new Error('PM không được đọc hộp thư chưa phân công.')
+      const selected = params?.projectId && !['ALL','UNASSIGNED'].includes(params.projectId) ? params.projectId : undefined
+      if (selected && !projects.some(p => p.id === selected)) throw new Error('Dự án không thuộc phạm vi server trả về.')
+      // /projects is server-scoped. Do not infer PM membership from primary PM/name/email.
+      const scopes = unassigned ? [{projectId: undefined as string | undefined, status: statusFilter}] : selected ? [{ projectId: selected, status: statusFilter }] : [
+        ...(actor.role === RoleCode.SUPERVISOR ? [{projectId: undefined as string | undefined, status: statusFilter}] : []),
+        ...projects.map(project => ({ projectId: project.id as string | undefined, status: statusFilter }))
+      ]
+      const items = new Map<string, InternalCaseDto>()
+      const failures: Array<{ projectId?: string; status?: string; cause: any }> = []
+      for (const { projectId, status } of scopes) {
+        try {
+        let cursor: string | undefined
+        const cursors = new Set<string>()
+        do {
+          const response = await apiClient.get<CasePageDto>('/cases', {
+            params: { projectId, status, pageSize: params?.pageSize || 100, cursor }, signal
+          })
+          assertCaseReadActive(session, signal)
+          if (!Array.isArray(response.data?.items) || response.data.nextCursor != null && (typeof response.data.nextCursor !== 'string' || !response.data.nextCursor)) throw new Error('Danh sách Case sai contract; không coi là rỗng.')
+          for (const item of response.data.items) {
+            if (!item.id || !['UNASSIGNED','OPEN','AWAITING_EVIDENCE','CONCLUDED','LINKED'].includes(item.status || '') || !item.version) throw new Error('Case summary thiếu ID/status/version.')
+            if ((item.projectId || undefined) !== projectId) throw new Error('Case trả về sai phạm vi dự án.')
+            items.set(item.id, item)
+          }
+          cursor = response.data.nextCursor || undefined
+          if (cursor && cursors.has(cursor)) throw new Error('Cursor Case bị lặp.')
+          if (cursor) cursors.add(cursor)
+        } while (cursor)
+        } catch (cause) {
+          assertCaseReadActive(session, signal)
+          if (actor.role !== RoleCode.SUPERVISOR) throw cause
+          failures.push({ projectId, status, cause })
+        }
+      }
+      const mapped = Array.from(items.values(), item => ({ ...mapBackendCaseToDomain(item, projectMap), project_code: projects.find(project => project.id === item.projectId)?.code }))
+      if (failures.length) {
+        throw new CaseListReadError(mapped, failures)
+      }
+      const enriched = await enrichDecisionState(mapped, signal)
+      assertCaseReadActive(session, signal)
+      return enriched
+    } catch (error) {
+      assertCaseReadActive(session, signal)
+      throw error
+    }
+  },
 
-    if (params?.source && params.source !== 'ALL') {
+  /**
+   * Lấy danh sách hồ sơ tiếp nhận Triage (Hộp thư AI & Phản ánh người dân - PA03, W03/W04)
+   * 100% dữ liệu từ Database Candidate3 BE - Tuân thủ kỷ luật CẤM mock data ngầm khi đã gắn API
+   */
+  async getCases(params?: TriageFilterParams, signal?: AbortSignal): Promise<TriageCase[]> {
+    const request = ++caseCacheRequest
+    const session = getCaseSessionKey()
+    assertCaseReadActive(session, signal)
+    // 1. Nạp từ Backend Candidate3 (CSDL thật)
+    const backendCases = await this.fetchCasesFromBackend({
+      projectId: params?.projectId,
+      status: params?.status,
+      pageSize: params?.pageSize,
+      cursor: params?.cursor
+    }, signal)
+
+    assertCaseReadActive(session, signal)
+    // A valid independent consumer still receives its own result. Only the most
+    // recently started list may replace the shared cache (which has one scope).
+    if (request === caseCacheRequest) {
+      inMemoryTriageCases = backendCases
+      saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
+    }
+
+    let list = [...backendCases]
+
+    // 3. Áp dụng bộ lọc
+    if (params?.source && params?.source !== 'ALL') {
       list = list.filter((c) => c.source === params.source)
     }
 
-    if (params?.status && params.status !== 'ALL') {
-      list = list.filter((c) => c.status === params.status)
-    }
-
-    if (params?.projectId && params.projectId !== 'ALL') {
+    if (params?.projectId && !['ALL','UNASSIGNED'].includes(params.projectId)) {
       const pId = params.projectId
-      list = list.filter((c) => c.project_id === pId || c.project_name.includes(pId))
+      list = list.filter(
+        (c) => c.project_id === pId
+      )
     }
 
-    if (params?.priority && params.priority !== 'ALL') {
+    if (params?.priority && params?.priority !== 'ALL') {
       list = list.filter((c) => c.severity === params.priority)
     }
 
@@ -65,29 +464,219 @@ export const triageService = {
   },
 
   /**
-   * Lấy chi tiết một ca khiếm khuyết theo ID
+   * API-019: GET /api/v1/cases/{caseId}
+   * Lấy chi tiết một ca khiếm khuyết theo ID từ Backend Candidate3 (kèm ETag)
    */
-  async getCaseById(id: string): Promise<TriageCase | null> {
-    await new Promise((resolve) => setTimeout(resolve, 80))
-    const item = inMemoryTriageCases.find((c) => c.id === id || c.code === id)
-    return item ? JSON.parse(JSON.stringify(item)) : null
+  async getCaseById(id: string, signal?: AbortSignal): Promise<TriageCase | null> {
+    const session = getCaseSessionKey()
+    const cacheRequest = caseCacheRequest
+    assertCaseReadActive(session, signal)
+    try {
+      console.log(`🚀 [CANDIDATE3 BE] Gọi GET /api/v1/cases/${id}...`)
+      const res = await apiClient.get<InternalCaseDto>(`/cases/${id}`, { signal })
+      const beItem = res.data
+      if (beItem?.id !== id || !beItem.version || !['UNASSIGNED','OPEN','AWAITING_EVIDENCE','CONCLUDED','LINKED'].includes(beItem.status || '') || etagHeaderMismatch(res.headers?.etag, beItem.version)) throw new Error('Case trả sai ID/status/version/ETag.')
+      if (useAuthStore.getState().user?.role === RoleCode.PROJECT_MANAGER && !beItem.projectId) throw new Error('PM không được đọc Case chưa phân công dự án.')
+      const etagHeader = res.headers?.['etag'] as string | undefined
+
+      const projectMap: Record<string, string> = {} // Do not borrow cached project labels from another session.
+
+      const domainCase = mapBackendCaseToDomain(beItem, projectMap)
+      if (etagHeader) {
+        domainCase.etag = etagHeader
+        domainCase.version = etagHeader.replace(/"/g, '')
+      }
+
+      assertCaseReadActive(session, signal)
+      // Cập nhật lại vào inMemoryStore
+      const idx = inMemoryTriageCases.findIndex((c) => c.id === id || c.code === id)
+      if (idx !== -1 && cacheRequest === caseCacheRequest) {
+        inMemoryTriageCases[idx] = { ...inMemoryTriageCases[idx], ...domainCase }
+        saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
+      }
+
+      return domainCase
+    } catch (err: any) {
+      assertCaseReadActive(session, signal)
+      throw err // Preserve Axios/ProblemDetails metadata; callers decide how to display it.
+    }
   },
 
   /**
-   * Cập nhật thông tin hồ sơ thẩm định
+   * API-024: POST /api/v1/cases/{caseId}/triage
+   * Duy nhất Giám sát (Supervisor) có quyền điều phối gán ca vào dự án và chọn phương thức xác minh
+   * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
+   */
+  async triageCase(caseId: string, payload: CaseTriageInput): Promise<TriageCase> {
+    const session = getCaseSessionKey(), actor = useAuthStore.getState().user
+    if (actor?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Supervisor được điều phối Case.')
+    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(caseId) || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(payload.projectId) || /^0{8}-0{4}-0{4}-0{4}-0{12}$/.test(caseId) || /^0{8}-0{4}-0{4}-0{4}-0{12}$/.test(payload.projectId)) throw new Error('Thiếu Case/project UUID hợp lệ; chưa điều phối.')
+    if (!payload.version || !payload.reason?.trim() || payload.reason.trim().length > 1000 || !['FIELD','DRONE','EXISTING_EVIDENCE'].includes(payload.verificationMethod || '')) throw new Error('Thiếu version, lý do (tối đa 1.000 ký tự) hoặc phương thức hợp lệ; chưa điều phối.')
+    const version = normalizeETag(payload.version)
+    if (!/^"[A-Za-z0-9+/]{11}="$/.test(version)) throw new Error('If-Match phải là version Case 8 byte đã đọc.')
+    if (!!payload.routeVersionId !== !!payload.segmentSetId || !!payload.routeVersionId !== !!payload.geometryVersion?.trim()) throw new Error('Geometry cần đủ routeVersionId/segmentSetId/geometryVersion; không tự tạo pin.')
+    if (payload.routeVersionId && (!/^[0-9a-f]{64}$/i.test(payload.geometryVersion || '') || !/^[0-9a-f-]{36}$/i.test(payload.routeVersionId) || !/^[0-9a-f-]{36}$/i.test(payload.segmentSetId || ''))) throw new Error('Pin hình học cần UUID tuyến/set và hash package 64 hex không ngoặc kép.')
+    const body = {projectId:payload.projectId,verificationMethod:payload.verificationMethod,reason:payload.reason.trim(),...(payload.routeVersionId ? {routeVersionId:payload.routeVersionId,segmentSetId:payload.segmentSetId,geometryVersion:payload.geometryVersion} : {})}
+    const fingerprint = JSON.stringify({body,version}), journalKey = triageJournal(caseId)
+    const previous = this.pendingTriage(caseId)
+    const command: PendingTriage = previous || {key:crypto.randomUUID(),body,version,fingerprint}
+    if (command.fingerprint !== fingerprint) throw new Error('Lệnh điều phối trước chưa đối chiếu xong; không đổi key/body/version.')
+    if (command.rejected || command.conflict) throw new Error('Lệnh đã bị từ chối; đọc lại và chủ động đối chiếu trước ý định mới.')
+    const pendingKey = `${actor.id}:triage:${caseId}`
+    if (pendingCaseCommands.has(pendingKey)) throw new Error('Đang gửi lệnh điều phối này.')
+    pendingCaseCommands.set(pendingKey,command)
+    try {
+      assertCaseReadActive(session); sessionStorage.setItem(journalKey,JSON.stringify(command))
+      if (!previous) {
+        const current=await apiClient.get<InternalCaseDto>(`/cases/${caseId}`);assertCaseReadActive(session)
+        const allowed=await readEligibleTriageProjects(undefined, command.body.projectId);assertCaseReadActive(session)
+        if (!allowed.some(p=>p.id===command.body.projectId)) throw Object.assign(new Error('Dự án đích không còn đủ điều kiện điều phối (hoạt động, PM chính và tim tuyến).'),{triageGuard:true})
+        if (current.data.id!==caseId || current.data.projectId || current.data.status!=='UNASSIGNED') throw Object.assign(new Error('Chỉ điều phối Case chưa phân công; hãy đọc lại hồ sơ.'),{triageGuard:true})
+        if (normalizeETag(current.data.version || '')!==command.version || etagHeaderMismatch(current.headers?.etag,current.data.version!)) throw Object.assign(new Error('Phiên bản đã đổi; giữ form và đối chiếu trước ý định mới.'),{triageGuard:true})
+      }
+      if (previous && !command.receipt && !command.received) {
+        const allowed = await readEligibleTriageProjects(undefined, command.body.projectId); assertCaseReadActive(session)
+        if (!allowed.some(p => p.id === command.body.projectId)) throw new Error('Dự án không còn đủ điều kiện; giữ yêu cầu đang chờ để đối chiếu, chưa gửi lại.')
+      }
+      if (!command.receipt && !command.received) {
+        const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/triage`,command.body,{headers:{'Idempotency-Key':command.key,'If-Match':command.version},transformRequest:[(data:unknown)=>{assertCaseReadActive(session);return JSON.stringify(data)}]})
+        assertCaseReadActive(session)
+        command.receipt=response.data;command.received=true;sessionStorage.setItem(journalKey,JSON.stringify(command))
+      }
+      const receipt=command.receipt
+      if (!receipt || receipt.id!==caseId || receipt.projectId!==command.body.projectId || receipt.verificationMethod!==command.body.verificationMethod || receipt.status!=='OPEN' || !receipt.version) throw new Error('Receipt triage sai ID/project/method/status; chỉ đối chiếu, không POST lại.')
+      const fresh=await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      assertCaseReadActive(session)
+      if (fresh.data.id!==caseId || fresh.data.projectId!==receipt.projectId || fresh.data.verificationMethod!==receipt.verificationMethod || fresh.data.status==='UNASSIGNED' || !fresh.data.version || etagHeaderMismatch(fresh.headers?.etag,fresh.data.version)) throw new Error('GET chưa khớp triage receipt; chỉ đọc lại, không POST thêm.')
+      sessionStorage.removeItem(journalKey)
+      return mapBackendCaseToDomain(fresh.data,{})
+    }catch(error:any){
+      assertCaseReadActive(session)
+      if (!command.receipt && !command.received && (error.triageGuard || error?.response?.status>=400 && error.response.status<500)){command.rejected=true;command.conflict=!!error.triageGuard || [409,412,428].includes(error.response.status);sessionStorage.setItem(journalKey,JSON.stringify(command))}
+      throw error
+    }finally{pendingCaseCommands.delete(pendingKey)}
+  },
+  pendingTriage(caseId:string): PendingTriage | null {
+    const raw=sessionStorage.getItem(triageJournal(caseId))
+    if (!raw)return null
+    const command=JSON.parse(raw) as PendingTriage
+    if (typeof command.key!=='string' || !command.key || typeof command.body?.projectId!=='string' || !['FIELD','DRONE','EXISTING_EVIDENCE'].includes(command.body.verificationMethod || '') || typeof command.body.reason!=='string' || !command.body.reason.trim() || command.body.reason.trim().length>1000 || typeof command.version!=='string' || !/^"[A-Za-z0-9+/]{11}="$/.test(command.version) || typeof command.fingerprint!=='string' || command.fingerprint!==JSON.stringify({body:command.body,version:command.version}))throw new Error('Journal triage sai contract; cần đối chiếu trước khi ghi.')
+    return command
+  },
+  reviseTriage(caseId:string) {
+    const actor=useAuthStore.getState().user,held=this.pendingTriage(caseId)
+    if (!held?.rejected || held.receipt || held.received || pendingCaseCommands.has(`${actor?.id}:triage:${caseId}`))throw new Error('Chỉ lập ý định mới sau lỗi xác định và thao tác đối chiếu chủ động.')
+    sessionStorage.removeItem(triageJournal(caseId))
+  },
+  async getTriageProjects(signal?:AbortSignal): Promise<CaseProjectOption[]> {
+    const role=useAuthStore.getState().user?.role
+    if(!role || ![RoleCode.SUPERVISOR,RoleCode.PROJECT_MANAGER].includes(role))throw new Error('Không có quyền đọc dự án điều phối.')
+    const session=getCaseSessionKey(),rows:CaseProjectOption[]=[],seen=new Set<string>()
+    let cursor:string|undefined
+    do{
+      const {data}=await apiClient.get('/projects',{params:{limit:100,cursor},signal});assertCaseReadActive(session,signal)
+      if (!Array.isArray(data?.items) || data.nextCursor != null && (typeof data.nextCursor !== 'string' || !data.nextCursor))throw new Error('Danh sách dự án sai contract.')
+      for(const p of data.items){if(!p.projectId||!p.projectCode||!p.name)throw new Error('Dự án thiếu reference server.');rows.push({id:p.projectId,code:p.projectCode,name:p.name})}
+      cursor=data.nextCursor||undefined;if(cursor&&seen.has(cursor))throw new Error('Cursor dự án lặp.');if(cursor)seen.add(cursor)
+    }while(cursor)
+    if(new Set(rows.map(p=>p.id)).size!==rows.length)throw new Error('Dự án bị trùng ID giữa các trang.')
+    return rows
+  },
+
+  /**
+   * API-020: POST /api/v1/cases/{caseId}/conclusions
+   * Chỉ huy trưởng (PM) nhập kết luận thẩm định khiếm khuyết
+   * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
+   */
+  async concludeCase(caseId: string, payload: CaseConclusionInput): Promise<TriageCase> {
+    const actor = useAuthStore.getState().user
+    if (actor?.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM được kết luận Case.')
+    const detail = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; chưa gửi lệnh.')
+    const server = mapBackendCaseToDomain(detail.data, {})
+    if (detail.data.status === 'CONCLUDED') {
+      throw Object.assign(new Error(`Hồ sơ đã có kết luận server: ${detail.data.conclusion?.outcome || 'chưa có dữ liệu'}. Lệnh mới chưa được gửi; hãy đối chiếu lại.`), {
+        code: 'invalid_state_transition', serverCase: server
+      })
+    }
+    const evidenceIds = [...new Set(payload.evidenceIds || [])]
+    if (payload.outcome !== 'NEEDS_EVIDENCE' && !evidenceIds.length) throw new Error('Thiếu reference bằng chứng được phép đọc cho Case này. Chưa có nguồn chọn bằng chứng trong giao diện; không gửi lệnh (contract gap).')
+    const defectIds = [...new Set(payload.defectIds || detail.data.defectIds || [])]
+    if (payload.outcome === 'CONFIRMED' && !defectIds.length) throw new Error('Chưa có Defect nguồn; không thể kết luận CONFIRMED (P2-07).')
+    const body = { outcome: payload.outcome, reason: payload.reason, evidenceIds, defectIds: payload.outcome === 'CONFIRMED' ? defectIds : [] }
+    const version = normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined)
+    const key = crypto.randomUUID()
+    const pendingKey = `${actor?.id}:conclude:${caseId}`
+    const journalKey = `rg_case_conclusion_${actor?.id}_${caseId}`
+    if (sessionStorage.getItem(journalKey)) throw new Error('Lệnh kết luận trước chưa đối chiếu xong; không tạo key mới sau F5.')
+    if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả. Hãy tải lại/đối chiếu; không tạo lệnh mới.')
+    pendingCaseCommands.set(pendingKey, { key, body, version })
+    sessionStorage.setItem(journalKey, JSON.stringify({ key, body, version }))
+    try {
+      const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/conclusions`, body, {
+        headers: { 'Idempotency-Key': key, 'If-Match': version }
+      })
+      pendingCaseCommands.delete(pendingKey)
+      if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả lệnh cũ.')
+      const reread = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết luận cũ.')
+      const confirmed = mapBackendCaseToDomain(reread.data, {})
+      if (reread.data.conclusion?.outcome !== payload.outcome) {
+        throw Object.assign(new Error('Kết quả server khác yêu cầu; hãy đối chiếu kết luận.'), { serverCase: confirmed })
+      }
+      sessionStorage.removeItem(journalKey)
+      return confirmed
+    } catch (error: any) {
+      if (error.response && error.response.status < 500) { pendingCaseCommands.delete(pendingKey); sessionStorage.removeItem(journalKey) }
+      if (error.serverCase) throw error
+      const status = error.response?.status
+      const code = error.response?.data?.code
+      if (status === 409 || status === 412 || !error.response || status >= 500) {
+        let current: TriageCase | undefined
+        try {
+          const fresh = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+          if (useAuthStore.getState().user === actor) current = mapBackendCaseToDomain(fresh.data, {})
+        } catch { /* Keep original command identity and report reconciliation failure below. */ }
+        const reason = status === 412 ? 'Phiên bản đã thay đổi. Đối chiếu kết quả server, giữ bản nháp và xác nhận lại trước lệnh mới.'
+          : status === 409 ? `Xung đột ${code || 'không rõ mã'}: ${error.response?.data?.detail || 'hãy đối chiếu trạng thái/nguồn.'}`
+          : 'Chưa rõ lệnh đã được ghi nhận hay chưa; đã giữ identity lệnh, không tự gửi lại.'
+        throw Object.assign(new Error(reason + (current ? '' : ' Không tải được kết quả để đối chiếu.')), {
+          cause: error, code, response: error.response, serverCase: current, commandKey: key
+        })
+      }
+      throw error
+    }
+  },
+
+  async publishCase(caseId: string, payload: CasePublicationInput): Promise<TriageCase> {
+    const session = getCaseSessionKey()
+    const receipt = await caseD2Command(caseId, 'publications', { summary: payload.summary?.trim(), reportIds: [...(payload.reportIds || [])].sort(), evidenceIds: [...(payload.evidenceIds || [])].sort(), defectIds: [...(payload.defectIds || [])].sort() }, async () => {
+      const detail = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      const reportIds = [...new Set(payload.reportIds || [])]
+      if (!reportIds.length || reportIds.some(id => !detail.data.reportIds?.includes(id))) throw new Error('Thiếu hoặc sai recipient report thuộc Case; chưa gửi publication.')
+      if (!payload.summary?.trim() || payload.summary.trim().length > 1000) throw new Error('Nội dung công bố cần từ 1 đến 1.000 ký tự.')
+      // Nhánh công bố theo contract BE: không Defect chỉ khi Case đã kết luận NO_DEFECT; còn lại phải chọn Defect thuộc Case.
+      const noDefect = detail.data.conclusion?.outcome === 'NO_DEFECT' && detail.data.status !== 'OPEN'
+      const chosenDefects = [...new Set(payload.defectIds || [])]
+      if (noDefect && chosenDefects.length) throw new Error('Case đã kết luận NO_DEFECT: công bố không kèm Defect.')
+      if (!noDefect && !chosenDefects.length) throw new Error('Chọn ít nhất một Defect của Case để công bố; BE chỉ cho công bố không Defect khi Case đã kết luận NO_DEFECT.')
+      if (chosenDefects.some(id => !detail.data.defectIds?.includes(id))) throw new Error('Defect được chọn không thuộc Case theo máy chủ; chưa gửi publication.')
+      return { body: { summary: payload.summary.trim(), reportIds, evidenceIds: [...new Set(payload.evidenceIds || [])], defectIds: [...new Set(payload.defectIds || [])] }, version: normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined) }
+    })
+    const data = receipt.data
+    if (!data?.id || data.caseId !== caseId || data.status !== 'PUBLISHED' || !data.version || !/^"[A-Za-z0-9+/]{11}="$/.test(normalizeETag(data.version)) || receipt.etag && receipt.etag !== normalizeETag(data.version)) throw new Error('Receipt công bố sai Case/status/version; giữ identity, chưa xác nhận thành công.')
+    const current = await this.getCaseById(caseId)
+    assertCaseReadActive(session)
+    if (!current) throw new Error('Đã nhận công bố nhưng chưa đọc lại được Case; thử lại để chỉ đọc kết quả.')
+    receipt.complete()
+    return { ...current, is_published: true, public_notice: receipt.body.summary }
+  },
+
+  /**
+   * Cập nhật thông tin hồ sơ thẩm định cục bộ & đồng bộ storage
    */
   async updateCase(caseId: string, updates: Partial<TriageCase>): Promise<TriageCase> {
-    await new Promise((resolve) => setTimeout(resolve, 120))
-    const index = inMemoryTriageCases.findIndex((c) => c.id === caseId || c.code === caseId)
-    if (index === -1) {
-      throw new Error(`Không tìm thấy hồ sơ Triage với ID ${caseId}`)
-    }
-    inMemoryTriageCases[index] = {
-      ...inMemoryTriageCases[index],
-      ...updates
-    }
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-    return JSON.parse(JSON.stringify(inMemoryTriageCases[index]))
+    throw new Error('Không dùng updateCase cục bộ thay triage/conclusion API; chưa ghi thay đổi.')
   },
 
   /**
@@ -98,92 +687,59 @@ export const triageService = {
     secondaryIds: string[],
     auditNotes: string
   ): Promise<{ success: boolean; master: TriageCase }> {
-    await new Promise((resolve) => setTimeout(resolve, 180))
-    const masterIndex = inMemoryTriageCases.findIndex((c) => c.id === masterId || c.code === masterId)
-    if (masterIndex === -1) {
-      throw new Error('Hồ sơ chính không tồn tại')
-    }
-
-    const master = inMemoryTriageCases[masterIndex]
-    const secondaryCodes: string[] = []
-
-    inMemoryTriageCases = inMemoryTriageCases.map((c) => {
-      if (secondaryIds.includes(c.id) || secondaryIds.includes(c.code)) {
-        secondaryCodes.push(c.code)
-        return {
-          ...c,
-          status: 'MERGED',
-          status_label: 'Đã gộp trùng',
-          master_case_id: master.id,
-          pm_notes: `[GỘP TRÙNG PA04] Đã liên kết vào hồ sơ gốc ${master.code}. Ghi chú: ${auditNotes}`
-        }
-      }
-      return c
+    const session = getCaseSessionKey()
+    const receipt = await caseD2Command(masterId, 'report-links', { secondaryIds: [...secondaryIds].sort(), auditNotes: auditNotes.trim() }, async () => {
+      if (!secondaryIds.length || secondaryIds.includes(masterId) || new Set(secondaryIds).size !== secondaryIds.length || !auditNotes.trim() || auditNotes.trim().length > 1000) throw new Error('Chọn Case chính/nguồn khác nhau và lý do liên kết hợp lệ.')
+      const master = await apiClient.get<InternalCaseDto>(`/cases/${masterId}`)
+      const sources = await Promise.all(secondaryIds.map(id => apiClient.get<InternalCaseDto>(`/cases/${id}`)))
+      const reportIds = sources.flatMap(response => response.data.reportIds || [])
+      if (!master.data.projectId || sources.some((response, i) => response.data.id !== secondaryIds[i] || response.data.projectId !== master.data.projectId || !response.data.version || !response.data.reportIds?.length) || !reportIds.length) throw new Error('Thiếu Report/version nguồn hoặc các Case khác dự án; chưa liên kết.')
+      return { body: { reportIds: [...new Set(reportIds)], sourceCaseVersions: Object.fromEntries(sources.map(source => [source.data.id, source.data.version])), reason: auditNotes.trim() }, version: normalizeETag(master.headers?.etag || master.data.version || undefined) }
     })
-
-    const updatedLinkedCodes = Array.from(new Set([...(master.linked_report_ids || []), ...secondaryCodes]))
-    inMemoryTriageCases[masterIndex] = {
-      ...master,
-      linked_report_ids: updatedLinkedCodes,
-      pm_notes: `${master.pm_notes ? master.pm_notes + '\n' : ''}[LIÊN KẾT BÁO TRÙNG PA04] Đã gộp hồ sơ từ: ${secondaryCodes.join(', ')}. Ghi chú: ${auditNotes}`
-    }
-
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-
-    return {
-      success: true,
-      master: JSON.parse(JSON.stringify(inMemoryTriageCases[masterIndex]))
-    }
+    if (receipt.data?.id !== masterId || !/^"[A-Za-z0-9+/]{11}="$/.test(normalizeETag(receipt.data.version)) || receipt.etag && receipt.etag !== normalizeETag(receipt.data.version)) throw new Error('Receipt liên kết sai Case; giữ identity để đối chiếu.')
+    const current = await this.getCaseById(masterId)
+    assertCaseReadActive(session)
+    if (!current || receipt.body.reportIds.some((id: string) => !current.report_ids?.includes(id))) throw new Error('Chưa GET xác nhận liên kết; thử lại để chỉ đọc kết quả.')
+    receipt.complete()
+    return { success: true, master: current }
   },
 
   /**
-   * Tách hồ sơ con khỏi hồ sơ Master khi phát hiện gộp nhầm (Unlink - BR-30)
+   * API-023: POST /api/v1/cases/{caseId}/report-splits
+   * Chỉ huy trưởng (PM) tách báo cáo đã gộp ra khỏi ca chính (Candidate3 Backend)
+   * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
    */
-  async unlinkReport(secondaryIdentifier: string): Promise<{ success: boolean }> {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    let masterCaseId: string | undefined
-
-    inMemoryTriageCases = inMemoryTriageCases.map((c) => {
-      if (c.id === secondaryIdentifier || c.code === secondaryIdentifier) {
-        masterCaseId = c.master_case_id
-        return {
-          ...c,
-          status: 'PENDING',
-          status_label: 'Chờ thẩm định',
-          master_case_id: undefined,
-          pm_notes: `[TÁCH HỒ SƠ BR-30] Đã tách khỏi hồ sơ gộp nhầm trước đó.`
-        }
-      }
-      return c
+  async splitReport(caseId: string, reportId: string, reason = 'Tách báo cáo không trùng lặp'): Promise<void> {
+    const session = getCaseSessionKey()
+    const receipt = await caseD2Command(caseId, 'report-splits', { reportId, reason: reason.trim() }, async () => {
+      const current = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      if (!current.data.reportIds?.includes(reportId)) throw new Error('Report không thuộc Case hiện tại; chưa gửi lệnh tách.')
+      if (current.data.reportIds.length < 2) throw new Error('Case phải có nhiều Report trước khi tách.')
+      if (!reason.trim() || reason.trim().length > 1000) throw new Error('Cần lý do tách từ 1 đến 1.000 ký tự.')
+      return { body: { reportIds: [reportId], reason: reason.trim() }, version: current.headers?.etag || normalizeETag(current.data.version || undefined) }
     })
+    if (!receipt.data?.id || receipt.data.id === caseId || !receipt.data.reportIds?.includes(reportId) || !/^"[A-Za-z0-9+/]{11}="$/.test(normalizeETag(receipt.data.version)) || receipt.etag && receipt.etag !== normalizeETag(receipt.data.version)) throw new Error('Receipt tách thiếu Case mới/Report; giữ identity để đối chiếu.')
+    const current = await this.getCaseById(caseId)
+    const created = await this.getCaseById(receipt.data.id)
+    assertCaseReadActive(session)
+    if (!current || !created || created.project_id !== current.project_id || current.report_ids?.includes(reportId) || !created.report_ids?.includes(reportId)) throw new Error('Chưa GET xác nhận Case nguồn/Case mới; thử lại để chỉ đọc kết quả.')
+    receipt.complete()
+  },
 
-    if (masterCaseId) {
-      const masterIdx = inMemoryTriageCases.findIndex((c) => c.id === masterCaseId)
-      if (masterIdx !== -1) {
-        const master = inMemoryTriageCases[masterIdx]
-        inMemoryTriageCases[masterIdx] = {
-          ...master,
-          linked_report_ids: (master.linked_report_ids || []).filter(
-            (code) => code !== secondaryIdentifier
-          )
-        }
-      }
-    }
-
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-
-    return {
-      success: true
-    }
+  async unlinkReport(reportIdentifier: string, masterCaseId?: string): Promise<{ success: boolean }> {
+    const reportId = reportIdentifier.replace(/^child-/, '')
+    if (!masterCaseId || !/^[0-9a-f-]{36}$/i.test(reportId)) throw new Error('Thiếu Case ID hoặc report ID gốc để tách; không dùng mã hiển thị thay reference.')
+    await this.splitReport(masterCaseId, reportId)
+    return { success: true }
   },
 
   /**
-   * Đặt lại dữ liệu mẫu ban đầu
+   * Đặt lại và làm mới dữ liệu từ CSDL Backend Candidate3 (Không nạp mock data)
    */
   async resetCases(): Promise<TriageCase[]> {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    inMemoryTriageCases = JSON.parse(JSON.stringify(mockTriageCases))
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-    return JSON.parse(JSON.stringify(inMemoryTriageCases))
+    try {
+      localStorage.removeItem(STORAGE_KEYS.TRIAGE_CASES)
+    } catch {}
+    return this.getCases()
   }
 }

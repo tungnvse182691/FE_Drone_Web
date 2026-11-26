@@ -12,7 +12,7 @@ export const LegalAuditStrip: React.FC = () => {
             Tiêu chuẩn pháp lý & Toàn vẹn chứng từ số
           </span>
           <p className="text-slate-500 leading-relaxed text-[11px] lg:text-xs">
-            Hồ sơ kỹ thuật xuất từ hệ thống RoadGuard tự động gắn mã băm SHA-256 Checksum cho từng tệp ảnh đối chứng và gói nén, đáp ứng đầy đủ tiêu chuẩn kiểm toán kỹ thuật công trình giao thông (TCVN 8819:2011 &amp; TCVN 8864).
+            Manifest ghi lại snapshot, nguồn và tệp của yêu cầu xuất. Kiểm tra tính đầy đủ và đối chiếu mã băm nội dung khi tải hồ sơ.
           </p>
         </div>
       </div>
@@ -22,8 +22,8 @@ export const LegalAuditStrip: React.FC = () => {
           check_circle
         </span>
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-900 text-xs">Mã băm SHA-256: Hợp lệ</span>
-          <span className="font-mono text-[10px] text-slate-500">Chuẩn đối soát bảo hành: v2.2</span>
+          <span className="font-semibold text-slate-900 text-xs">SHA-256: đối chiếu từng nội dung tải</span>
+          <span className="font-mono text-[10px] text-slate-500">Chưa kết luận tính đầy đủ từ trạng thái job</span>
         </div>
       </div>
     </div>

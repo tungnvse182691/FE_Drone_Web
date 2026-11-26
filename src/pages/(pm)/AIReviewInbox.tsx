@@ -1,7 +1,9 @@
+// @refresh reset
+// Custom hooks in .ts are not signature-instrumented; remount this boundary after edits.
+import { createPortal } from 'react-dom'
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { mockProjects } from '../../data/mockData'
 import { Icon } from '../../components/ui/Icon'
 
 import { ReviewHeader } from './ai-review/ReviewHeader'
@@ -10,6 +12,7 @@ import { ReviewCasesTable } from './ai-review/ReviewCasesTable'
 import { ReviewDetailModal } from './ai-review/ReviewDetailModal'
 import { ReviewModals } from './ai-review/ReviewModals'
 import { useAIReviewState } from './ai-review/useAIReviewState'
+import { CaseReportMediaProvider } from './ai-review/useCaseReportMedia'
 
 export type { TriageCase } from './ai-review/types'
 
@@ -19,6 +22,7 @@ export const AIReviewInbox: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const state = useAIReviewState()
+  const activeProjects = state.projects
   const {
     cases, viewSourceMode, handleSetViewSourceMode, expandedMasterIds, handleToggleExpandMaster,
     collapseMergedRows, setCollapseMergedRows, selectedReportIds, setSelectedReportIds,
@@ -30,13 +34,12 @@ export const AIReviewInbox: React.FC = () => {
     surveyReason, setSurveyReason, surveyAssignedCrew, setSurveyAssignedCrew, surveySlaHours, setSurveySlaHours,
     setSelectedCaseId, isDetailModalOpen, setIsDetailModalOpen, selectedCase, activeTab, setActiveTab,
     sourceFilter, setSourceFilter, lineTypeFilter, setLineTypeFilter, projectFilter, setProjectFilter, priorityFilter, setPriorityFilter,
-    searchQuery, setSearchQuery, toastMessage, setToastMessage, showToast, detailViewMode, setDetailViewMode,
-    modalMapType, setModalMapType, isGISModalOpen, setIsGISModalOpen, isMergeModalOpen, setIsMergeModalOpen,
-    isPhotoZoomModalOpen, setIsPhotoZoomModalOpen, modalMapContainerRef, drawerMapContainerRef,
+    searchQuery, setSearchQuery, toastMessage, setToastMessage, showToast,
+    isMergeModalOpen, setIsMergeModalOpen,
+    isPhotoZoomModalOpen, setIsPhotoZoomModalOpen,
     currentSeverity, setCurrentSeverity, currentUrgency, setCurrentUrgency, currentArea, setCurrentArea,
     currentDepth, setCurrentDepth, currentNotes, setCurrentNotes, filteredCases, pendingCount,
-    criticalCount, mergedCount, surveyCount, citizenCount, unassignedCitizenCount, droneAICount,
-    handleResetTriageData, handleSelectCase, handleToggleClusterItem, handleVerifyDefect,
+    criticalCount, mergedCount, surveyCount, citizenCount, unassignedCitizenCount, droneAICount, handleSelectCase, handleToggleClusterItem, handleVerifyDefect,
     handleOpenRequestSurveyModal, handleConfirmRequestSurvey, handleNavigateFastTrack,
     handleToggleSelectReport, handleSelectAllReports, handleOpenLinkReportsModal,
     handleConfirmLinkReports, handleUnlinkReport, handleOpenTriageProject, handleConfirmTriageProject,
@@ -46,16 +49,17 @@ export const AIReviewInbox: React.FC = () => {
   } = state
 
   return (
+    <CaseReportMediaProvider caseId={state.intake.selected?.id || ''} caseVersion={state.intake.selected?.version}>
     <div className="space-y-6">
       {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
+      {toastMessage && createPortal(
+        <div role="status" className="fixed bottom-6 right-6 z-[9999] max-w-[calc(100vw-3rem)] bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
           <Icon name="check_circle" size={18} className="text-emerald-400 shrink-0" />
-          <span className="text-xs font-medium">{toastMessage}</span>
+          <span className="text-xs font-medium break-words min-w-0">{toastMessage}</span>
           <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white cursor-pointer ml-2">
             <Icon name="close" size={16} />
           </button>
-        </div>
+        </div>, document.body
       )}
 
       {/* 1. Header & Quick Actions */}
@@ -74,6 +78,7 @@ export const AIReviewInbox: React.FC = () => {
       {/* 2. Quick Filter Tabs & Search Controls */}
       <ReviewFilterBar
         cases={cases}
+        projectsList={activeProjects}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         pendingCount={pendingCount}
@@ -92,8 +97,11 @@ export const AIReviewInbox: React.FC = () => {
         showToast={showToast}
       />
 
+      {state.isLoading && <p role="status" className="text-sm text-slate-500">Đang tải hồ sơ...</p>}
+      {state.loadError && <div role="alert" className="text-sm text-rose-700">{state.loadError} <button type="button" onClick={state.retryLoad} className="underline">Thử lại</button></div>}
+
       {/* 3. BẢNG DANH SÁCH HỒ SƠ */}
-      <div className="w-full">
+      {(!state.isLoading && !state.loadError || cases.length > 0) && <div className="w-full">
         <ReviewCasesTable
           viewSourceMode={viewSourceMode}
           cases={cases}
@@ -117,24 +125,25 @@ export const AIReviewInbox: React.FC = () => {
             handleSelectCase(c)
             setIsMergeModalOpen(true)
           }}
-          onResetTriageData={handleResetTriageData}
           onClearSelectedReports={() => setSelectedReportIds([])}
           onBulkVerify={handleBulkVerify}
           onBulkNeedSurvey={handleBulkNeedSurvey}
         />
-      </div>
+      </div>}
 
       {/* 4. MODAL HỒ SƠ THẨM ĐỊNH */}
       <ReviewDetailModal
+        onDefectRecorded={showToast}
         isOpen={isDetailModalOpen}
+        evidenceRequest={state.evidenceRequest}
+        loading={state.intake.detailLoading}
+        error={state.intake.detailError}
+        onRetry={state.intake.retryDetail}
         onClose={() => setIsDetailModalOpen(false)}
         selectedCase={selectedCase}
         isSupervisor={isSupervisor}
         setSelectedCaseId={setSelectedCaseId}
         cases={cases}
-        detailViewMode={detailViewMode}
-        setDetailViewMode={setDetailViewMode}
-        drawerMapContainerRef={drawerMapContainerRef}
         currentSeverity={currentSeverity}
         setCurrentSeverity={setCurrentSeverity}
         currentUrgency={currentUrgency}
@@ -154,7 +163,6 @@ export const AIReviewInbox: React.FC = () => {
         onNavigateFastTrack={handleNavigateFastTrack}
         onUnlinkReport={handleUnlinkReport}
         onOpenTriageProject={handleOpenTriageProject}
-        onOpenGISModal={() => setIsGISModalOpen(true)}
         onOpenPhotoZoomModal={() => setIsPhotoZoomModalOpen(true)}
         onOpenMergeModal={(c) => {
           handleSelectCase(c)
@@ -169,15 +177,10 @@ export const AIReviewInbox: React.FC = () => {
         targetTriageCase={targetTriageCase}
         cases={cases}
         selectedReportIds={selectedReportIds}
-        mockProjects={mockProjects}
+        projects={activeProjects}
         isMergeModalOpen={isMergeModalOpen}
         setIsMergeModalOpen={setIsMergeModalOpen}
         onExecuteMerge={handleExecuteMerge}
-        isGISModalOpen={isGISModalOpen}
-        setIsGISModalOpen={setIsGISModalOpen}
-        modalMapType={modalMapType}
-        setModalMapType={setModalMapType}
-        modalMapContainerRef={modalMapContainerRef}
         isPhotoZoomModalOpen={isPhotoZoomModalOpen}
         setIsPhotoZoomModalOpen={setIsPhotoZoomModalOpen}
         isLinkReportsModalOpen={isLinkReportsModalOpen}
@@ -192,11 +195,13 @@ export const AIReviewInbox: React.FC = () => {
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
         onConfirmTriageProject={handleConfirmTriageProject}
+        triagePending={state.intake}
         isNoDefectModalOpen={isNoDefectModalOpen}
         setIsNoDefectModalOpen={setIsNoDefectModalOpen}
         noDefectReason={noDefectReason}
         setNoDefectReason={setNoDefectReason}
         onConfirmNoDefect={handleConfirmNoDefect}
+        onReviewNoDefect={state.handleReviewNoDefect}
         isPublishModalOpen={isPublishModalOpen}
         setIsPublishModalOpen={setIsPublishModalOpen}
         publishPublicNote={publishPublicNote}
@@ -215,6 +220,7 @@ export const AIReviewInbox: React.FC = () => {
         onConfirmRequestSurvey={handleConfirmRequestSurvey}
       />
     </div>
+    </CaseReportMediaProvider>
   )
 }
 

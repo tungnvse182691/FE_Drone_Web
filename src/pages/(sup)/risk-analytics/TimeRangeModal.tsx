@@ -33,11 +33,12 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
         </div>
 
         <div className="space-y-3 text-xs">
+          <p className="text-slate-500">Chưa có nguồn chỉ số KPI theo khung tùy chỉnh. Bộ lọc kỳ trên màn hình chỉ lọc thời gian tạo hồ sơ xuất.</p>
           <div className="space-y-1">
             <label className="font-medium text-slate-700">Từ ngày</label>
             <input
               type="date"
-              defaultValue="2026-07-01"
+              disabled title="Chưa có nguồn KPI theo kỳ"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none font-mono"
             />
           </div>
@@ -46,14 +47,14 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
             <label className="font-medium text-slate-700">Đến ngày</label>
             <input
               type="date"
-              defaultValue="2026-09-30"
+              disabled title="Chưa có nguồn KPI theo kỳ"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none font-mono"
             />
           </div>
 
           <div className="space-y-1">
             <label className="font-medium text-slate-700">Chu kỳ phân tích định kỳ</label>
-            <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none font-medium cursor-pointer">
+            <select disabled className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none font-medium cursor-pointer">
               <option>Theo Quý (3 tháng)</option>
               <option>Theo Tháng (30 ngày)</option>
               <option>Lũy kế toàn bộ chu kỳ bảo hành (12 tháng)</option>

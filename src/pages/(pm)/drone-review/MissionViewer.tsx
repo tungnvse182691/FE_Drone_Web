@@ -59,7 +59,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
           <Icon name="photo_camera" size={18} className="text-[#C9A227]" />
           <div>
             <h3 className="font-bold text-xs text-[#1A1D20] leading-tight">
-              Khung hình trích xuất {selectedItem ? `#FR-${selectedItem.id === 'DET-01' ? '1420' : selectedItem.id === 'DET-02' ? '1480' : selectedItem.id === 'DET-03' ? '1540' : selectedItem.id === 'DET-04' ? '1590' : selectedItem.id === 'DET-05' ? '1680' : selectedItem.id === 'DET-06' ? '1720' : selectedItem.id === 'DET-07' ? '1810' : '1880'}` : `#FR-${currentFrame}`}
+              Khung hình trích xuất {selectedItem ? `#FR-${selectedItem.code || currentFrame}` : `#FR-${currentFrame}`}
             </h3>
             <span className="font-mono text-[11px] text-slate-500">
               {selectedItem ? `${selectedItem.stationing} (${selectedItem.lane})` : 'Toàn tuyến'}
@@ -151,6 +151,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
 
       {/* Video Timeline Scrubber & Player Controls */}
       <MissionScrubber
+          onSelectGisMap={() => setViewerMode('GIS_MAP')}
         currentFrame={currentFrame}
         setCurrentFrame={setCurrentFrame}
         totalFrames={totalFrames}

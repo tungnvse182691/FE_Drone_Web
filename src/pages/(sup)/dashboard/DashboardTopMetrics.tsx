@@ -1,93 +1,46 @@
 import React from 'react'
-import {
-  BarChart3,
-  AlarmClock,
-  TriangleAlert,
-  Route as RouteIcon,
-  ShieldCheck,
-  Clock,
-  MapPin,
-  TrendingUp,
-  AlertTriangle,
-  Info
-} from 'lucide-react'
+import { BarChart3, AlarmClock, TriangleAlert, Route as RouteIcon, TrendingUp, Bug } from 'lucide-react'
 
 export interface DashboardTopMetricsProps {
-  totalActiveProjects: number
-  expiringProjectsCount: number
-  pendingBaselineKm: number
+  /** Số dự án ACTIVE (GET /projects); null khi chưa tải được. */
+  totalActiveProjects: number | null
+  /** Tổng chiều dài các tuyến hiện hành (mét) từ GET /projects/overviews; null nếu BE chưa đủ dữ liệu. */
+  totalLengthMeters: number | null
+  lengthIncomplete: boolean
+  /** Số dự án có hồ sơ bảo hành hết hạn trong 30 ngày tới (từ warranties[].endDate); null khi chưa tải được. */
+  expiringSoon: number | null
+  /** Tổng số khiếm khuyết mở (OpenDefectMetric defect.open.v2); null nếu có dự án INCOMPLETE. */
+  openDefects: number | null
+  isLoading: boolean
 }
 
-export const DashboardTopMetrics: React.FC<DashboardTopMetricsProps> = ({
-  totalActiveProjects,
-  expiringProjectsCount,
-  pendingBaselineKm
-}) => {
+const Card: React.FC<{ title: string; icon: React.ReactNode; tone: string; value: string; note: string; noteIcon: React.ReactNode }> = ({ title, icon, tone, value, note, noteIcon }) => (
+  <div className="bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs border border-slate-200">
+    <div className="flex items-start justify-between">
+      <span className="text-xs font-bold text-slate-700">{title}</span>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tone}`}>{icon}</div>
+    </div>
+    <div className="mt-4">
+      <div className="font-sansation text-3xl font-bold text-slate-900 tracking-tight">{value}</div>
+      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-600 font-medium">{noteIcon}<span>{note}</span></div>
+    </div>
+  </div>
+)
+
+export const DashboardTopMetrics: React.FC<DashboardTopMetricsProps> = ({ totalActiveProjects, totalLengthMeters, lengthIncomplete, expiringSoon, openDefects, isLoading }) => {
+  const dash = isLoading ? '…' : '—'
   return (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Card 1: Dự án đang bảo hành */}
-              <div className="bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs border border-slate-200">
-                <div className="flex items-start justify-between">
-                  <span className="text-xs font-bold text-slate-700">Dự án đang bảo hành</span>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-blue-600 bg-[#EAF4FB]">
-                    <BarChart3 className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="font-sansation text-3xl font-bold text-slate-900 tracking-tight">5</div>
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-600 font-medium">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                      <TrendingUp className="w-3 h-3 mr-0.5" />
-                      293.8 km
-                    </span>
-                    <span>tổng chiều dài</span>
-                    <span className="text-slate-300">•</span>
-                    <span>156 đoạn</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: Dự án sắp hết hạn */}
-              <div className="bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs border border-slate-200">
-                <div className="flex items-start justify-between">
-                  <span className="text-xs font-bold text-slate-700">Dự án sắp hết hạn</span>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-rose-600 bg-red-50">
-                    <AlarmClock className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="font-sansation text-3xl font-bold text-slate-900 tracking-tight">1</div>
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px]">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold text-rose-700 bg-red-50 border border-rose-200">
-                      <TriangleAlert className="w-3 h-3" />
-                      <span>Cảnh báo: &lt; 30 ngày (Cao tốc Diễn Châu: còn 25 ngày)</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Đoạn đường chưa baseline (MET-09) */}
-              <div className="bg-white rounded-2xl p-5 flex flex-col justify-between shadow-2xs border border-slate-200">
-                <div className="flex items-start justify-between">
-                  <span className="text-xs font-bold text-slate-700 leading-snug">
-                    Đoạn đường chưa baseline
-                  </span>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[#92700C] bg-[#FEF9C3]">
-                    <RouteIcon className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-sansation text-3xl font-bold text-slate-900 tracking-tight">12</span>
-                    <span className="text-xs font-semibold text-slate-600">đoạn</span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-2 text-[11px] text-slate-600">
-                    <Info className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Thuộc 4 dự án (Cần bay khảo sát gốc)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <Card title="Dự án đang bảo hành" icon={<BarChart3 className="w-4 h-4" />} tone="text-blue-600 bg-[#EAF4FB]"
+        value={totalActiveProjects != null ? String(totalActiveProjects) : dash}
+        note={totalLengthMeters != null ? `Tổng chiều dài tuyến hiện hành: ${(totalLengthMeters / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 3 })} km${lengthIncomplete ? ' (chưa đủ dự án)' : ''}` : 'Chưa có chiều dài tuyến từ máy chủ'}
+        noteIcon={<RouteIcon className="w-3 h-3 text-slate-400" />} />
+      <Card title="Dự án sắp hết hạn (≤30 ngày)" icon={<AlarmClock className="w-4 h-4" />} tone="text-rose-600 bg-red-50"
+        value={expiringSoon != null ? String(expiringSoon) : dash}
+        note="Theo ngày kết thúc hồ sơ bảo hành do máy chủ trả" noteIcon={<TriangleAlert className="w-3 h-3 text-slate-400" />} />
+      <Card title="Khiếm khuyết đang mở" icon={<Bug className="w-4 h-4" />} tone="text-[#92700C] bg-[#FEF9C3]"
+        value={openDefects != null ? String(openDefects) : dash}
+        note="Trạng thái OPEN/VERIFIED (defect.open.v2)" noteIcon={<TrendingUp className="w-3 h-3 text-slate-400" />} />
+    </div>
   )
 }

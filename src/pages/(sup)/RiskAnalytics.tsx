@@ -1,3 +1,5 @@
+import {ReportingMetricsPanel,useProjectReporting} from './risk-analytics/ReportingMetricsPanel'
+// @refresh reset
 import React from 'react'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useRiskAnalyticsState } from './risk-analytics/useRiskAnalyticsState'
@@ -7,17 +9,20 @@ import { ExportRecordRow } from './risk-analytics/ExportRecordRow'
 import { LegalAuditStrip } from './risk-analytics/LegalAuditStrip'
 import { RiskDeteriorationSection } from './risk-analytics/RiskDeteriorationSection'
 import { RiskModals } from './risk-analytics/RiskModals'
+import { DefectStatisticsPanel } from './risk-analytics/DefectStatisticsPanel'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
 
 export const RiskAnalytics: React.FC = () => {
+  const isPM = useAuthStore((s) => s.user?.role) === RoleCode.PROJECT_MANAGER
   const {
+    bindReportingGeometry,apiError,detailError,exportBusy,held,journalError,
     projects,
     projectsConfig,
     selectedProject,
     setSelectedProject,
     selectedTimeRange,
     setSelectedTimeRange,
-    selectedTrack,
-    setSelectedTrack,
     statusFilter,
     setStatusFilter,
     searchQuery,
@@ -62,6 +67,8 @@ export const RiskAnalytics: React.FC = () => {
     handleRefresh,
     resetFilters
   } = useRiskAnalyticsState()
+  const reporting=useProjectReporting(selectedProject)
+  React.useEffect(()=>{const g=reporting.geometry.value,f=reporting.filters;bindReportingGeometry(g?{...g,routes:g.routes.filter(r=>!f.routeVersionId||r.id===f.routeVersionId),segments:g.segments.filter(s=>(!f.routeVersionId||s.routeVersionId===f.routeVersionId)&&(!f.segmentSetId||s.segmentSetId===f.segmentSetId)&&(!f.segmentIds?.length||f.segmentIds.includes(s.id)))}:null)},[reporting.geometry.value,reporting.filters,bindReportingGeometry])
 
   return (
     <div className="space-y-6 pb-16 text-[#1E293B]">
@@ -74,6 +81,7 @@ export const RiskAnalytics: React.FC = () => {
       )}
 
       {/* Header & Filter Controls */}
+      {(apiError||journalError)&&<p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{apiError||journalError}</p>}
       <RiskHeader
         currentProject={currentProject}
         isRefreshing={isRefreshing}
@@ -84,8 +92,6 @@ export const RiskAnalytics: React.FC = () => {
         setSelectedProject={setSelectedProject}
         selectedTimeRange={selectedTimeRange}
         setSelectedTimeRange={setSelectedTimeRange}
-        selectedTrack={selectedTrack}
-        setSelectedTrack={setSelectedTrack}
         sortField={sortField}
         setSortField={setSortField}
         sortAsc={sortAsc}
@@ -102,199 +108,8 @@ export const RiskAnalytics: React.FC = () => {
 
       {/* KPI METRICS (BỘ 4 THẺ CÓ ĐIỂM NHẤN THEO SPEC B2) */}
       <div className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-          {/* KPI 1: Hiệu quả xử lý hư hỏng (#1E40AF Blue) */}
-          <div className="relative rounded-[20px] border-[1.5px] border-[#1E40AF]/25 bg-gradient-to-b from-[#1E40AF]/[0.04] via-white/50 to-white p-5 shadow-2xs overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(30,64,175,0.15)] flex flex-col justify-between">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1E40AF] to-blue-200" />
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#1E40AF] ring-4 ring-[#1E40AF]/20" />
-                  <span className="font-bold text-xs tracking-wider text-slate-700 uppercase">
-                    Hiệu quả xử lý hư hỏng
-                  </span>
-                </div>
-                <span className="px-[10px] py-[3px] rounded-full bg-blue-50 text-[#1E40AF] text-[11px] font-bold border border-blue-200">
-                  {currentProject.met01_change}
-                </span>
-              </div>
-              <div className="pt-1">
-                <span className="font-sansation text-3xl font-bold tracking-tight text-slate-900">
-                  {currentProject.met01_ratio}%
-                </span>
-                <p className="text-xs text-slate-600 mt-1 font-medium">
-                  {currentProject.met01_completed_text}
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-4 space-y-1.5 border-t border-slate-100 mt-3">
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-[#1E40AF] h-full rounded-full transition-all duration-700"
-                  style={{ width: `${currentProject.met01_ratio}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[11px] text-slate-500 font-medium">
-                <span>Tiến độ cam kết SLA</span>
-                <span className="font-semibold text-slate-800">Mục tiêu: ≥ {currentProject.met01_target}%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 2: Thời gian thẩm duyệt trung bình (#B45309 Amber) */}
-          <div className="relative rounded-[20px] border-[1.5px] border-[#B45309]/25 bg-gradient-to-b from-[#B45309]/[0.04] via-white/50 to-white p-5 shadow-2xs overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(180,83,9,0.15)] flex flex-col justify-between">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#B45309] to-amber-200" />
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#B45309] ring-4 ring-[#B45309]/20" />
-                  <span className="font-bold text-xs tracking-wider text-slate-700 uppercase">
-                    Thời gian thẩm duyệt
-                  </span>
-                </div>
-                <span className="px-[10px] py-[3px] rounded-full bg-amber-50 text-[#B45309] text-[11px] font-bold border border-amber-200">
-                  {currentProject.met04_change}
-                </span>
-              </div>
-              <div className="pt-1">
-                <div className="flex items-baseline gap-1">
-                  <span className="font-sansation text-3xl font-bold tracking-tight text-slate-900">
-                    {currentProject.met04_mtta}
-                  </span>
-                  <span className="text-sm font-semibold text-slate-600">ngày</span>
-                </div>
-                <p className="text-xs text-slate-600 mt-1 font-medium">
-                  Mục tiêu trung bình: ≤ 4.0 ngày / đợt
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 mt-3">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex justify-between items-center text-xs">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Giám sát duyệt</span>
-                  <span className="font-mono font-bold text-slate-800">{currentProject.met04_sup_days} ngày</span>
-                </div>
-                <span className="text-slate-300 font-light">|</span>
-                <div className="flex flex-col text-right">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">PM XỬ LÝ NHANH</span>
-                  <span className="font-mono font-bold text-[#8C6D1F]">{currentProject.met04_pm_days} ngày</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 3: Độ bền kết cấu & Kiểm soát lún nứt (#047857 Emerald / #B91C1C Red) */}
-          <div
-            className={`relative rounded-[20px] border-[1.5px] p-5 shadow-2xs overflow-hidden transition-all duration-200 hover:-translate-y-1 flex flex-col justify-between ${
-              currentProject.met08_recurrence >= 5.0
-                ? 'border-[#B91C1C]/25 bg-gradient-to-b from-[#B91C1C]/[0.04] via-white/50 to-white hover:shadow-[0_12px_28px_rgba(185,28,28,0.15)]'
-                : 'border-[#047857]/25 bg-gradient-to-b from-[#047857]/[0.04] via-white/50 to-white hover:shadow-[0_12px_28px_rgba(4,120,87,0.15)]'
-            }`}
-          >
-            <div
-              className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
-                currentProject.met08_recurrence >= 5.0
-                  ? 'from-[#B91C1C] to-rose-200'
-                  : 'from-[#047857] to-emerald-200'
-              }`}
-            />
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ring-4 ${
-                      currentProject.met08_recurrence >= 5.0
-                        ? 'bg-[#B91C1C] ring-[#B91C1C]/20'
-                        : 'bg-[#047857] ring-[#047857]/20'
-                    }`}
-                  />
-                  <span className="font-bold text-xs tracking-wider text-slate-700 uppercase">
-                    Kiểm soát lún nứt
-                  </span>
-                </div>
-                <span
-                  className={`px-[10px] py-[3px] rounded-full text-[11px] font-bold border ${
-                    currentProject.met08_recurrence >= 5.0
-                      ? 'bg-rose-50 text-[#B91C1C] border-rose-200'
-                      : 'bg-emerald-50 text-[#047857] border-emerald-200'
-                  }`}
-                >
-                  {currentProject.met08_recurrence >= 5.0 ? 'CẢNH BÁO' : 'ĐẠT CHUẨN'}
-                </span>
-              </div>
-              <div className="pt-1">
-                <div className="flex items-baseline gap-1">
-                  <span
-                    className={`font-sansation text-3xl font-bold tracking-tight ${
-                      currentProject.met08_recurrence >= 5.0 ? 'text-[#B91C1C]' : 'text-slate-900'
-                    }`}
-                  >
-                    {currentProject.met08_recurrence}%
-                  </span>
-                  <span className="text-xs text-slate-500 font-medium">tái phát</span>
-                </div>
-                <p className="text-xs text-slate-600 mt-1 font-medium">
-                  {currentProject.met08_note}
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 mt-3">
-              <div
-                className={`inline-flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded-xl text-xs font-semibold border ${
-                  currentProject.met08_recurrence >= 5.0
-                    ? 'bg-rose-50 border-rose-200 text-[#B91C1C]'
-                    : 'bg-emerald-50 border-emerald-200 text-[#047857]'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[15px]">
-                  {currentProject.met08_recurrence >= 5.0 ? 'report' : 'check_circle'}
-                </span>
-                <span>
-                  {currentProject.met08_recurrence >= 5.0
-                    ? 'Vượt ngưỡng kỹ thuật (≥ 5.0%)'
-                    : 'Đạt chuẩn kỹ thuật (< 5.0%)'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 4: Toàn vẹn hồ sơ số (#047857 Emerald) */}
-          <div className="relative rounded-[20px] border-[1.5px] border-[#047857]/25 bg-gradient-to-b from-[#047857]/[0.04] via-white/50 to-white p-5 shadow-2xs overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_12px_28px_rgba(4,120,87,0.15)] flex flex-col justify-between">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#047857] to-emerald-200" />
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#047857] ring-4 ring-[#047857]/20" />
-                  <span className="font-bold text-xs tracking-wider text-slate-700 uppercase">
-                    Toàn vẹn hồ sơ số
-                  </span>
-                </div>
-                <span className="px-[10px] py-[3px] rounded-full bg-emerald-50 text-[#047857] text-[11px] font-bold border border-emerald-200 font-mono">
-                  SHA-256
-                </span>
-              </div>
-              <div className="pt-1">
-                <span className="font-sansation text-3xl font-bold tracking-tight text-slate-900">
-                  {currentProject.met11_integrity}%
-                </span>
-                <p className="text-xs text-slate-600 mt-1 font-medium">
-                  {currentProject.met11_items_text}
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 mt-3">
-              <div className="inline-flex items-center justify-center gap-1.5 w-full bg-slate-50 border border-slate-200 py-1.5 px-3 rounded-xl text-xs font-semibold text-slate-700">
-                <span className="material-symbols-outlined text-[15px] text-[#047857]">shield_with_heart</span>
-                <span className="truncate">TCVN 8819:2011 • Đạt chuẩn</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <ReportingMetricsPanel project={selectedProject} data={reporting} />
+        {isPM && selectedProject && selectedProject !== 'ALL' && <DefectStatisticsPanel projectId={selectedProject} />}
         {/* ASYNC EXPORT WORKER QUEUE CARD */}
         <AsyncExportWorkerCard
           currentProject={currentProject}
@@ -310,6 +125,10 @@ export const RiskAnalytics: React.FC = () => {
 
       {/* RPT-06: GIS Risk Map & Deterioration Progression by Chainage Km */}
       <RiskDeteriorationSection
+        loading={reporting.geometry.loading}
+        error={reporting.geometry.error}
+        warnings={reporting.geometry.value?.warnings}
+        hasMapGeometry={!!reporting.geometry.value?.routes.some(r=>(!reporting.filters.routeVersionId||r.id===reporting.filters.routeVersionId)&&r.coordinates.length>1)}
         segments={rpt06Segments}
         activeSegmentId={activeSegmentId}
         activeSegment={activeSegment}
@@ -441,7 +260,7 @@ export const RiskAnalytics: React.FC = () => {
                       <span className="material-symbols-outlined text-[36px] text-slate-300 mx-auto block">
                         folder_open
                       </span>
-                      <p className="text-sm font-semibold text-slate-700">Không tìm thấy hồ sơ phù hợp với bộ lọc hiện tại</p>
+                      <p className="text-sm font-semibold text-slate-700">{apiError?'Không tải được danh mục export':selectedProject==='ALL'?'Chọn dự án để đọc hồ sơ':'Không tìm thấy hồ sơ phù hợp với bộ lọc hiện tại'}</p>
                       <p className="text-xs text-slate-400">Hãy thử đổi dự án, điều chỉnh kỳ báo cáo hoặc nhấn "Đặt lại".</p>
                     </td>
                   </tr>
@@ -491,6 +310,7 @@ export const RiskAnalytics: React.FC = () => {
 
       {/* All Modal Windows */}
       <RiskModals
+        busy={exportBusy} pending={!!held} received={!!held?.received} journalKey={held?.key} error={apiError||journalError} detailError={detailError}
         isExportModalOpen={isExportModalOpen}
         setIsExportModalOpen={setIsExportModalOpen}
         exportForm={exportForm}

@@ -1,3 +1,5 @@
+import { branchLineRange, validateBranchCoordinates } from './alignmentBranchHelpers'
+import { pavementNumber, buildMainlinePavementGeoJSON } from './alignmentPavementHelpers'
 import { AssignedProjectOption, SegmentItem } from './types'
 import {
   calculateCoordsLengthKm,
@@ -20,151 +22,9 @@ export const SEGMENT_COLORS = [
   '#2563EB'  // Blue
 ]
 
-// Tọa độ tim tuyến chuẩn QL1A Km 1020 - Km 1045 (Chuẩn hình học không có lỗi tự cắt hay khoảng hở)
-export const ROUTE_COORDINATES: [number, number][] = [
-  [108.0825, 16.2731], // P0 - Km 1020+000 (Huế)
-  [108.1054, 16.2589], // P1 - Km 1022+500
-  [108.1287, 16.2415], // P2 - Km 1025+000 (Điểm giáp Seg 1-2)
-  [108.1492, 16.2238], // P3 - Km 1027+500
-  [108.1695, 16.2085], // P4 - Km 1030+000
-  [108.1884, 16.1843], // P5 - Km 1035+000
-  [108.2152, 16.1521], // P6 - Km 1040+000
-  [108.2418, 16.1215]  // P7 - Km 1045+000 (Đà Nẵng)
-]
-
-// Các mốc lý trình ứng với các điểm trên tuyến (25.0 km)
-export const ROUTE_KM_POINTS = [1020, 1022.5, 1025, 1027.5, 1030, 1035, 1040, 1045]
-
-// Danh mục dự án mà PM Đỗ Quốc Hoàng được phân công quản lý
-export const PM_ASSIGNED_PROJECTS: AssignedProjectOption[] = [
-  {
-    id: 'prj-ql1a-02',
-    code: 'PRJ-QL1A-02',
-    name: 'QL1A - Đoạn Km 1020 đến Km 1045',
-    stationOriginText: 'Km 1020+000 (1.020.000m)',
-    stationOriginKm: 1020.0,
-    endKm: 1045.0,
-    crs: 'EPSG:32648 (UTM Zone 48N)',
-    lengthKm: 25.0,
-    defaultCoords: ROUTE_COORDINATES,
-    defaultKmPoints: ROUTE_KM_POINTS,
-    defaultManualText: `108.0825, 16.2731
-108.1054, 16.2589
-108.1287, 16.2415
-108.1492, 16.2238
-108.1695, 16.2085
-108.1884, 16.1843
-108.2152, 16.1521
-108.2418, 16.1215`,
-    defaultSegments: [
-      {
-        id: 'seg-1',
-        code: 'Phân đoạn #01',
-        startKm: 1020.0,
-        endKm: 1025.0,
-        lengthKm: 5.0,
-        roadWidthM: 8.0,
-        status: 'VALID',
-        statusText: 'HỢP LỆ',
-        laneCount: 4,
-        surfaceMaterial: 'Mặt BTN C12.5',
-        color: SEGMENT_COLORS[0]
-      },
-      {
-        id: 'seg-2',
-        code: 'Phân đoạn #02',
-        startKm: 1025.0,
-        endKm: 1030.0,
-        lengthKm: 5.0,
-        roadWidthM: 10.0,
-        status: 'VALID',
-        statusText: 'HỢP LỆ',
-        laneCount: 4,
-        surfaceMaterial: 'Mặt BTN C12.5',
-        color: SEGMENT_COLORS[1]
-      },
-      {
-        id: 'seg-3',
-        code: 'Phân đoạn #03',
-        startKm: 1030.0,
-        endKm: 1045.0,
-        lengthKm: 15.0,
-        roadWidthM: 8.0,
-        status: 'VALID',
-        statusText: 'HỢP LỆ',
-        laneCount: 4,
-        surfaceMaterial: 'Mặt BTN C12.5',
-        color: SEGMENT_COLORS[2]
-      }
-    ]
-  },
-  {
-    id: 'prj-lstl-05',
-    code: 'PRJ-LSTL-05',
-    name: 'Cao tốc La Sơn - Túy Loan',
-    stationOriginText: 'Km 0+000 (0m)',
-    stationOriginKm: 0.0,
-    endKm: 66.0,
-    crs: 'EPSG:32648 (UTM Zone 48N)',
-    lengthKm: 66.0,
-    defaultCoords: [
-      [107.6521, 16.2912],
-      [107.7214, 16.2105],
-      [107.8102, 16.1423],
-      [107.9056, 16.0821],
-      [108.0124, 16.0354],
-      [108.1189, 15.9876]
-    ],
-    defaultKmPoints: [0, 15, 30, 45, 55, 66],
-    defaultManualText: `107.6521, 16.2912
-107.7214, 16.2105
-107.8102, 16.1423
-107.9056, 16.0821
-108.0124, 16.0354
-108.1189, 15.9876`,
-    defaultSegments: [
-      {
-        id: 'seg-lstl-1',
-        code: 'Đoạn La Sơn #01',
-        startKm: 0.0,
-        endKm: 20.0,
-        lengthKm: 20.0,
-        roadWidthM: 12.0,
-        status: 'VALID',
-        statusText: 'HỢP LỆ',
-        laneCount: 4,
-        surfaceMaterial: 'Mặt BTN C19.0',
-        color: SEGMENT_COLORS[0]
-      },
-      {
-        id: 'seg-lstl-2',
-        code: 'Đoạn Đèo Khe Tre #02',
-        startKm: 20.0,
-        endKm: 45.0,
-        lengthKm: 25.0,
-        roadWidthM: 12.0,
-        status: 'VALID',
-        statusText: 'HỢP LỆ',
-        laneCount: 4,
-        surfaceMaterial: 'Mặt BTN C19.0',
-        color: SEGMENT_COLORS[1]
-      },
-      {
-        id: 'seg-lstl-3',
-        code: 'Đoạn Túy Loan #03',
-        startKm: 45.0,
-        endKm: 66.0,
-        lengthKm: 21.0,
-        roadWidthM: 14.0,
-        status: 'VALID',
-        statusText: 'HỢP LỆ',
-        laneCount: 4,
-        surfaceMaterial: 'Mặt BTN C19.0',
-        color: SEGMENT_COLORS[2]
-      }
-    ]
-  }
-]
+// Không còn tim tuyến/dự án mẫu trong FE: tim tuyến và dự án lấy từ API BE
+export const ROUTE_COORDINATES: [number, number][] = []
+export const ROUTE_KM_POINTS: number[] = []
 
 // ==========================================
 // 1. Helpers GeoJSON Alignment & Ribbon
@@ -325,7 +185,7 @@ export function generateRoadRibbonPolygon(
       voutY = (denseCoords[1][1] - pt[1]) * metersPerDegLat
     } else if (j === K - 1) {
       vinX = (pt[0] - denseCoords[j - 1][0]) * metersPerDegLng
-      vinY = (pt[1] - denseCoords[j - 1][0]) * metersPerDegLat
+      vinY = (pt[1] - denseCoords[j - 1][1]) * metersPerDegLat
       if (nextPoint) {
         voutX = (nextPoint[0] - pt[0]) * metersPerDegLng
         voutY = (nextPoint[1] - pt[1]) * metersPerDegLat
@@ -335,7 +195,7 @@ export function generateRoadRibbonPolygon(
       }
     } else {
       vinX = (pt[0] - denseCoords[j - 1][0]) * metersPerDegLng
-      vinY = (pt[1] - denseCoords[j - 1][0]) * metersPerDegLat
+      vinY = (pt[1] - denseCoords[j - 1][1]) * metersPerDegLat
       voutX = (denseCoords[j + 1][0] - pt[0]) * metersPerDegLng
       voutY = (denseCoords[j + 1][1] - pt[1]) * metersPerDegLat
     }
@@ -417,8 +277,13 @@ export function buildSegmentsGeoJSON(
 ): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
 
+  if (!segList.length && coords.length >= 2) features.push({
+    type: 'Feature', properties: { isLine: true, isLabelPoint: false },
+    geometry: { type: 'LineString', coordinates: coords }
+  })
+
   segList.forEach((seg, idx) => {
-    const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
+    const lineCoords = seg.serverCoordinates || getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
 
     // 1. Tim tuyến phân đoạn
     features.push({
@@ -429,7 +294,7 @@ export function buildSegmentsGeoJSON(
         startKm: seg.startKm,
         endKm: seg.endKm,
         lengthKm: seg.lengthKm,
-        roadWidthM: seg.roadWidthM || 8.0,
+        roadWidthM: seg.serverCoordinates ? (Number.isFinite(seg.roadWidthM) ? seg.roadWidthM : null) : seg.roadWidthM || 8.0,
         color: seg.color || SEGMENT_COLORS[idx % SEGMENT_COLORS.length] || '#0284C7',
         isSelected: activeSegId === 'ALL' ? true : seg.id === activeSegId,
         isLine: true,
@@ -497,7 +362,8 @@ export function buildSegmentsSurfaceGeoJSON(
   const features: GeoJSON.Feature[] = []
 
   segList.forEach((seg, idx) => {
-    const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
+    if (seg.serverCoordinates && (!Number.isFinite(seg.roadWidthM) || seg.roadWidthM <= 0)) return
+    const lineCoords = seg.serverCoordinates || getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
     if (!lineCoords || lineCoords.length < 2) return
 
     const prevSeg = segList.find((s) => s.id !== seg.id && Math.abs(s.endKm - seg.startKm) < 0.005)
@@ -609,326 +475,59 @@ export function buildPlanningCorridorGeoJSON(
 // ==========================================
 
 export interface SlabsCustomConfig {
-  slabLenM?: number
-  thicknessCm?: number
-  contractionSpacingM?: number
-  expansionSpacingM?: number
-  expansionGapMm?: number
+  stripWidthMeters?: number | string
+  slabLenM?: number | string
+  thicknessCm?: number | string
+  contractionSpacingM?: number | string
+  expansionSpacingM?: number | string
+  expansionGapMm?: number | string
 }
 
-export function getBranchLineCoords(
-  startKm: number,
-  endKm: number,
-  bCoords: [number, number][],
-  totalLenKm: number
-): [number, number][] {
-  if (!bCoords || bCoords.length < 2) return []
-  if (startKm <= 0 && endKm >= totalLenKm) return bCoords
-
-  const latMid = bCoords[0][1]
-  const mLat = 111320
-  const mLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-
-  const cumDists: number[] = [0]
-  for (let i = 0; i < bCoords.length - 1; i++) {
-    const dx = (bCoords[i + 1][0] - bCoords[i][0]) * mLng
-    const dy = (bCoords[i + 1][1] - bCoords[i][1]) * mLat
-    cumDists.push(cumDists[i] + (Math.sqrt(dx * dx + dy * dy) || 0.001))
-  }
-  const fullM = cumDists[cumDists.length - 1]
-  if (fullM <= 0.5) return bCoords
-
-  const startM = Math.max(0, (startKm / Math.max(0.001, totalLenKm)) * fullM)
-  const endM = Math.min(fullM, (endKm / Math.max(0.001, totalLenKm)) * fullM)
-
-  const interp = (targetM: number): [number, number] => {
-    if (targetM <= 0) return bCoords[0]
-    if (targetM >= fullM) return bCoords[bCoords.length - 1]
-    for (let i = 0; i < cumDists.length - 1; i++) {
-      if (targetM >= cumDists[i] && targetM <= cumDists[i + 1]) {
-        const span = cumDists[i + 1] - cumDists[i]
-        if (span <= 1e-6) return bCoords[i]
-        const t = (targetM - cumDists[i]) / span
-        return [
-          Number((bCoords[i][0] + t * (bCoords[i + 1][0] - bCoords[i][0])).toFixed(7)),
-          Number((bCoords[i][1] + t * (bCoords[i + 1][1] - bCoords[i][1])).toFixed(7))
-        ]
-      }
-    }
-    return bCoords[bCoords.length - 1]
-  }
-
-  const result: [number, number][] = [interp(startM)]
-  for (let i = 0; i < cumDists.length; i++) {
-    if (cumDists[i] > startM && cumDists[i] < endM) {
-      result.push(bCoords[i])
-    }
-  }
-  result.push(interp(endM))
-  return result
+export function getBranchLineCoords(startKm: number, endKm: number, coords: [number, number][], _totalLenKm: number): [number, number][] {
+  return branchLineRange(coords, startKm, endKm)
 }
 
 export function buildSlabsAndJointsGeoJSON(
   segList: SegmentItem[],
   coords: [number, number][],
   kmPts: number[],
-  customCfg?: SlabsCustomConfig,
+  inputCfg?: SlabsCustomConfig,
   branchList: any[] = []
 ): {
   slabsGeoJSON: GeoJSON.FeatureCollection
+  slabLabelsGeoJSON: GeoJSON.FeatureCollection
   jointsGeoJSON: GeoJSON.FeatureCollection
+  jointLabelsGeoJSON: GeoJSON.FeatureCollection
   edgesGeoJSON: GeoJSON.FeatureCollection
+  missing: string[]
+  issues: import('./alignmentPavementHelpers').PavementInputIssue[]
 } {
-  const slabLengthM = 5.0
-  const slabThicknessCm = 26
-  const contractionSpacingM = 5.0
-  const expansionSpacingM = 50.0
-  const expansionGapMm = 20
-
-  const activeSlabLen = Math.max(1.0, customCfg?.slabLenM ?? slabLengthM)
-  const activeThick = Math.max(10, customCfg?.thicknessCm ?? slabThicknessCm)
-  const activeContraction = Math.max(1.0, customCfg?.contractionSpacingM ?? contractionSpacingM)
-  const activeExpansion = Math.max(5.0, customCfg?.expansionSpacingM ?? expansionSpacingM)
-  const activeGap = Math.max(5, customCfg?.expansionGapMm ?? expansionGapMm)
-
-  const slabFeatures: GeoJSON.Feature[] = []
-  const jointFeatures: GeoJSON.Feature[] = []
-  const edgeFeatures: GeoJSON.Feature[] = []
-
+  // Mainline shares the engineering plan with the sidebar; legacy branches remain below.
+  const customCfg = inputCfg && Object.fromEntries(Object.entries(inputCfg).map(([key, value]) =>
+    [key, value === undefined ? undefined : pavementNumber(value)])) as { [K in keyof SlabsCustomConfig]?: number } | undefined
+  const mainline = buildMainlinePavementGeoJSON(segList, coords, kmPts, inputCfg)
+  const slabFeatures = mainline.slabsGeoJSON.features
+  const jointFeatures = mainline.jointsGeoJSON.features
+  const edgeFeatures = mainline.edgesGeoJSON.features
   let globalSlabIndex = 1
-
-  // 1. SINH TẤM & KHE CHO TRỤC CHÍNH
-  segList.forEach((seg, segIdx) => {
-    const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
-    if (!lineCoords || lineCoords.length < 2) return
-
-    const latMid = lineCoords[0][1]
-    const metersPerDegLat = 111320
-    const metersPerDegLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-
-    const cumDists: number[] = [0]
-    for (let i = 0; i < lineCoords.length - 1; i++) {
-      const dx = (lineCoords[i + 1][0] - lineCoords[i][0]) * metersPerDegLng
-      const dy = (lineCoords[i + 1][1] - lineCoords[i][1]) * metersPerDegLat
-      cumDists.push(cumDists[i] + (Math.sqrt(dx * dx + dy * dy) || 0.001))
-    }
-    const totalLenM = cumDists[cumDists.length - 1]
-    if (totalLenM <= 0.5) return
-
-    const interpolateCoord = (targetD: number): [number, number] => {
-      if (targetD <= 0) return lineCoords[0]
-      if (targetD >= totalLenM) return lineCoords[lineCoords.length - 1]
-      for (let i = 0; i < cumDists.length - 1; i++) {
-        if (targetD >= cumDists[i] && targetD <= cumDists[i + 1]) {
-          const span = cumDists[i + 1] - cumDists[i]
-          if (span <= 1e-6) return lineCoords[i]
-          const t = (targetD - cumDists[i]) / span
-          const lng = lineCoords[i][0] + t * (lineCoords[i + 1][0] - lineCoords[i][0])
-          const lat = lineCoords[i][1] + t * (lineCoords[i + 1][1] - lineCoords[i][1])
-          return [Number(lng.toFixed(7)), Number(lat.toFixed(7))]
-        }
-      }
-      return lineCoords[lineCoords.length - 1]
-    }
-
-    const prevSeg = segList.find((s) => s.id !== seg.id && Math.abs(s.endKm - seg.startKm) < 0.005)
-    const nextSeg = segList.find((s) => s.id !== seg.id && Math.abs(s.startKm - seg.endKm) < 0.005)
-    const currentW = Math.max(2.0, Math.min(60.0, seg.roadWidthM || 8.0))
-    const prevW = prevSeg ? (prevSeg.roadWidthM || 8.0) : currentW
-    const nextW = nextSeg ? (nextSeg.roadWidthM || 8.0) : currentW
-
-    const maxTaperDist = Math.min(30.0, totalLenM * 0.35)
-    const needTaperStart = currentW > prevW
-    const needTaperEnd = currentW > nextW
-
-    const getWidthAtDist = (s: number): number => {
-      if (needTaperStart && s < maxTaperDist) {
-        const t = Math.max(0, Math.min(1, s / maxTaperDist))
-        return prevW + (currentW - prevW) * (t * t * (3 - 2 * t))
-      }
-      if (needTaperEnd && s > totalLenM - maxTaperDist) {
-        const t = Math.max(0, Math.min(1, (totalLenM - s) / maxTaperDist))
-        return nextW + (currentW - nextW) * (t * t * (3 - 2 * t))
-      }
-      return currentW
-    }
-
-    const getNormalAtDist = (s: number): [number, number] => {
-      const kmAtS = seg.startKm + (s / Math.max(0.001, totalLenM)) * (seg.endKm - seg.startKm)
-      const norm = getAlignmentNormalAtKm(kmAtS, coords, kmPts, metersPerDegLng, metersPerDegLat)
-      return [norm.normX, norm.normY]
-    }
-
-    const slabLenM = activeSlabLen
-    const maxSteps = Math.min(400, Math.floor(totalLenM / slabLenM))
-    const expRatio = Math.max(1, Math.round(activeExpansion / slabLenM))
-
-    for (let i = 0; i < maxSteps; i++) {
-      const d0 = i * slabLenM
-      const d1 = Math.min(totalLenM, (i + 1) * slabLenM)
-
-      const c0 = interpolateCoord(d0)
-      const c1 = interpolateCoord(d1)
-
-      const w0 = getWidthAtDist(d0)
-      const w1 = getWidthAtDist(d1)
-
-      const norm0 = getNormalAtDist(d0)
-      const norm1 = getNormalAtDist(d1)
-
-      const h0 = w0 / 2.0
-      const h1 = w1 / 2.0
-
-      const left0: [number, number] = [
-        Number((c0[0] + (norm0[0] * h0) / metersPerDegLng).toFixed(7)),
-        Number((c0[1] + (norm0[1] * h0) / metersPerDegLat).toFixed(7))
-      ]
-      const left1: [number, number] = [
-        Number((c1[0] + (norm1[0] * h1) / metersPerDegLng).toFixed(7)),
-        Number((c1[1] + (norm1[1] * h1) / metersPerDegLat).toFixed(7))
-      ]
-      const right0: [number, number] = [
-        Number((c0[0] - (norm0[0] * h0) / metersPerDegLng).toFixed(7)),
-        Number((c0[1] - (norm0[1] * h0) / metersPerDegLat).toFixed(7))
-      ]
-      const right1: [number, number] = [
-        Number((c1[0] - (norm1[0] * h1) / metersPerDegLng).toFixed(7)),
-        Number((c1[1] - (norm1[1] * h1) / metersPerDegLat).toFixed(7))
-      ]
-
-      const slabNum = String(globalSlabIndex).padStart(3, '0')
-      const kmPos = seg.startKm + d0 / 1000
-      const floorKm = Math.floor(kmPos)
-      const meters = Math.round((kmPos - floorKm) * 1000)
-      const kmStation = `${floorKm}+${String(meters).padStart(3, '0')}`
-
-      slabFeatures.push({
-        type: 'Feature',
-        properties: {
-          id: `SLAB-${slabNum}L`,
-          code: `SLAB-${slabNum}L`,
-          segmentId: seg.id,
-          lane: 'Làn Trái',
-          roadWidthM: Number(w0.toFixed(1)),
-          segmentCode: seg.code,
-          station: `Km ${kmStation}`,
-          lengthM: Number(slabLenM.toFixed(1)),
-          widthM: Number(h0.toFixed(1)),
-          thicknessCm: activeThick,
-          edgeOffset: `Mép Trái: -${h0.toFixed(1)}m`,
-          status: i % 11 === 0 ? 'CRACKED' : 'GOOD'
-        },
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[left0, c0, c1, left1, left0]]
-        }
-      })
-
-      slabFeatures.push({
-        type: 'Feature',
-        properties: {
-          id: `SLAB-${slabNum}R`,
-          code: `SLAB-${slabNum}R`,
-          segmentId: seg.id,
-          lane: 'Làn Phải',
-          roadWidthM: Number(w0.toFixed(1)),
-          segmentCode: seg.code,
-          station: `Km ${kmStation}`,
-          lengthM: Number(slabLenM.toFixed(1)),
-          widthM: Number(h0.toFixed(1)),
-          thicknessCm: activeThick,
-          edgeOffset: `Mép Phải: +${h0.toFixed(1)}m`,
-          status: i % 13 === 0 ? 'CRACKED' : 'GOOD'
-        },
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[c0, right0, right1, c1, c0]]
-        }
-      })
-
-      globalSlabIndex++
-
-      const isExpansion = i % expRatio === 0
-      jointFeatures.push({
-        type: 'Feature',
-        properties: {
-          id: isExpansion ? `EJ-${segIdx + 1}-${Math.floor(i / expRatio) + 1}` : `CJ-${segIdx + 1}-${i + 1}`,
-          segmentId: seg.id,
-          segmentCode: seg.code,
-          isExpansion,
-          name: isExpansion ? `Khe giãn nở nhiệt ${activeGap}mm (Expansion Joint)` : `Khe co giãn ${activeContraction}m (Contraction Joint)`,
-          label: isExpansion ? `⚡ Khe giãn ${activeGap}mm` : `Khe co ${activeContraction}m`,
-          station: `Km ${kmStation}`,
-          roadWidthM: Number(w0.toFixed(1)),
-          description: isExpansion
-            ? `Khe giãn nở nhiệt ${activeGap}mm, cự ly ${activeExpansion}m, đệm bitum cao su đàn hồi & thanh truyền lực trượt bọc ống nhựa PVC`
-            : `Khe co ngót ${activeContraction}m, cắt sâu 5cm, chèn mastic & thanh truyền lực dowel bar phi 25`
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates: [left0, right0]
-        }
-      })
-
-      if (isExpansion || i === 0 || i === 4) {
-        edgeFeatures.push({
-          type: 'Feature',
-          properties: {
-            isDimensionLine: true,
-            label: `W = ${w0.toFixed(1)}m`
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [left0, right0]
-          }
-        })
-
-        edgeFeatures.push({
-          type: 'Feature',
-          properties: {
-            side: 'LEFT',
-            label: `Mép Trái: -${h0.toFixed(1)}m`,
-            widthM: Number(h0.toFixed(1))
-          },
-          geometry: {
-            type: 'Point',
-            coordinates: left0
-          }
-        })
-
-        edgeFeatures.push({
-          type: 'Feature',
-          properties: {
-            side: 'RIGHT',
-            label: `Mép Phải: +${h0.toFixed(1)}m`,
-            widthM: Number(h0.toFixed(1))
-          },
-          geometry: {
-            type: 'Point',
-            coordinates: right0
-          }
-        })
-
-        if (isExpansion || i === 0) {
-          edgeFeatures.push({
-            type: 'Feature',
-            properties: {
-              side: 'CENTER',
-              label: `Bề rộng W = ${w0.toFixed(1)}m (Trái -${h0.toFixed(1)}m | Phải +${h0.toFixed(1)}m)`,
-              widthM: Number(w0.toFixed(1))
-            },
-            geometry: {
-              type: 'Point',
-              coordinates: c0
-            }
-          })
-        }
-      }
-    }
-  })
 
   // 2. SINH ĐẦY ĐỦ TẤM BÊ TÔNG, KHE CO, KHE GIÃN & THÔNG SỐ 2 MÉP CHO CÁC TUYẾN NHÁNH PHỤ
   branchList.forEach((br) => {
+    if (br.previewOnly) return // Branch pavement is outside the local branch editing flow.
+    // Legacy branch-only configuration; mainline never uses these defaults.
+    const slabLengthM = 5.0
+    const slabThicknessCm = 26
+    const contractionSpacingM = 5.0
+    const expansionSpacingM = 50.0
+    const expansionGapMm = 20
+
+    const activeSlabLen = Math.max(1.0, customCfg?.slabLenM ?? slabLengthM)
+    const activeThick = Math.max(10, customCfg?.thicknessCm ?? slabThicknessCm)
+    const activeContraction = Math.max(1.0, customCfg?.contractionSpacingM ?? contractionSpacingM)
+    const activeExpansion = Math.max(5.0, customCfg?.expansionSpacingM ?? expansionSpacingM)
+    const activeGap = Math.max(5, customCfg?.expansionGapMm ?? expansionGapMm)
+
+
     let branchCoords: [number, number][] = br.coords
     const branchStation = br.branchStationKm || kmPts[0] || 1020
 
@@ -1091,7 +690,7 @@ export function buildSlabsAndJointsGeoJSON(
             widthM: Number(h0.toFixed(1)),
             thicknessCm: activeThick,
             edgeOffset: `Mép Trái: -${h0.toFixed(1)}m`,
-            status: i % 11 === 0 ? 'CRACKED' : 'GOOD'
+            status: 'GOOD'
           },
           geometry: {
             type: 'Polygon',
@@ -1115,7 +714,7 @@ export function buildSlabsAndJointsGeoJSON(
             widthM: Number(h0.toFixed(1)),
             thicknessCm: activeThick,
             edgeOffset: `Mép Phải: +${h0.toFixed(1)}m`,
-            status: i % 13 === 0 ? 'CRACKED' : 'GOOD'
+            status: 'GOOD'
           },
           geometry: {
             type: 'Polygon',
@@ -1209,236 +808,53 @@ export function buildSlabsAndJointsGeoJSON(
 
   return {
     slabsGeoJSON: { type: 'FeatureCollection', features: slabFeatures },
+    slabLabelsGeoJSON: mainline.slabLabelsGeoJSON,
     jointsGeoJSON: { type: 'FeatureCollection', features: jointFeatures },
+    jointLabelsGeoJSON: mainline.jointLabelsGeoJSON,
+    missing: mainline.missing,
+    issues: mainline.issues,
     edgesGeoJSON: { type: 'FeatureCollection', features: edgeFeatures }
   }
 }
 
 // Xây dựng GeoJSON dải bề mặt đường Polygon cho các Tuyến nhánh (Branch Surfaces)
-export function buildBranchesSurfaceGeoJSON(
-  branchList: any[],
-  coords: [number, number][],
-  kmPts: number[],
-  selectedBranchId: string | null = null
-): GeoJSON.FeatureCollection {
+export function buildBranchesSurfaceGeoJSON(branchList: any[], _coords: [number, number][], _kmPts: number[], selectedBranchId: string | null = null): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
-
-  branchList.forEach((br) => {
-    let branchCoords: [number, number][] = br.coords
-    const branchStation = br.branchStationKm || kmPts[0] || 1020
-
-    if (!branchCoords || branchCoords.length < 2) {
-      if (coords.length >= 2) {
-        const startPt = interpolateCoordAtKm(branchStation, coords, kmPts)
-        const stepAheadKm = Math.min(branchStation + 0.1, kmPts[kmPts.length - 1] || branchStation + 0.1)
-        const nextPt = interpolateCoordAtKm(stepAheadKm, coords, kmPts)
-
-        const dx = nextPt[0] - startPt[0]
-        const dy = nextPt[1] - startPt[1]
-        const len = Math.sqrt(dx * dx + dy * dy) || 0.001
-        const ux = dx / len
-        const uy = dy / len
-
-        const sign = br.direction === 'LEFT' ? -1 : 1
-        const perpX = uy * sign
-        const perpY = -ux * sign
-
-        const angleUx = ux * 0.707 + perpX * 0.707
-        const angleUy = uy * 0.707 + perpY * 0.707
-
-        const targetLenKm = br.lengthKm || 1.85
-        const latMid = startPt[1]
-        const metersPerDegLat = 111320
-        const metersPerDegLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-
-        const totalMeters = targetLenKm * 1000
-        const deltaX = (angleUx * totalMeters) / metersPerDegLng
-        const deltaY = (angleUy * totalMeters) / metersPerDegLat
-
-        const midPt: [number, number] = [
-          Number((startPt[0] + deltaX * 0.45).toFixed(7)),
-          Number((startPt[1] + deltaY * 0.45).toFixed(7))
-        ]
-        const endPt: [number, number] = [
-          Number((startPt[0] + deltaX).toFixed(7)),
-          Number((startPt[1] + deltaY).toFixed(7))
-        ]
-        branchCoords = [startPt, midPt, endPt]
-      } else {
-        branchCoords = []
+  for (const branch of branchList) {
+    let coords: [number, number][]
+    try { coords = validateBranchCoordinates(branch.coords) } catch { continue }
+    const segments = branch.segments?.length ? branch.segments : [{ id: branch.id, code: branch.code, startKm: 0, endKm: branch.lengthKm, lengthKm: branch.lengthKm, roadWidthM: branch.roadWidthM, laneCount: branch.laneCount, surfaceMaterial: branch.surfaceMaterial }]
+    for (const segment of segments) {
+      if (!Number.isFinite(segment.roadWidthM) || segment.roadWidthM <= 0) continue
+      const line = branchLineRange(coords, segment.startKm, segment.endKm)
+      if (line.length < 2) continue
+      const left: [number, number][] = [], right: [number, number][] = []
+      for (let i = 0; i < line.length; i++) {
+        const point = line[i], before = line[Math.max(0, i - 1)], after = line[Math.min(line.length - 1, i + 1)], mLng = 111320 * Math.cos(point[1] * Math.PI / 180)
+        const dx = (after[0] - before[0]) * mLng, dy = (after[1] - before[1]) * 111320, norm = Math.hypot(dx, dy), half = segment.roadWidthM / 2
+        if (!(norm > 0)) continue
+        left.push([point[0] - dy / norm * half / mLng, point[1] + dx / norm * half / 111320]); right.push([point[0] + dy / norm * half / mLng, point[1] - dx / norm * half / 111320])
       }
+      if (left.length < 2) continue
+      features.push({ type: 'Feature', properties: { ...segment, branchId: branch.id, branchCode: branch.code, color: segment.color || branch.color, isSelected: selectedBranchId === branch.id || selectedBranchId === segment.id, preview: true }, geometry: { type: 'Polygon', coordinates: [[...left, ...right.reverse(), left[0]]] } })
     }
-
-    if (branchCoords && branchCoords.length >= 2) {
-      branchCoords = smoothRoadPolyline(branchCoords)
-      const actualBranchKm = calculateCoordsLengthKm(branchCoords) || br.lengthKm || 1.0
-      const maxSegKm = Math.max(actualBranchKm, ...(br.segments || []).map((s: any) => s.endKm || 0))
-      const totalBranchKm = Math.max(0.01, maxSegKm)
-
-      const brSegments: any[] = (br.segments && br.segments.length > 0)
-        ? br.segments
-        : [{
-            id: br.id,
-            code: br.code,
-            name: br.name,
-            startKm: 0.0,
-            endKm: totalBranchKm,
-            lengthKm: totalBranchKm,
-            roadWidthM: br.roadWidthM || 8.0,
-            color: br.color || '#D97706'
-          }]
-
-      brSegments.forEach((seg: any) => {
-        const segCoords = getBranchLineCoords(seg.startKm, seg.endKm, branchCoords, totalBranchKm)
-        if (segCoords && segCoords.length >= 2) {
-          const roadW = seg.roadWidthM || br.roadWidthM || 8.0
-          let ring = generateRoadRibbonPolygon(segCoords, roadW)
-          if (!ring || ring.length < 4) {
-            const halfW = roadW / 2.0
-            const left: [number, number][] = []
-            const right: [number, number][] = []
-            const latMid = segCoords[0][1]
-            const mLat = 111320
-            const mLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-            for (let k = 0; k < segCoords.length; k++) {
-              const pt = segCoords[k]
-              const nextK = segCoords[Math.min(segCoords.length - 1, k + 1)]
-              const prevK = segCoords[Math.max(0, k - 1)]
-              const dLng = (nextK[0] - prevK[0]) * mLng
-              const dLat = (nextK[1] - prevK[1]) * mLat
-              const dLen = Math.sqrt(dLng * dLng + dLat * dLat) || 1
-              const nX = -dLat / dLen
-              const nY = dLng / dLen
-              left.push([
-                Number((pt[0] + (nX * halfW) / mLng).toFixed(7)),
-                Number((pt[1] + (nY * halfW) / mLat).toFixed(7))
-              ])
-              right.push([
-                Number((pt[0] - (nX * halfW) / mLng).toFixed(7)),
-                Number((pt[1] - (nY * halfW) / mLat).toFixed(7))
-              ])
-            }
-            ring = [...left, ...right.reverse(), left[0]]
-          }
-
-          if (ring && ring.length >= 4) {
-            features.push({
-              type: 'Feature',
-              properties: {
-                id: seg.id,
-                code: seg.code,
-                name: `${br.name} - ${seg.code}`,
-                branchId: br.id,
-                branchCode: br.code,
-                startKm: seg.startKm,
-                endKm: seg.endKm,
-                lengthKm: seg.lengthKm,
-                color: seg.color || br.color || '#D97706',
-                isSelected: selectedBranchId === seg.id || selectedBranchId === br.id,
-                roadWidthM: roadW,
-                isBranch: true
-              },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [ring]
-              }
-            })
-          }
-        }
-      })
-    }
-  })
-
-  return {
-    type: 'FeatureCollection',
-    features
   }
+  return { type: 'FeatureCollection', features }
 }
 
-// Xây dựng GeoJSON cho tim tuyến và nhãn các Tuyến nhánh (Branch Alignments)
-export function buildBranchesGeoJSON(
-  branchList: any[],
-  coords: [number, number][],
-  kmPts: number[]
-): GeoJSON.FeatureCollection {
+export function buildBranchesGeoJSON(branchList: any[], _coords: [number, number][], _kmPts: number[]): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
-
-  branchList.forEach((br) => {
-    let branchCoords: [number, number][] = br.coords
-    const branchStation = br.branchStationKm || kmPts[0] || 1020
-
-    if (!branchCoords || branchCoords.length < 2) {
-      if (coords.length >= 2) {
-        const startPt = interpolateCoordAtKm(branchStation, coords, kmPts)
-        const stepAheadKm = Math.min(branchStation + 0.1, kmPts[kmPts.length - 1] || branchStation + 0.1)
-        const nextPt = interpolateCoordAtKm(stepAheadKm, coords, kmPts)
-
-        const dx = nextPt[0] - startPt[0]
-        const dy = nextPt[1] - startPt[1]
-        const len = Math.sqrt(dx * dx + dy * dy) || 0.001
-        const ux = dx / len
-        const uy = dy / len
-
-        const sign = br.direction === 'LEFT' ? -1 : 1
-        const perpX = uy * sign
-        const perpY = -ux * sign
-
-        const angleUx = ux * 0.707 + perpX * 0.707
-        const angleUy = uy * 0.707 + perpY * 0.707
-
-        const targetLenKm = br.lengthKm || 1.85
-        const latMid = startPt[1]
-        const metersPerDegLat = 111320
-        const metersPerDegLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-
-        const totalMeters = targetLenKm * 1000
-        const deltaX = (angleUx * totalMeters) / metersPerDegLng
-        const deltaY = (angleUy * totalMeters) / metersPerDegLat
-
-        const midPt: [number, number] = [
-          Number((startPt[0] + deltaX * 0.45).toFixed(7)),
-          Number((startPt[1] + deltaY * 0.45).toFixed(7))
-        ]
-        const endPt: [number, number] = [
-          Number((startPt[0] + deltaX).toFixed(7)),
-          Number((startPt[1] + deltaY).toFixed(7))
-        ]
-        branchCoords = [startPt, midPt, endPt]
-      } else {
-        branchCoords = []
-      }
+  for (const branch of branchList) {
+    let coords: [number, number][]
+    try { coords = validateBranchCoordinates(branch.coords) } catch { continue }
+    const segments = branch.segments?.length ? branch.segments : [{ id: branch.id, code: branch.code, startKm: 0, endKm: branch.lengthKm, lengthKm: branch.lengthKm, roadWidthM: branch.roadWidthM, laneCount: branch.laneCount, surfaceMaterial: branch.surfaceMaterial }]
+    for (const segment of segments) {
+      const line = branchLineRange(coords, segment.startKm, segment.endKm)
+      if (line.length < 2) continue
+      features.push({ type: 'Feature', properties: { ...segment, branchId: branch.id, branchCode: branch.code, name: branch.name, color: segment.color || branch.color, stationText: branch.branchStationText, directionText: branch.directionText, isBranch: true, isLine: true, preview: true }, geometry: { type: 'LineString', coordinates: line } })
     }
-
-    if (branchCoords && branchCoords.length >= 2) {
-      branchCoords = smoothRoadPolyline(branchCoords)
-      features.push({
-        type: 'Feature',
-        properties: {
-          id: br.id,
-          branchId: br.id,
-          branchCode: br.code,
-          code: br.code,
-          name: br.name,
-          color: br.color || '#D97706',
-          roadWidthM: br.roadWidthM || 8.0,
-          lengthKm: br.lengthKm,
-          stationText: br.branchStationText,
-          directionText: br.directionText,
-          isBranch: true,
-          isLine: true
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates: branchCoords
-        }
-      })
-    }
-  })
-
-  return {
-    type: 'FeatureCollection',
-    features
   }
+  return { type: 'FeatureCollection', features }
 }
 
 export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOption {
@@ -1446,21 +862,25 @@ export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOpti
   const lengthKm = p.length_km || 0.0
   const endKm = p.end_km || parseFloat((startKm + lengthKm).toFixed(3))
 
-  const stationText = p.stationing_text ? p.stationing_text.split('➔')[0].trim() : `Km ${startKm}+000`
+  const stationText = p.stationing_text && p.stationing_text !== 'Chưa thiết lập tim tuyến'
+    ? p.stationing_text.split('➔')[0].trim()
+    : 'Chưa thiết lập tim tuyến'
 
   return {
     id: p.id,
     code: p.code,
     name: p.name,
-    stationOriginText: `${stationText} (${Math.round(startKm * 1000)}m)`,
+    region: p.region || p.location_detail || '',
+    location_detail: p.location_detail || p.region || '',
+    stationOriginText: stationText,
     stationOriginKm: startKm,
     endKm: endKm,
-    crs: 'EPSG:32648 (UTM Zone 48N)',
-    lengthKm: 0.0, // Dự án mới chưa có tọa độ thực tế, chiều dài ban đầu là 0
-    defaultCoords: [], // Dự án mới CHƯA có tọa độ tim tuyến (không sinh tọa độ giả)
-    defaultKmPoints: [], // Chưa có mốc lý trình
-    defaultSegments: [], // Chưa có phân đoạn (PM tự chia bằng nút "Áp dụng chia đoạn tự động" hoặc nạp tệp)
-    defaultBranches: [], // Chưa có nhánh rẽ mặc định
+    crs: p.engineering_utm_srid ? `EPSG:${p.engineering_utm_srid}` : 'Chưa có CRS kỹ thuật từ máy chủ',
+    lengthKm,
+    defaultCoords: [],
+    defaultKmPoints: [],
+    defaultSegments: [],
+    defaultBranches: [],
     defaultManualText: ''
   }
 }
@@ -1469,21 +889,9 @@ export function getAvailableAssignedProjects(): AssignedProjectOption[] {
   const storedProjects = projectService.getProjects()
   const list: AssignedProjectOption[] = []
 
-  // 1. Duyệt qua tất cả dự án trong projectService
+  // Chỉ lấy 100% các dự án thực tế từ CSDL Backend API (Không fallback mock)
   for (const p of storedProjects) {
-    const existing = PM_ASSIGNED_PROJECTS.find((op) => op.id === p.id || op.code === p.code)
-    if (existing) {
-      list.push({ ...existing, id: p.id, code: p.code, name: p.name })
-    } else {
-      list.push(buildDynamicProjectAlignment(p))
-    }
-  }
-
-  // 2. Thêm bất kỳ preset nào trong PM_ASSIGNED_PROJECTS chưa có trong list
-  for (const op of PM_ASSIGNED_PROJECTS) {
-    if (!list.some((item) => item.id === op.id)) {
-      list.push(op)
-    }
+    list.push(buildDynamicProjectAlignment(p))
   }
 
   return list

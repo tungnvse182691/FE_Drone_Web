@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { authService } from '../../api/services/authService'
 import { ForcePasswordForm } from './force-change-password/ForcePasswordForm'
@@ -10,15 +9,15 @@ import './auth-light-aurora.css'
 export const ForceChangePassword: React.FC = () => {
   const toast = useToastStore()
   const navigate = useNavigate()
-  const { setUserAndToken } = useAuthStore()
 
   // State cho Form Đổi mật khẩu bắt buộc
-  const [tempPassword, setTempPassword] = useState('123456')
+  const [tempPassword, setTempPassword] = useState('')
   const [showTempPassword, setShowTempPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isForceSuccess, setIsForceSuccess] = useState(false)
 
   // Validation quy tắc mật khẩu
@@ -35,22 +34,24 @@ export const ForceChangePassword: React.FC = () => {
 
   const handleForcePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!allRulesPassed || !isConfirmMatched) return
+    if (!allRulesPassed || !isConfirmMatched || isSubmitting || isForceSuccess) return
+    setIsSubmitting(true)
 
     try {
       const res = await authService.changePassword({ tempPassword, newPassword })
+      if (res.requiresLogin || !res.user) { navigate('/login', { replace: true }); return }
+      const updatedUser = res.user
       setIsForceSuccess(true)
-      setTimeout(() => {
-        const updatedUser = res.user
-        setUserAndToken(updatedUser)
-        if (updatedUser.role === RoleCode.SUPERVISOR) {
-          navigate('/sup/dashboard')
-        } else {
-          navigate('/pm/dashboard')
-        }
-      }, 700)
-    } catch {
-      toast.error('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+      navigate(updatedUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard')
+    } catch (err: any) {
+      const detailMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        err?.message ||
+        'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.'
+      toast.error(detailMsg)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -140,6 +141,7 @@ export const ForceChangePassword: React.FC = () => {
                 isConfirmMatched={isConfirmMatched}
                 isConfirmMismatched={isConfirmMismatched}
                 isForceSuccess={isForceSuccess}
+                isSubmitting={isSubmitting}
                 onSubmit={handleForcePasswordSubmit}
               />
             </div>

@@ -43,7 +43,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
   onNavigateHome,
   onNavigateProposals,
   onOpenBatchApprove,
-  onExportPdf: _onExportPdf,
+  onExportPdf,
   onOpenDispatch
 }) => {
   return (
@@ -119,12 +119,12 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
               <span className="inline-flex items-center gap-1">
                 <Icon name="navigation" size={14} className="text-brand-gold" />
-                <span>{routeDisplay || 'QL1A'} • {chainageDisplay || 'Km 1024 - Km 1045'}</span>
+                <span>{routeDisplay || '—'} • {chainageDisplay || '—'}</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1">
                 <Icon name="person" size={14} className="text-slate-400" />
-                <span>Lập bởi: {createdByName || 'PM Đỗ Quốc Hoàng'} • {createdAt || 'Hôm nay'}</span>
+                <span>Lập bởi: {createdByName || '—'} • {createdAt || '—'}</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1 text-brand-gold font-medium">
@@ -136,6 +136,17 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
 
           {/* Quick Action Buttons */}
           <div className="flex items-center flex-wrap gap-2 shrink-0">
+            {/* BE: /projects/{p}/exports chỉ PM (Supervisor 403) */}
+            {!isSupervisor && (
+              <button
+                onClick={onExportPdf}
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 transition-colors rounded-lg font-medium text-xs shadow-2xs cursor-pointer"
+              >
+                <Icon name="picture_as_pdf" size={16} className="text-rose-600" />
+                <span>Xuất hồ sơ gói (PDF)</span>
+              </button>
+            )}
             {isSupervisor && (
               <button
                 onClick={onOpenBatchApprove}

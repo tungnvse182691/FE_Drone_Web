@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { STORAGE_KEYS, removeFromStorage } from './api/services/storageHelper'
+import { useQueryClient } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { ToastContainer } from './components/ui/ToastContainer'
@@ -27,6 +29,7 @@ import { DefectDetailVerify } from './pages/(pm)/DefectDetailVerify'
 import { AssignCrew } from './pages/(pm)/AssignCrew'
 import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
+import { OfflineCoordination } from './pages/(pm)/OfflineCoordination'
 import { FastTrackDispatch } from './pages/(pm)/FastTrackDispatch'
 import { RepairProposals } from './pages/(pm)/RepairProposals'
 import { NotificationsHandoffHub } from './pages/(pm)/NotificationsHandoffHub'
@@ -34,7 +37,6 @@ import { NotificationsHandoffHub } from './pages/(pm)/NotificationsHandoffHub'
 // Supervisor Pages
 import { SupLayout } from './pages/(sup)/SupLayout'
 import { SupDashboard } from './pages/(sup)/SupDashboard'
-import { BatchRejection } from './pages/(sup)/BatchRejection'
 import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
 import { AcceptanceList } from './pages/(sup)/AcceptanceList'
@@ -47,6 +49,17 @@ import { ProfilePage } from './pages/(pm)/ProfilePage'
 
 export const App: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore()
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    const unsubscribe = useAuthStore.subscribe((state, previous) => {
+      if (state.authEpoch !== previous.authEpoch) {
+        queryClient.clear()
+        Object.values(STORAGE_KEYS).forEach(removeFromStorage)
+      }
+    })
+    void useAuthStore.getState().checkSession()
+    return unsubscribe
+  }, [queryClient])
 
   return (
     <BrowserRouter>
@@ -57,6 +70,8 @@ export const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/accept-invitation" element={<AcceptInvitation />} />
           <Route path="/invite/:token" element={<AcceptInvitation />} />
+          <Route path="/auth/setup-password" element={<AcceptInvitation />} />
+          <Route path="/setup-password" element={<AcceptInvitation />} />
         </Route>
 
         {/* Force password change route */}
@@ -87,7 +102,9 @@ export const App: React.FC = () => {
             <Route path="repair-batches/:id/submit" element={<Navigate to="/pm/proposals" replace />} />
             <Route path="repair-batches/assign" element={<AssignCrew />} />
             <Route path="field-tasks" element={<FieldTasks />} />
-            <Route path="conflict-center" element={<FieldTasks />} />
+            <Route path="offline" element={<OfflineCoordination />} />
+            <Route path="conflicts" element={<Navigate to="/pm/offline" replace />} />
+            <Route path="conflict-center" element={<Navigate to="/pm/offline" replace />} />
             <Route path="fast-track" element={<FastTrackDispatch />} />
             <Route path="dispatch" element={<FastTrackDispatch />} />
             <Route path="proposals" element={<RepairProposals />} />
@@ -133,10 +150,14 @@ export const App: React.FC = () => {
             <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
             <Route path="drone-mission" element={<DroneMissionAIReview />} />
             <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
+            <Route path="cases" element={<AIReviewInbox />} />
+            <Route path="ai-inbox" element={<AIReviewInbox />} />
             <Route path="fast-track" element={<FastTrackDispatch />} />
             <Route path="dispatch" element={<FastTrackDispatch />} />
             <Route path="field-tasks" element={<FieldTasks />} />
-            <Route path="conflict-center" element={<FieldTasks />} />
+            <Route path="offline" element={<OfflineCoordination />} />
+            <Route path="conflicts" element={<Navigate to="/sup/offline" replace />} />
+            <Route path="conflict-center" element={<Navigate to="/sup/offline" replace />} />
             <Route path="proposals" element={<RepairProposals />} />
             <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
             <Route path="work-packages" element={<RepairProposals />} />
@@ -144,7 +165,7 @@ export const App: React.FC = () => {
             <Route path="repair-batches" element={<RepairProposals />} />
             <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
             <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
-            <Route path="approvals/:id/reject" element={<BatchRejection />} />
+            <Route path="approvals/:id/reject" element={<Navigate to="/sup/proposals" replace />} />
             <Route path="acceptance" element={<AcceptanceList />} />
             <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
             <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />

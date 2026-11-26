@@ -1,3 +1,4 @@
+import { surveyBandDisplay } from './surveyBandDisplay'
 import React, { useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -7,45 +8,46 @@ import { Icon } from '../../../components/ui/Icon'
 import { ProjectRouteConfig } from './types'
 
 interface FlightCorridorMapProps {
+  targetBand?: string
   currentProject?: ProjectRouteConfig
   fullRouteCoords: [number, number][]
   surveySegmentCoords: [number, number][]
   sKm: number
   eKm: number
   flightDistanceKm: number
-  estimatedDurationMinutes: number
-  estimatedBatteries: number
 }
 
 export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
+  targetBand = '',
   currentProject,
   fullRouteCoords,
   surveySegmentCoords,
   sKm,
   eKm,
-  flightDistanceKm,
-  estimatedDurationMinutes,
-  estimatedBatteries
+  flightDistanceKm
 }) => {
+  const band = surveyBandDisplay(currentProject?.serverGeometry,currentProject?.serverSet,sKm,eKm,targetBand)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
 
   useEffect(() => {
-    if (!mapContainerRef.current) return
+    if (!mapContainerRef.current || !currentProject?.hasAlignment || fullRouteCoords.length < 2) return
 
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove()
       mapInstanceRef.current = null
     }
 
-    const midCoord = surveySegmentCoords[Math.floor(surveySegmentCoords.length / 2)] || fullRouteCoords[0]
+    const midCoord =
+      surveySegmentCoords[Math.floor(surveySegmentCoords.length / 2)] ||
+      fullRouteCoords[0]
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: getMapLibreStyle('SATELLITE'),
       center: midCoord,
-      zoom: 12.8,
+      zoom: 14.5,
       minZoom: 9,
       maxZoom: 20,
       pitch: 32
@@ -59,7 +61,11 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         type: 'geojson',
         data: {
           type: 'Feature',
-          geometry: { type: 'LineString', coordinates: fullRouteCoords },
+          geometry: {
+            type: 'LineString',
+            coordinates:
+              fullRouteCoords
+          },
           properties: {}
         }
       })
@@ -91,12 +97,12 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
       })
 
       // Survey Segment Source
+      const validSegmentCoords = surveySegmentCoords
       map.addSource('survey-segment-source', {
         type: 'geojson',
         data: {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: surveySegmentCoords },
-          properties: {}
+          type: 'FeatureCollection',
+          features: validSegmentCoords.length >= 2 ? [{type:'Feature',geometry:{type:'LineString',coordinates:validSegmentCoords},properties:{}}] : []
         }
       })
 
@@ -125,47 +131,52 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         }
       })
 
+      map.addSource('selected-band-source',{type:'geojson',data:band.data})
+      map.addLayer({id:'selected-band-fill',type:'fill',source:'selected-band-source',filter:['==',['geometry-type'],'Polygon'],paint:{'fill-color':'#C9A227','fill-opacity':0.25}})
+      map.addLayer({id:'selected-band-line',type:'line',source:'selected-band-source',paint:{'line-width':4,'line-color':targetBand==='LEFT_EDGE'?'#0284C7':targetBand==='RIGHT_EDGE'?'#E5484D':'#C9A227'}})
       // Markers
       markersRef.current.forEach((m) => m.remove())
       markersRef.current = []
 
-      const startPoint = surveySegmentCoords[0]
-      const endPoint = surveySegmentCoords[surveySegmentCoords.length - 1]
+      if (validSegmentCoords.length > 0) {
+        const startPoint = validSegmentCoords[0]
+        const endPoint = validSegmentCoords[validSegmentCoords.length - 1]
 
-      // Marker Cất cánh
-      const startEl = document.createElement('div')
-      startEl.innerHTML = `
-        <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
-          <div style="background:#2F9E44; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
-            Cất cánh: Km ${sKm.toFixed(currentProject?.type === 'BRANCH' ? 2 : 1)}
+        // Marker Cất cánh
+        const startEl = document.createElement('div')
+        startEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
+            <div style="background:#2F9E44; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
+              Đầu phạm vi: Km ${sKm}
+            </div>
+            <div style="width:14px; height:14px; background:#2F9E44; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #2F9E44;"></div>
           </div>
-          <div style="width:14px; height:14px; background:#2F9E44; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #2F9E44;"></div>
-        </div>
-      `
-      const startMarker = new maplibregl.Marker({ element: startEl })
-        .setLngLat(startPoint)
-        .addTo(map)
-      markersRef.current.push(startMarker)
+        `
+        const startMarker = new maplibregl.Marker({ element: startEl })
+          .setLngLat(startPoint)
+          .addTo(map)
+        markersRef.current.push(startMarker)
 
-      // Marker Hạ cánh
-      const endEl = document.createElement('div')
-      endEl.innerHTML = `
-        <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
-          <div style="background:#E5484D; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
-            Hạ cánh: Km ${eKm.toFixed(currentProject?.type === 'BRANCH' ? 2 : 1)}
+        // Marker Hạ cánh
+        const endEl = document.createElement('div')
+        endEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
+            <div style="background:#E5484D; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
+              Cuối phạm vi: Km ${eKm}
+            </div>
+            <div style="width:14px; height:14px; background:#E5484D; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #E5484D;"></div>
           </div>
-          <div style="width:14px; height:14px; background:#E5484D; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #E5484D;"></div>
-        </div>
-      `
-      const endMarker = new maplibregl.Marker({ element: endEl })
-        .setLngLat(endPoint)
-        .addTo(map)
-      markersRef.current.push(endMarker)
+        `
+        const endMarker = new maplibregl.Marker({ element: endEl })
+          .setLngLat(endPoint)
+          .addTo(map)
+        markersRef.current.push(endMarker)
 
-      // Fit bounds
-      const bounds = new maplibregl.LngLatBounds()
-      surveySegmentCoords.forEach((c) => bounds.extend(c))
-      map.fitBounds(bounds, { padding: 60, speed: 1.2 })
+        // Fit bounds
+        const bounds = new maplibregl.LngLatBounds()
+        validSegmentCoords.forEach((c) => bounds.extend(c))
+        map.fitBounds(bounds, { padding: {top:85,bottom:75,left:65,right:65}, speed: 1.2 })
+      }
 
       setTimeout(() => map.resize(), 100)
     })
@@ -178,7 +189,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         mapInstanceRef.current = null
       }
     }
-  }, [sKm, eKm, fullRouteCoords, surveySegmentCoords, currentProject])
+  }, [sKm, eKm, fullRouteCoords, surveySegmentCoords, currentProject, targetBand])
 
   return (
     <Card>
@@ -195,77 +206,76 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         </div>
 
         {/* Map Canvas */}
-        <div className="w-full h-80 rounded-xl overflow-hidden relative shadow-inner border border-[#E2E5E9]">
-          <div ref={mapContainerRef} className="w-full h-full" />
-
-          {/* Overlay Badge - Chi tiết tuyến cha / tuyến con */}
-          <div className="absolute top-2.5 left-2.5 bg-slate-900/90 backdrop-blur-md text-white px-2.5 py-1.5 rounded-lg text-[10px] font-mono pointer-events-none z-10 border border-white/10 shadow-lg flex flex-col gap-0.5 max-w-[280px]">
-            <div className="text-[#C9A227] font-bold uppercase tracking-wider flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#C9A227] animate-pulse"></span>
-              <span>{currentProject?.type === 'BRANCH' ? 'Tuyến Phụ Khảo Sát:' : 'Tuyến Chính Khảo Sát:'}</span>
+        {!currentProject?.hasAlignment || fullRouteCoords.length < 2 ? (
+          <div className="w-full h-80 rounded-xl overflow-hidden relative shadow-inner border border-[#E2E5E9] bg-slate-50 flex flex-col items-center justify-center p-6 text-center space-y-2.5">
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700">
+              <Icon name="wrong_location" size={24} />
             </div>
-            {currentProject?.type === 'BRANCH' && (
-              <div className="text-[10px] text-amber-300 font-sans truncate">
-                Dự án mẹ: {currentProject.parentProjectName}
+            <p className="text-sm font-bold text-slate-800">
+              {currentProject?.hasAlignment ? 'Đã có tuyến và bộ phân đoạn; chưa có tọa độ hiển thị được hỗ trợ' : `Dự án [${currentProject?.code}] chưa có bộ phân đoạn công bố phù hợp`}
+            </p>
+            <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+              {currentProject?.hasAlignment ? 'Chưa đủ dữ liệu hoặc adapter CRS để vẽ bản đồ; không suy rằng tuyến chưa được thiết lập.' : 'Đọc lại tuyến đã xác nhận và bộ phân đoạn PUBLISHED của dự án để chọn phạm vi khảo sát.'}
+            </p>
+          </div>
+        ) : (
+          <div className="w-full h-80 rounded-xl overflow-hidden relative shadow-inner border border-[#E2E5E9]">
+            <div ref={mapContainerRef} className="w-full h-full" />
+
+            {/* Overlay Badge - Chi tiết tuyến dự án */}
+            <div className="absolute top-2.5 left-2.5 bg-slate-900/90 backdrop-blur-md text-white px-2.5 py-1.5 rounded-lg text-[10px] font-mono pointer-events-none z-10 border border-white/10 shadow-lg flex flex-col gap-0.5 max-w-[calc(100%-1.25rem)]">
+              <div className="text-[#C9A227] font-bold uppercase tracking-wider flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#C9A227] animate-pulse"></span>
+                <span>Tuyến Khảo Sát:</span>
               </div>
-            )}
-            <div className="text-white font-bold text-xs truncate">
-              Km {sKm.toFixed(currentProject?.type === 'BRANCH' ? 2 : 1)} → Km {eKm.toFixed(currentProject?.type === 'BRANCH' ? 2 : 1)} ({flightDistanceKm.toFixed(1)} km)
+              <div className="text-[11px] text-amber-200 font-sans font-semibold truncate">
+                [{currentProject?.code}] {currentProject?.name}
+              </div>
+              <div className="text-white font-bold text-xs break-words">
+                {Number.isFinite(sKm) && Number.isFinite(eKm) ? `Km ${sKm} → Km ${eKm} (${flightDistanceKm} km)` : 'Chưa chọn phạm vi segment'}
+              </div>
+            </div>
+
+            {/* Map Legend */}
+            <div className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-sm text-white px-2 py-1.5 rounded-md text-[9px] pointer-events-none z-10 border border-white/10 flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-1 bg-slate-400 border border-white/40"></span>
+                <span>Toàn tuyến dự án</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-3 h-1.5 bg-[#C9A227] rounded-xs shadow-xs"></span>
+                <span className="text-[#C9A227] font-bold">Đoạn chọn bay</span>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Map Legend */}
-          <div className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-sm text-white px-2 py-1.5 rounded-md text-[9px] pointer-events-none z-10 border border-white/10 flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-1 bg-slate-400 border border-white/40"></span>
-              <span>{currentProject?.type === 'BRANCH' ? 'Toàn tuyến nhánh' : 'Toàn tuyến dự án'}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-1.5 bg-[#C9A227] rounded-xs shadow-xs"></span>
-              <span className="text-[#C9A227] font-bold">Đoạn chọn bay</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Telemetry Summary Cards */}
-        <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+        <p role="status" className="text-[11px] text-slate-600 break-words">{band.message}</p>
+        {/* Telemetry Summary Cards: Chuẩn theo thông số trắc địa Backend Candidate3 */}
+        <div className="grid grid-cols-2 gap-2 text-center text-xs pt-1">
           <div className="bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg p-2.5">
             <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-              <Icon name="place" size={13} className="text-[#C9A227]" />
-              <span>Cự ly bay</span>
+              <Icon name="straighten" size={13} className="text-[#C9A227]" />
+              <span>Cự ly khảo sát</span>
             </div>
-            <div className="font-bold text-[#1A1D20] text-sm mt-0.5">
-              {flightDistanceKm.toFixed(1)} km
-            </div>
-          </div>
-
-          <div className="bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg p-2.5">
-            <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-              <Icon name="schedule" size={13} className="text-sky-600" />
-              <span>Thời gian bay</span>
-            </div>
-            <div className="font-bold text-[#1A1D20] text-sm mt-0.5">
-              ~{estimatedDurationMinutes} phút
+            <div className="font-bold text-[#1A1D20] text-sm mt-0.5 font-mono">
+              {Number.isFinite(sKm) && Number.isFinite(eKm) ? `${flightDistanceKm.toFixed(3)} km` : 'Chưa chọn phạm vi'}
             </div>
           </div>
 
           <div className="bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg p-2.5">
             <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-              <Icon name="battery_charging_full" size={13} className="text-[#2F9E44]" />
-              <span>Chu kỳ pin</span>
+              <Icon name="alt_route" size={13} className="text-sky-600" />
+              <span>Đoạn lý trình</span>
             </div>
-            <div className="font-bold text-[#1A1D20] text-sm mt-0.5">
-              {estimatedBatteries} pack pin
+            <div className="font-bold text-[#1A1D20] text-xs mt-0.5 font-mono truncate" title={Number.isFinite(sKm) && Number.isFinite(eKm) ? `Km ${sKm} → Km ${eKm}` : undefined}>
+              {Number.isFinite(sKm) && Number.isFinite(eKm) ? `${sKm} → ${eKm}` : 'Chưa chọn phạm vi'}
             </div>
           </div>
+
         </div>
 
-        <div className="p-3 bg-[#FEF3E2] rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed flex items-start gap-2">
-          <Icon name="warning" size={16} className="text-[#F59E0B] shrink-0 mt-0.5" />
-          <p>
-            <strong>Lưu ý vùng bay:</strong> Tuyến bay đã được đăng ký giấy phép số 284/GP-TC. Giới hạn độ cao tối đa 120m AGL, duy trì đường truyền RTK liên tục để gán tọa độ centimet cho từng ảnh.
-          </p>
-        </div>
+
       </div>
     </Card>
   )

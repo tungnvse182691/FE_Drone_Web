@@ -10,6 +10,23 @@
  */
 import { apiClient } from './client'
 
+export function webLoginErrorMessage(error: { response?: { status?: number } }): string {
+  switch (error.response?.status) {
+    case 401: return 'Email hoặc mật khẩu không đúng.'
+    case 403: return 'Tài khoản không có quyền thực hiện thao tác này.'
+    case 500: return 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.'
+    default: return 'Không thể hoàn tất yêu cầu đăng nhập.'
+  }
+}
+
+export function webSessionErrorMessage(error: { response?: { status?: number } }): string {
+  switch (error.response?.status) {
+    case 401: return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+    case 403: return 'Phiên đăng nhập không có quyền sử dụng.'
+    default: return 'Không thể khôi phục phiên đăng nhập.'
+  }
+}
+
 export interface CsrfResponse {
   requestToken: string
   headerName: string
@@ -23,15 +40,16 @@ export interface LoginRequest {
 export interface SessionResponse {
   user: {
     id: string
-    email: string
-    fullName: string
+    email?: string
+    fullName?: string
+    displayName: string
     role: string
     [key: string]: unknown
   }
   mustChangePassword: boolean
   issuedAt: string
-  absoluteExpiresAt: string
-  idleExpiresAt: string
+  absoluteExpiresAt: string | null
+  idleExpiresAt: string | null
   renewable: boolean
   ticketLifetimeSeconds: number
 }
@@ -72,7 +90,7 @@ export async function logoutApi(csrfToken: string): Promise<void> {
 export async function renewSessionApi(csrfToken: string): Promise<SessionResponse> {
   const res = await apiClient.post<SessionResponse>(
     '/auth/web/renew',
-    {},
+    undefined,
     {
       headers: { 'X-CSRF-TOKEN': csrfToken },
     }
@@ -85,3 +103,40 @@ export async function getSessionApi(): Promise<SessionResponse> {
   const res = await apiClient.get<SessionResponse>('/auth/web/session')
   return res.data
 }
+
+/** API-008: Yêu cầu khôi phục mật khẩu (ẩn danh, kèm CSRF). BE trả 202 dù email có tồn tại hay không (không lộ tài khoản). */
+export async function requestPasswordRecoveryApi(email: string): Promise<number> {
+  const csrf = await fetchCsrfToken()
+  const res = await apiClient.post('/auth/password-recovery-requests', { email: email.trim() }, { headers: { 'X-CSRF-TOKEN': csrf.requestToken } })
+  return res.status
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
+/** API-004: Đổi mật khẩu (yêu cầu Idempotency-Key và X-CSRF-TOKEN) */
+export async function changePasswordApi(
+  payload: ChangePasswordRequest,
+  csrfToken: string,
+  assertCurrent: () => void,
+  idempotencyKey: string = crypto.randomUUID()
+): Promise<number> {
+  const response = await apiClient.post(
+    '/auth/change-password',
+    payload,
+    {
+      transformRequest: [(body: ChangePasswordRequest) => {
+        assertCurrent()
+        return JSON.stringify(body)
+      }],
+      headers: {
+        'X-CSRF-TOKEN': csrfToken,
+        'Idempotency-Key': idempotencyKey,
+      },
+    }
+  )
+  return response.status
+}
+

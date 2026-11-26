@@ -28,8 +28,6 @@ export interface ApprovalItemsTableProps {
   }
   onViewPhoto: (item: RepairItemDetail) => void
   onQuickApprove: (itemId: string) => void
-  onOpenDecisionModal: (item: RepairItemDetail, type: 'EVIDENCE' | 'RECONSIDER' | 'REJECT') => void
-  onCrewChange: (itemId: string, newCrew: string) => void
   isSupervisor?: boolean
 }
 
@@ -46,8 +44,6 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
   stats,
   onViewPhoto,
   onQuickApprove,
-  onOpenDecisionModal,
-  onCrewChange,
   isSupervisor = true
 }) => {
   return (
@@ -92,8 +88,6 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
                 isSupervisor={isSupervisor}
                 onViewPhoto={onViewPhoto}
                 onQuickApprove={onQuickApprove}
-                onOpenDecisionModal={onOpenDecisionModal}
-                onCrewChange={onCrewChange}
               />
             ))}
 

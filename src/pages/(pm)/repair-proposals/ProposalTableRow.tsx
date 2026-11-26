@@ -6,6 +6,7 @@ import { Tooltip } from '../../../components/ui/Tooltip'
 import { TruncatedText } from '../../../components/ui/TruncatedText'
 
 export interface ProposalTableRowProps {
+  onReadPackage?:(pkg:ProposalWorkPackage)=>void
   pkg: ProposalWorkPackage
   basePath: string
   isSupervisor: boolean
@@ -20,6 +21,7 @@ export interface ProposalTableRowProps {
 
 export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
   pkg,
+  onReadPackage,
   basePath,
   isSupervisor,
   isPM,
@@ -32,6 +34,12 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
 }) => {
   const navigate = useNavigate()
   const approvalRatio = pkg.total_items > 0 ? (pkg.approved_items / pkg.total_items) * 100 : 0
+  // Quyết định phê duyệt ≠ tiến độ thi công/nghiệm thu: chỉ nói "đã giao Crew" khi BE đã sinh việc giao.
+  const executionText = pkg.status === 'DISPATCHED'
+    ? 'Đã giao Crew — thi công/nghiệm thu đang theo dõi'
+    : pkg.status_label.startsWith('Đã giải quyết')
+    ? 'Nghĩa vụ đã được giải quyết'
+    : 'Chưa giao Crew — chưa thi công'
 
   const hoverBorderClass = (() => {
     switch (pkg.status) {
@@ -61,7 +69,7 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
       <td className="py-3 px-3 min-w-[180px]">
         <div className="flex flex-col gap-1">
           <div
-            onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
+            onClick={() => onReadPackage?onReadPackage(pkg):navigate(`${basePath}/proposals/${pkg.id}`)}
             className="font-bold text-slate-900 hover:text-[#C9A227] cursor-pointer transition-colors text-xs leading-snug line-clamp-2"
             title={pkg.title}
           >
@@ -72,7 +80,7 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             <span>•</span>
             <span className="font-mono text-[#C9A227] font-semibold">{pkg.chainage_display}</span>
             <span>•</span>
-            <span>{pkg.segments_count} phân đoạn</span>
+            <span>{Number.isFinite(pkg.segments_count)?`${pkg.segments_count} phân đoạn`:'Chưa có số phân đoạn từ hồ sơ'}</span>
           </div>
         </div>
       </td>
@@ -96,7 +104,7 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
       {/* Cột 5: Thời gian thi công */}
       <td className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-800 text-xs">{pkg.duration_days} ngày</span>
+          <span className="font-semibold text-slate-800 text-xs">{Number.isFinite(pkg.duration_days)?`${pkg.duration_days} ngày`:'Chưa có thời hạn kế hoạch'}</span>
           <span className="text-[11px] text-slate-500">{pkg.date_range}</span>
         </div>
       </td>
@@ -119,55 +127,52 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         {pkg.status === 'SUBMITTED' && (
           <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
             <Icon name="schedule" size={13} />
-            <span>Đã gửi</span>
+            <span>{pkg.status_label}</span>
           </span>
         )}
         {pkg.status === 'DECIDED' && (
           <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
             <Icon name="check_circle" size={13} />
-            <span>Đã duyệt</span>
+            <span>{pkg.status_label}</span>
           </span>
         )}
         {pkg.status === 'DISPATCHED' && (
           <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0F9FF] text-[#1E40AF] border border-[#B8C5D9]">
             <Icon name="local_shipping" size={13} />
-            <span>Đã giao việc</span>
+            <span>{pkg.status_label}</span>
           </span>
         )}
-        {pkg.status === 'DRAFT' && (
+        {['READY_TO_ASSIGN','UNPROPOSED','DRAFT'].includes(pkg.status) && (
           <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-            <span>Bản nháp</span>
+            <span>{pkg.status_label}</span>
           </span>
         )}
       </td>
 
-      {/* Cột 8: Tiến độ phê duyệt */}
-      <td className="py-3 px-3 whitespace-nowrap w-[110px] min-w-[110px]">
-        <div className="flex flex-col gap-1 w-24">
+      {/* Cột 8: Quyết định phê duyệt (khác với tiến độ thi công/nghiệm thu) */}
+      <td className="py-3 px-3 whitespace-nowrap w-[130px] min-w-[130px]">
+        <div className="flex flex-col gap-1 w-28">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-medium text-slate-700">
-              {pkg.approved_items}/{pkg.total_items}
+            <span className="font-medium text-slate-700" title="Số hạng mục đã có quyết định phê duyệt trên tổng số hạng mục">
+              {pkg.approved_items}/{pkg.total_items} đã duyệt
             </span>
             <span className="font-mono text-slate-500 font-bold">{Math.round(approvalRatio)}%</span>
           </div>
           <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                approvalRatio === 100
-                  ? 'bg-[#047857]'
-                  : approvalRatio > 0
-                  ? 'bg-[#C9A227]'
-                  : 'bg-slate-300'
+                approvalRatio > 0 ? 'bg-[#C9A227]' : 'bg-slate-300'
               }`}
               style={{ width: `${approvalRatio}%` }}
             />
           </div>
+          <span className="text-[10px] text-slate-500 whitespace-normal leading-snug">{executionText}</span>
         </div>
       </td>
 
       {/* Sticky Cột 9: Thao tác — luôn nhìn thấy ở 1440px */}
-      <td className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50/90 z-10 w-[155px] min-w-[155px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
+      <td className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50/90 z-10 w-[215px] min-w-[215px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-end gap-1.5 relative whitespace-nowrap">
           {/* Vai trò Supervisor */}
           {isSupervisor && pkg.status === 'SUBMITTED' && (
@@ -187,8 +192,7 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             <Tooltip content="Theo dõi tiến độ tổ thi công ngoài hiện trường">
               <button
                 onClick={() => {
-                  showToast(`Gói [${pkg.code}] đã được phê duyệt hợp lệ.`)
-                  navigate(`${basePath}/proposals/${pkg.id}`)
+                  if(onReadPackage)onReadPackage(pkg);else navigate(`${basePath}/proposals/${pkg.id}`)
                 }}
                 type="button"
                 className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-[12px] whitespace-nowrap shadow-2xs transition-colors cursor-pointer shrink-0"
@@ -224,10 +228,24 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             </>
           )}
 
+          {/* PM: hạng mục Normal đã được Giám sát duyệt (ReadyToAssign) → sang màn giao việc với đúng dự án/gói */}
+          {isPM && pkg.status_label.startsWith('Normal: đã duyệt') && (
+            <Tooltip content="Giao hạng mục Normal đã duyệt cho Crew">
+              <button
+                onClick={() => navigate(`/pm/repair-batches/assign?${new URLSearchParams({ projectId: pkg.route_id, packageId: pkg.id })}`)}
+                type="button"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white font-medium text-[12px] whitespace-nowrap shadow-2xs transition-colors cursor-pointer shrink-0"
+              >
+                <Icon name="local_shipping" size={13} className="shrink-0" />
+                <span>Giao việc</span>
+              </button>
+            </Tooltip>
+          )}
+
           {/* Nút xem chi tiết / thẩm định */}
           <Tooltip content={isSupervisor ? 'Thẩm định kỹ thuật chi tiết' : 'Xem chi tiết hồ sơ gói'}>
             <button
-              onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
+              onClick={() => onReadPackage?onReadPackage(pkg):navigate(`${basePath}/proposals/${pkg.id}`)}
               type="button"
               className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[12px] whitespace-nowrap transition-colors cursor-pointer shrink-0"
             >

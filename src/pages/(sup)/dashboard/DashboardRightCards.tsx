@@ -9,18 +9,28 @@ import {
   ArrowRight,
   Check
 } from 'lucide-react'
-import { MOCK_RECENT_ACTIVITIES } from './mockData'
+import type { SupDashboardActivity } from '../../../api/services/supDashboardService'
 
 export interface DashboardRightCardsProps {
+  /** Tổng hạng mục sửa chữa theo repairItemsByStatus (CONFIRMED / còn lại) từ BE; null khi chưa tải được. */
+  repairItems: { confirmed: number; other: number } | null
+  /** Sự kiện gần đây từ GET /projects/{id}/reports/timeline. */
+  activities: SupDashboardActivity[]
+  isLoading: boolean
   onNavigateAuditTrail: () => void
   onNavigateRiskAnalytics: () => void
 }
 
 export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
+  repairItems,
+  activities,
+  isLoading,
   onNavigateAuditTrail,
   onNavigateRiskAnalytics
 }) => {
   const navigate = useNavigate()
+  const repairTotal = repairItems ? repairItems.confirmed + repairItems.other : 0
+  const pct = (n: number) => (repairTotal > 0 ? `${((n / repairTotal) * 100).toFixed(1)}%` : '0%')
 
   return (
     <>
@@ -36,26 +46,27 @@ export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
 
                 <span className="text-xs text-slate-500 font-medium">Chỉ số hoàn thành đúng hạn (SLA)</span>
                 <div className="font-sansation text-3xl font-bold tracking-tight mt-1 mb-5 text-brand-gold">
-                  88.5%
+                  —
                 </div>
+                <p className="text-[11px] text-slate-500 -mt-3 mb-4">Máy chủ chưa cung cấp dữ liệu này</p>
 
                 <div className="space-y-1.5 mb-4">
                   <div className="flex justify-between items-center text-xs font-semibold">
                     <span className="text-slate-700">Đã nghiệm thu đóng hồ sơ</span>
-                    <span className="font-bold text-brand-gold">156 điểm</span>
+                    <span className="font-bold text-brand-gold">{repairItems ? `${repairItems.confirmed} hạng mục` : '—'}</span>
                   </div>
                   <div className="w-full rounded-full h-2 overflow-hidden bg-slate-100">
-                    <div className="h-2 rounded-full bg-brand-gold" style={{ width: '86.6%' }}></div>
+                    <div className="h-2 rounded-full bg-brand-gold" style={{ width: repairItems ? pct(repairItems.confirmed) : '0%' }}></div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center text-xs font-semibold">
                     <span className="text-slate-700">Đang xử lý / Chờ nghiệm thu</span>
-                    <span className="text-rose-600 font-bold">24 điểm</span>
+                    <span className="text-rose-600 font-bold">{repairItems ? `${repairItems.other} hạng mục` : '—'}</span>
                   </div>
                   <div className="w-full rounded-full h-2 overflow-hidden bg-slate-100">
-                    <div className="bg-rose-500 h-2 rounded-full" style={{ width: '13.4%' }}></div>
+                    <div className="bg-rose-500 h-2 rounded-full" style={{ width: repairItems ? pct(repairItems.other) : '0%' }}></div>
                   </div>
                 </div>
               </div>
@@ -69,15 +80,22 @@ export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
               </div>
 
               <div className="space-y-3.5">
-                {MOCK_RECENT_ACTIVITIES.map((act: any) => (
-                  <div key={act.id} className="flex items-start gap-3">
+                {activities.length === 0 && (
+                  <p className="text-xs text-slate-400 text-center py-4">
+                    {isLoading ? 'Đang tải hoạt động từ máy chủ...' : 'Không có hoạt động nào trong CSDL.'}
+                  </p>
+                )}
+                {activities.map((act) => {
+                  const actType: string = 'default'
+                  return (
+                  <div key={act.eventId} className="flex items-start gap-3">
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold ${
-                        act.type === 'ai'
+                        actType === 'ai'
                           ? 'bg-purple-100 text-purple-700'
-                          : act.type === 'acceptance'
+                          : actType === 'acceptance'
                           ? 'bg-emerald-100 text-emerald-700'
-                          : act.type === 'proposal'
+                          : actType === 'proposal'
                           ? 'bg-amber-100 text-amber-700'
                           : 'bg-blue-100 text-blue-700'
                       }`}
@@ -89,23 +107,24 @@ export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
                       <div className="flex items-center justify-between mb-1">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            act.type === 'ai'
+                            actType === 'ai'
                               ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                              : act.type === 'acceptance'
+                              : actType === 'acceptance'
                               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                              : act.type === 'proposal'
+                              : actType === 'proposal'
                               ? 'bg-amber-50 text-amber-800 border border-amber-200'
                               : 'bg-blue-50 text-blue-800 border border-blue-200'
                           }`}
                         >
-                          {act.tag}
+                          {act.action}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-medium">{act.time}</span>
+                        <span className="text-[11px] text-slate-400 font-medium">{new Date(act.occurredAt).toLocaleString('vi-VN', { hour12: false })}</span>
                       </div>
-                      <p className="text-xs text-slate-700 font-medium leading-relaxed">{act.content}</p>
+                      <p className="text-xs text-slate-700 font-medium leading-relaxed">{act.summary} · {act.projectCode}{act.actorDisplay ? ` · ${act.actorDisplay}` : ''}</p>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
 
               <div className="pt-3 mt-3 border-t border-slate-100">
@@ -126,24 +145,8 @@ export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
                 Chỉ số chất lượng mặt đường (PCI)
               </h3>
               <div className="space-y-3 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 font-medium">QL1A (Km 1024 - Km 1045):</span>
-                    <span className="font-bold text-emerald-600">78.5 (Tốt)</span>
-                  </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '78.5%' }} />
-                  </div>
-                </div>
-
-                <div className="p-3 bg-slate-50 rounded-xl space-y-2 border border-slate-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 font-medium">Cao tốc Bắc Nam XL-03:</span>
-                    <span className="font-bold text-amber-600">64.2 (Trung bình)</span>
-                  </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div className="bg-amber-500 h-full rounded-full" style={{ width: '64.2%' }} />
-                  </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-500 font-medium">
+                  Máy chủ chưa cung cấp dữ liệu này
                 </div>
 
                 <button

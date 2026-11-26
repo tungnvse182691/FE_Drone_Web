@@ -4,8 +4,15 @@ import { Icon } from '../../../components/ui/Icon'
 import { AssignedProjectOption } from './types'
 
 export interface AlignmentHeaderProps {
+  workflowActions?: React.ReactNode
+  statusMessage?: string
+  serverDraftStatus?: string | null
+  loading?: boolean
+  commandBusy?: boolean
+  saveDisabledReason?: string
+  confirmDisabledReason?: string
   basePath: string
-  alignmentStatus: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
+  alignmentStatus: 'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'
   activeProject: AssignedProjectOption
   selectedProjectId: string
   assignedProjects: AssignedProjectOption[]
@@ -24,6 +31,10 @@ export interface AlignmentHeaderProps {
 
 export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
   basePath,
+  workflowActions, statusMessage = '', serverDraftStatus, loading = false,
+  commandBusy = false,
+  saveDisabledReason = '',
+  confirmDisabledReason = 'Chưa đọc điều kiện xác nhận.',
   alignmentStatus,
   activeProject,
   selectedProjectId,
@@ -44,11 +55,11 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
   const displayTotalKm = totalProjectLengthKm !== undefined ? totalProjectLengthKm : importedLengthKm
 
   return (
-    <section className="bg-white rounded-xl px-5 py-3.5 shadow-2xs border border-brand-border flex flex-col md:flex-row md:items-center justify-between gap-3">
-      <div className="flex flex-col gap-1 min-w-0">
+    <section className="bg-white rounded-xl px-5 py-3.5 shadow-2xs border border-brand-border flex flex-col gap-3">
+      <div className="flex flex-col gap-1 min-w-0 w-full">
         {/* Breadcrumb & Status */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-slate-500 font-medium">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap min-w-0 items-center gap-1.5 text-slate-500 font-medium">
             <button
               onClick={() => navigate(`${basePath}/dashboard`)}
               className="hover:text-brand-gold transition-colors cursor-pointer"
@@ -63,54 +74,79 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
               Dự án
             </button>
             <Icon name="chevron_right" size={14} className="text-slate-400" />
-            <span className="text-slate-800 font-semibold truncate">Thiết lập tim tuyến &amp; Phân đoạn (WF-02)</span>
+            <span className="text-slate-800 font-semibold truncate">Thiết lập tim tuyến &amp; Phân đoạn</span>
           </nav>
 
           <span className="text-slate-300">•</span>
 
           {/* Trạng thái tim tuyến Badge */}
-          {alignmentStatus === 'DRAFT' && (
-            <span className="inline-flex items-center gap-1.5 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 text-amber-800 font-semibold text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-              DRAFT v1.2 • Đang chỉnh sửa đỉnh
+          {!serverDraftStatus && alignmentStatus !== 'CONFIRMED' && displayTotalKm <= 0 && (!currentCoords || currentCoords.length === 0) ? (
+            <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 text-slate-600 font-semibold text-[11px]">
+              Chưa có tim tuyến
             </span>
-          )}
-          {alignmentStatus === 'PENDING_APPROVAL' && (
-            <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 text-blue-800 font-semibold text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-              PENDING_APPROVAL • Chờ Supervisor duyệt tim tuyến
-            </span>
-          )}
-          {alignmentStatus === 'CONFIRMED' && (
-            <span className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-emerald-800 font-bold text-[11px]">
-              <Icon name="verified_user" size={14} className="text-emerald-600" />
-              CONFIRMED • Đã khóa tim tuyến SHA-256
-            </span>
+          ) : (
+            <>
+              {alignmentStatus === 'REJECTED' && <span className="text-xs font-semibold text-rose-700">Đã từ chối — PM cần sửa hồ sơ và trình lại</span>}
+              {alignmentStatus === 'SUBMITTED' && <span className="text-xs font-semibold text-blue-700">Đã trình — chờ Giám sát xác nhận</span>}
+              {alignmentStatus === 'DRAFT' && serverDraftStatus === 'DRAFT' && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 text-amber-800 font-semibold text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  Bản nháp
+                </span>
+              )}
+              {alignmentStatus === 'PENDING_APPROVAL' && (
+                <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 text-blue-800 font-semibold text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                  Chờ duyệt
+                </span>
+              )}
+              {alignmentStatus === 'CONFIRMED' && (
+                <span className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-emerald-800 font-bold text-[11px]">
+                  <Icon name="verified_user" size={14} className="text-emerald-600" />
+                  Đã duyệt
+                </span>
+              )}
+            </>
           )}
         </div>
 
+        {loading && <p role="status" className="text-xs text-slate-500">Đang tải hồ sơ tuyến...</p>}
+        {statusMessage && <p role="status" className="text-xs text-slate-600 break-words">{statusMessage}</p>}
         {/* Project Title & Project Switcher */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600">
-          <h1 className="text-lg font-bold text-brand-dark tracking-tight">
+          <h1 className="w-full min-w-0 text-lg font-bold text-brand-dark tracking-tight">
             Quản Lý Hình Học Tuyến &amp; Phân Đoạn Lý Trình
           </h1>
           <span className="hidden lg:inline text-slate-300">|</span>
 
           {/* Dropdown chọn dự án PM phụ trách */}
-          <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/90 px-2.5 py-1 rounded-xl shadow-2xs">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 bg-amber-50/80 border border-amber-200/90 px-2.5 py-1 rounded-xl shadow-2xs">
             <Icon name="domain" size={14} className="text-brand-gold shrink-0" />
             <span className="text-[11px] font-semibold text-slate-600">Dự án phụ trách:</span>
             <select
               value={selectedProjectId}
               onChange={(e) => onSwitchProject(e.target.value)}
-              className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer hover:text-[#8F7212] transition-colors"
+              className="min-w-0 max-w-full flex-1 text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer hover:text-[#8F7212] transition-colors"
             >
-              {assignedProjects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  [{p.code}] {p.name}
-                </option>
-              ))}
+              {assignedProjects.length === 0 ? (
+                <option value="">Đang tải dự án...</option>
+              ) : (
+                assignedProjects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    [{p.code}] {p.name}
+                  </option>
+                ))
+              )}
             </select>
+          </div>
+
+          {/* Hiển thị địa bàn quản lý của dự án */}
+          <div className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-200/90 px-2.5 py-1 rounded-xl shadow-2xs">
+            <Icon name="location_on" size={14} className="text-brand-gold shrink-0" />
+            <span className="text-[11px] font-semibold text-slate-600">Địa bàn:</span>
+            <span className={activeProject?.region ? 'text-xs font-bold text-slate-900' : 'text-xs text-slate-400 italic'}>
+              {activeProject?.region || 'Chưa thiết lập địa bàn'}
+            </span>
           </div>
 
           {displayTotalKm > 0 ? (
@@ -125,7 +161,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             </div>
           ) : (
             <span className="flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-              Chưa có tim tuyến • 0.00 km
+              {serverDraftStatus ? 'Chưa có chiều dài đã xác nhận' : 'Chưa có dữ liệu chiều dài'}
             </span>
           )}
           <span className="hidden xl:flex items-center gap-1 text-[11px] text-slate-500 font-mono">
@@ -136,18 +172,22 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
       </div>
 
       {/* Action Button Group */}
-      <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <button
-          onClick={onOpenImportModal}
-          className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          type="button"
-        >
-          <Icon name="upload_file" size={14} className="text-slate-500" />
-          <span>Nhập Tuyến / Tọa độ (WF-02)</span>
-        </button>
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 [&>*]:max-w-full [&>button]:h-auto [&>button]:min-h-8 [&>button]:py-1.5 [&>button]:whitespace-normal [&>a]:break-words">
+        {/* PM: Import Coordinates Button (Only allowed when in DRAFT) */}
+        {workflowActions}
+        {!isSupervisor && ['DRAFT','REJECTED'].includes(alignmentStatus) && (
+          <button
+            onClick={onOpenImportModal}
+            className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            type="button"
+          >
+            <Icon name="upload_file" size={14} className="text-slate-500" />
+            <span>Nhập Tuyến / Tọa độ</span>
+          </button>
+        )}
 
-        {/* PM: Clear Mainline Button */}
-        {!isSupervisor && onClearMainline && (currentCoords.length > 0 || importedLengthKm > 0) && (
+        {/* PM: Clear Mainline Button (Strictly only when DRAFT - never allowed when CONFIRMED) */}
+        {!isSupervisor && ['DRAFT','REJECTED'].includes(alignmentStatus) && onClearMainline && (currentCoords.length > 0 || importedLengthKm > 0) && (
           <button
             onClick={() => {
               if (confirm('Bạn có chắc chắn muốn xóa toàn bộ tim tuyến trục chính và các mốc lý trình của dự án này không? Bản đồ sẽ trở về trạng thái trống để bạn nhập hoặc vẽ lại từ đầu.')) {
@@ -165,9 +205,12 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
 
         {/* PM: Submit Approval */}
         {!isSupervisor && (
+          <>
           <button
             onClick={onSubmitAlignment}
-            disabled={alignmentStatus === 'CONFIRMED' || alignmentStatus === 'PENDING_APPROVAL'}
+            disabled={commandBusy || !!saveDisabledReason}
+            title={saveDisabledReason}
+            aria-describedby={commandBusy || saveDisabledReason ? 'alignment-draft-save-reason' : undefined}
             className={`h-8 px-3.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 ${
               alignmentStatus === 'CONFIRMED'
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
@@ -179,23 +222,33 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
           >
             <Icon name="send" size={14} />
             <span>
-              {alignmentStatus === 'PENDING_APPROVAL'
+              {alignmentStatus === 'SUBMITTED' ? 'Đã trình Giám sát' : alignmentStatus === 'PENDING_APPROVAL'
                 ? 'Đã trình duyệt tim tuyến'
                 : alignmentStatus === 'CONFIRMED'
                 ? 'Đã khóa tim tuyến'
-                : 'Trình duyệt tim tuyến'}
+                : 'Lưu bản nháp'}
             </span>
           </button>
+          {(commandBusy || saveDisabledReason) && (
+            <p id="alignment-draft-save-reason" role="status" className="text-xs text-slate-600 break-words">
+              {saveDisabledReason || 'Đang lưu hoặc đọc lại hồ sơ; vui lòng chờ.'}
+            </p>
+          )}
+          </>
         )}
 
         {/* Supervisor: Lock Baseline */}
         {isSupervisor && (
+          <>
           <button
             onClick={onLockAlignment}
-            disabled={alignmentStatus === 'CONFIRMED'}
+            disabled={commandBusy || !!confirmDisabledReason}
+            title={confirmDisabledReason || 'Xác nhận phiên bản bản nháp đã xem trước'}
             className={`h-8 px-3.5 rounded-lg font-semibold text-xs shadow-xs flex items-center gap-1.5 transition-all ${
               alignmentStatus === 'CONFIRMED'
                 ? 'bg-emerald-600 text-white opacity-90 cursor-default'
+                : commandBusy || !!confirmDisabledReason
+                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                 : 'bg-brand-gold hover:bg-[#B38E1F] text-white cursor-pointer active:scale-98'
             }`}
             type="button"
@@ -203,6 +256,8 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             <Icon name="lock" size={14} />
             <span>{alignmentStatus === 'CONFIRMED' ? 'Đã khóa tim tuyến' : 'Xác nhận & Khóa tim tuyến'}</span>
           </button>
+          {confirmDisabledReason && alignmentStatus !== 'CONFIRMED' && <p role="status" className="text-xs text-slate-600 break-words">{confirmDisabledReason}</p>}
+          </>
         )}
       </div>
     </section>

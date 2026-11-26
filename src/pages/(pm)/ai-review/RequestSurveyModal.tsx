@@ -42,9 +42,9 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
               <Icon name="photo_camera" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Lệnh Khảo Sát &amp; Đo Đạc Bổ Sung (WF-11)</h3>
+              <h3 className="text-base font-bold text-brand-dark">Lệnh Khảo Sát &amp; Đo Đạc Bổ Sung</h3>
               <p className="text-xs text-slate-500">
-                Nêu lý do kỹ thuật, chọn hình thức và phân công đơn vị đi đo / bay drone lại
+                Ghi yêu cầu bổ sung bằng chứng; chưa tạo hoặc giao nhiệm vụ.
               </p>
             </div>
           </div>
@@ -90,7 +90,7 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
                 }`}
               >
                 <div className="flex items-start gap-2">
-                  <input
+                  <input disabled
                     type="radio"
                     name="survey_mode"
                     checked={surveyMode === 'MEASURE_ONLY'}
@@ -121,7 +121,7 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
                 }`}
               >
                 <div className="flex items-start gap-2">
-                  <input
+                  <input disabled
                     type="radio"
                     name="survey_mode"
                     checked={surveyMode === 'DRONE_RESURVEY'}
@@ -189,8 +189,8 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
             <label className="font-bold text-slate-700 block">
               3. Phân công đơn vị thực hiện: <span className="text-red-500">*</span>
             </label>
-            <select
-              value={surveyAssignedCrew}
+            <select disabled
+              value=""
               onChange={(e) => setSurveyAssignedCrew(e.target.value)}
               className="w-full bg-white border border-slate-200 font-medium text-xs px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
             >
@@ -259,11 +259,12 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
           </button>
           <button
             type="button"
+            disabled={!surveyReason.trim()}
             onClick={onConfirmRequestSurvey}
             className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="check" size={16} />
-            <span>Phát Lệnh Khảo Sát / Đo Lại (WF-11)</span>
+            <span>Ghi yêu cầu bổ sung bằng chứng</span>
           </button>
         </div>
       </div>

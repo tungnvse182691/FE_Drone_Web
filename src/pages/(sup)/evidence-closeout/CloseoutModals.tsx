@@ -1,13 +1,21 @@
 import React from 'react'
 import { CaseItem } from './types'
 import { ReworkModal } from './ReworkModal'
-import { VerifyModal } from './VerifyModal'
 import { ExportPdfAModal } from './ExportPdfAModal'
 import { ExportZipModal } from './ExportZipModal'
+import { DeclareConstructionModal, ReviewModalVariant } from './DeclareConstructionModal'
+import { AcceptancePackage } from '../../../api/services/acceptanceService'
 
 export interface CloseoutModalsProps {
   currentItem: CaseItem
   caseItems: CaseItem[]
+  currentPackage?: AcceptancePackage | null
+  isDeclareModalOpen?: boolean
+  setIsDeclareModalOpen?: (open: boolean) => void
+  onConfirmDeclaration?: (notes: string) => void
+  reviewVariant?: ReviewModalVariant
+  busy?: boolean
+  modalError?: string
   isReworkModalOpen: boolean
   setIsReworkModalOpen: (open: boolean) => void
   reworkChecklist: {
@@ -29,9 +37,6 @@ export interface CloseoutModalsProps {
   reworkNotes: string
   setReworkNotes: (s: string) => void
   handleSubmitRework: () => void
-  isCloseCaseModalOpen: boolean
-  setIsCloseCaseModalOpen: (open: boolean) => void
-  onConfirmCloseCase: () => void
   isExportModalOpen: boolean
   setIsExportModalOpen: (open: boolean) => void
   exportFormat: 'PDF_A' | 'ZIP_PACKAGE'
@@ -56,9 +61,6 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
   reworkNotes,
   setReworkNotes,
   handleSubmitRework,
-  isCloseCaseModalOpen,
-  setIsCloseCaseModalOpen,
-  onConfirmCloseCase,
   isExportModalOpen,
   setIsExportModalOpen,
   exportFormat,
@@ -68,7 +70,14 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
   includeDroneRawTiff,
   setIncludeDroneRawTiff,
   isExporting,
-  handleTriggerExport
+  handleTriggerExport,
+  currentPackage,
+  isDeclareModalOpen,
+  setIsDeclareModalOpen,
+  onConfirmDeclaration,
+  reviewVariant,
+  busy,
+  modalError
 }) => {
   return (
     <>
@@ -84,15 +93,10 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         reworkNotes={reworkNotes}
         setReworkNotes={setReworkNotes}
         onSubmitRework={handleSubmitRework}
+        busy={busy}
+        error={isReworkModalOpen ? modalError : undefined}
       />
 
-      {/* MODAL 2: CLOSE COMPOSITE CASE MODAL (SUPERVISOR CLOSEOUT - BR-26) */}
-      <VerifyModal
-        isOpen={isCloseCaseModalOpen}
-        onClose={() => setIsCloseCaseModalOpen(false)}
-        onConfirm={onConfirmCloseCase}
-        caseItems={caseItems}
-      />
 
       {/* MODAL 3: EXPORT EVIDENCE DOSSIER RPT-07 */}
       {isExportModalOpen && (
@@ -102,6 +106,7 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
             onClose={() => setIsExportModalOpen(false)}
             currentItem={currentItem}
             setExportFormat={setExportFormat}
+            caseCode={currentPackage?.case_code}
             includeSha256Checksum={includeSha256Checksum}
             setIncludeSha256Checksum={setIncludeSha256Checksum}
             isExporting={isExporting}
@@ -113,12 +118,27 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
             onClose={() => setIsExportModalOpen(false)}
             currentItem={currentItem}
             setExportFormat={setExportFormat}
+            caseCode={currentPackage?.case_code}
             includeDroneRawTiff={includeDroneRawTiff}
             setIncludeDroneRawTiff={setIncludeDroneRawTiff}
             isExporting={isExporting}
             onExport={handleTriggerExport}
           />
         )
+      )}
+
+      {/* MODAL 4: PM REVIEW ACCEPT / FAST TRACK / GIÁM SÁT XÁC NHẬN CUỐI */}
+      {isDeclareModalOpen && setIsDeclareModalOpen && onConfirmDeclaration && (
+        <DeclareConstructionModal
+          isOpen={isDeclareModalOpen}
+          onClose={() => setIsDeclareModalOpen(false)}
+          currentPackage={currentPackage || null}
+          currentItem={currentItem}
+          variant={reviewVariant}
+          busy={busy}
+          error={modalError}
+          onConfirmDeclaration={onConfirmDeclaration}
+        />
       )}
     </>
   )

@@ -5,11 +5,12 @@ import { getMapLibreStyle } from '../../../utils/maplibre'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from '../projects/types'
 
-import { alignmentService } from '../../../api/services/alignmentService'
+
 
 interface ProjectMapPreviewCardProps {
   project: HubProject
   basePath: string
+  isSupervisor?: boolean
   onNavigate: (path: string) => void
   activeTab?: 'MAINLINE' | 'BRANCHES'
 }
@@ -17,12 +18,15 @@ interface ProjectMapPreviewCardProps {
 export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
   project,
   basePath,
+  isSupervisor = false,
   onNavigate,
   activeTab = 'MAINLINE'
 }) => {
   const previewMapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapInstanceRef = useRef<maplibregl.Map | null>(null)
-  const hasAlignment = project.length_km > 0
+  const routes = project.server_facts?.routes || []
+  const mapRoutes = routes.filter(route => route.wgs84.length >= 2)
+  const hasAlignment = mapRoutes.length > 0
 
   useEffect(() => {
     if (!previewMapContainerRef.current || !hasAlignment) return
@@ -32,23 +36,11 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
       previewMapInstanceRef.current = null
     }
 
-    const alignData = alignmentService.getAlignmentData(project.id)
-    const corridorCoords: [number, number][] =
-      alignData.coords && alignData.coords.length >= 2
-        ? alignData.coords
-        : [
-            [108.0825, 16.1420],
-            [108.1210, 16.1750],
-            [108.1651, 16.2052],
-            [108.2040, 16.2380],
-            [108.2418, 16.2690]
-          ]
+    const corridorCoords: [number, number][] = mapRoutes[0]?.wgs84 || []
+    if (corridorCoords.length < 2) return
+    const branchesList = mapRoutes.slice(1).map(route => ({id: route.routeVersionId, code: route.code, name: route.name, coords: route.wgs84}))
 
-    const branchesList = (alignData.branches || []).filter(
-      (b: any) => b.coords && Array.isArray(b.coords) && b.coords.length >= 2
-    )
-
-    const centerPoint = corridorCoords[Math.floor(corridorCoords.length / 2)] || [108.1651, 16.2052]
+    const centerPoint = corridorCoords[Math.floor(corridorCoords.length / 2)]
 
     const map = new maplibregl.Map({
       container: previewMapContainerRef.current,
@@ -162,11 +154,10 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
       map.remove()
       previewMapInstanceRef.current = null
     }
-  }, [hasAlignment, project.id, activeTab])
+  }, [hasAlignment, project.id, project.server_facts, activeTab])
 
   // Lấy số lượng nhánh thực tế để hiển thị Legend
-  const alignData = alignmentService.getAlignmentData(project.id)
-  const branchesCount = (alignData.branches || []).length
+  const branchesCount = project.server_facts?.branchesCount
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs flex flex-col gap-3 font-body">
@@ -193,7 +184,7 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
                 <span className={`w-2 h-2 rounded-full ${activeTab === 'MAINLINE' ? 'bg-brand-gold ring-1 ring-white' : 'bg-brand-gold/70'}`} />
                 <span className={activeTab === 'MAINLINE' ? 'font-bold text-white' : 'text-slate-300'}>Trục chính</span>
               </span>
-              {branchesCount > 0 && (
+              {branchesCount != null && branchesCount > 0 && (
                 <>
                   <span className="text-slate-500">•</span>
                   <span className="flex items-center gap-1">
@@ -205,7 +196,7 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
             </div>
 
             <div className="absolute bottom-2 left-2 px-2 py-1 bg-slate-900/80 backdrop-blur-xs text-white rounded text-[10px] font-mono">
-              GPS: WGS84 • UTM 48N
+              Tọa độ WGS84 từ server
             </div>
           </div>
 
@@ -223,18 +214,29 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
           <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
             <Icon name="alt_route" size={20} />
           </div>
-          <span className="text-xs font-bold text-slate-800">Chưa có hành lang tim tuyến</span>
+          <span className="text-xs font-bold text-slate-800">{project.geometry_read_error ? 'Không tải được dữ liệu tim tuyến' : routes.length ? 'Chưa có tọa độ WGS84 server để hiển thị bản đồ' : 'Chưa có tim tuyến hiện hành'}</span>
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            Dự án mới cần PM nạp tọa độ GPX hoặc file CAD/KML ở Bước 2 để hiển thị bản đồ số.
+            {project.geometry_read_error ? 'Đọc dữ liệu tuyến thất bại; không coi là chưa thiết lập.' : routes.length ? 'Đã có geometry server; bản đồ này chỉ hiển thị khi server cung cấp tọa độ WGS84 hợp lệ.' : 'Chưa có tuyến hiện hành trong hồ sơ server.'}
           </p>
-          <button
-            type="button"
-            onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
-            className="mt-1 px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
-          >
-            <Icon name="alt_route" size={14} />
-            <span>Thiết lập tim tuyến (WF-02)</span>
-          </button>
+          {project.status === 'CLOSED' ? (
+            <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1">
+              <Icon name="lock" size={13} />
+              <span>Hồ sơ đã khóa chỉ đọc</span>
+            </span>
+          ) : !isSupervisor ? (
+            <button
+              type="button"
+              onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
+              className="mt-1 px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+            >
+              <Icon name="alt_route" size={14} />
+              <span>Thiết lập tim tuyến</span>
+            </button>
+          ) : (
+            <span className="text-[11px] font-medium text-amber-800 bg-amber-50 px-2.5 py-1 rounded border border-amber-200">
+              {routes.length ? project.kml_status : 'Chưa có dữ liệu tuyến hiện hành'}
+            </span>
+          )}
         </div>
       )}
     </div>

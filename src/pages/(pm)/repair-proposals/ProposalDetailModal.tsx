@@ -1,6 +1,16 @@
-import React from 'react'
+import React,{useState,useEffect,useRef} from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { ProposalWorkPackage } from './types'
+import {repairWorkflowService,type RepairItem} from '../../../api/services/repairWorkflowService'
+import {useAuthStore} from '../../../store/authStore'
+import {useNavigate} from 'react-router-dom'
+import {exportError} from '../../../api/services/projectExportService'
+import {RepairItemActions} from './RepairItemActions'
+import {SourceDefectPanel} from './SourceDefectPanel'
+import {PlanningPanel} from './PlanningPanel'
+import {NotificationSupervisorPanel} from './NotificationSupervisorPanel'
+import {RepairSafetyPanel} from './RepairSafetyPanel'
+import {useToastStore} from '../../../store/toastStore'
 
 export interface ProposalDetailModalProps {
   selectedPackageForDetail: ProposalWorkPackage | null
@@ -11,19 +21,53 @@ export interface ProposalDetailModalProps {
   handleSubmitDraftPackage: (id: string, code: string) => void
 }
 
+type DetailRead = { item?: RepairItem; error?: string }
+
+const STATE_BADGE = (state: string) =>
+  state === 'Confirmed' || state === 'ReadyToAssign' ? 'bg-emerald-100 text-emerald-800'
+  : state === 'AwaitingApproval' ? 'bg-amber-100 text-amber-800'
+  : ['Assigned', 'InProgress', 'Submitted', 'Reviewed'].includes(state) ? 'bg-blue-100 text-blue-800'
+  : 'bg-slate-200 text-slate-700'
+
 export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
   selectedPackageForDetail,
   setSelectedPackageForDetail,
   isSupervisor,
   isPM,
-  handleQuickApprove,
-  handleSubmitDraftPackage,
 }) => {
+  const auth=useAuthStore(),toast=useToastStore(),navigate=useNavigate(),scope=`${auth.authEpoch}:${selectedPackageForDetail?.route_id}:${selectedPackageForDetail?.id}`,latest=useRef(scope);latest.current=scope
+  const [read,setRead]=useState<{scope:string;items:RepairItem[]}|null>(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[itemId,setItemId]=useState(''),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[reload,setReload]=useState(0)
+  const [details,setDetails]=useState<{scope:string;rows:Record<string,DetailRead>}>({scope:'',rows:{}})
+  useEffect(()=>{const c=new AbortController();setRead(null);setError('');setMessage('');setItemId('');setReason('');if(selectedPackageForDetail)repairWorkflowService.items(selectedPackageForDetail.route_id,selectedPackageForDetail.id,c.signal).then(items=>{if(!c.signal.aborted)setRead({scope,items})}).catch(e=>{if(!c.signal.aborted)setError(exportError(e))});return()=>c.abort()},[scope,reload])
+  const items=read?.scope===scope?read.items:[]
+  // GET chi tiết từng hạng mục: nguồn chuẩn của phương án (repairPlan) và checklist (checklistVersion). Lỗi tải hiển thị riêng từng hạng mục.
+  useEffect(()=>{
+    const c=new AbortController()
+    if(!selectedPackageForDetail||!read||read.scope!==scope){setDetails({scope,rows:{}});return}
+    setDetails({scope,rows:{}})
+    for(const it of read.items)repairWorkflowService.detail(selectedPackageForDetail.route_id,selectedPackageForDetail.id,it.id,c.signal)
+      .then(d=>{if(!c.signal.aborted)setDetails(o=>o.scope===scope?{scope,rows:{...o.rows,[it.id]:{item:d}}}:o)})
+      .catch(e=>{if(!c.signal.aborted)setDetails(o=>o.scope===scope?{scope,rows:{...o.rows,[it.id]:{error:exportError(e)}}}:o)})
+    return()=>c.abort()
+  },[read])
+  const detailOf=(id:string):DetailRead|undefined=>details.scope===scope?details.rows[id]:undefined
+  let held:ReturnType<typeof repairWorkflowService.pending>=null,journalError=''
+  try{if(isSupervisor&&selectedPackageForDetail&&itemId)held=repairWorkflowService.pending(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve')}catch(e){journalError=exportError(e)}
+  const approve=async()=>{if(!selectedPackageForDetail||!itemId||!isSupervisor||busy||journalError)return;const start=scope;setBusy(true);setError('');try{const r=await repairWorkflowService.decide(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve',held?.body.reason||reason);if(latest.current!==start)return;const fresh=await repairWorkflowService.items(selectedPackageForDetail.route_id,selectedPackageForDetail.id);if(latest.current!==start)return;setRead({scope,items:fresh});setItemId('');setReason('');const ok=`Đã phê duyệt hạng mục ${r.id.slice(0,8).toUpperCase()}; máy chủ xác nhận trạng thái ${r.state}.`;setMessage(ok);toast.success(ok);window.dispatchEvent(new Event('repair-workflow-refresh'))}catch(e){if(latest.current===start){let msg=exportError(e);try{if(repairWorkflowService.pending(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve')?.received)msg=`Lệnh phê duyệt đã gửi nhưng chưa đối chiếu được kết quả từ máy chủ (${msg}). Cần đối chiếu; không gửi lệnh mới, chỉ bấm "Đối chiếu quyết định đã gửi".`}catch{/* journal lỗi đã hiển thị riêng */}setError(msg)}}finally{if(latest.current===start)setBusy(false)}}
   if (!selectedPackageForDetail) return null
+
+  // Phương án chung của gói: lấy từ GET chi tiết hạng mục; không khẳng định "API thiếu" khi chưa đọc xong hoặc đang lỗi.
+  const detailRows=items.map(i=>detailOf(i.id))
+  const planLoading=items.length>0&&detailRows.some(d=>!d)
+  const planErrors=detailRows.filter((d):d is DetailRead=>!!d&&!!d.error).map(d=>d.error as string)
+  const plans=[...new Set(detailRows.map(d=>d?.item?.repairPlan?.trim()).filter((p):p is string=>!!p))]
+  const decided=items.filter(i=>i.state==='Confirmed'||i.mode==='Normal'&&['ReadyToAssign','Assigned','InProgress','Submitted','Reviewed'].includes(i.state)).length
+  const dispatchTo=(id:string)=>{navigate(`/pm/repair-batches/assign?${new URLSearchParams({projectId:selectedPackageForDetail.route_id,packageId:selectedPackageForDetail.id,itemId:id})}`)}
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div className="w-full max-w-4xl max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-brand-border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {(error||journalError)&&<p role="alert" className="p-3 text-xs text-rose-700">{error||journalError}</p>}{message&&<p role="status" className="p-3 text-xs text-emerald-800">{message}</p>}
         {/* Header chi tiết */}
         <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -56,16 +100,10 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                       : 'bg-slate-200 text-slate-700'
                   }`}
                 >
-                  {selectedPackageForDetail.status === 'SUBMITTED'
-                    ? 'Đã gửi'
-                    : selectedPackageForDetail.status === 'DECIDED'
-                    ? 'Đã duyệt'
-                    : selectedPackageForDetail.status === 'DISPATCHED'
-                    ? 'Đã giao việc'
-                    : 'Bản nháp'}
+                  {items.length?[...new Set(items.map(i=>`${i.mode}: ${i.state}`))].join(' · '):selectedPackageForDetail.status_label}
                 </span>
                 <span className="text-xs text-slate-500 font-mono">
-                  Snapshot: v1.0 (Immutable)
+                  Nguồn đang đọc từ hệ thống
                 </span>
               </div>
               <h3 className="text-base font-bold text-brand-dark mt-1">
@@ -89,8 +127,8 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Body: Danh sách các RepairItems */}
-        <div className="p-5 overflow-y-auto space-y-4 text-xs">
+        {/* Body: toàn bộ hồ sơ và thao tác xếp theo chiều dọc, cuộn trong khung */}
+        <div className="p-5 overflow-y-auto space-y-4 text-xs min-h-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <span className="text-[11px] text-slate-500 font-medium block">Số lượng khiếm khuyết</span>
@@ -109,7 +147,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
             <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
               <span className="text-[11px] text-amber-900 font-medium block">Thời hạn &amp; Tiến độ kế hoạch</span>
               <span className="text-lg font-mono font-black text-[#8F7212] mt-0.5 block">
-                {selectedPackageForDetail.duration_days} ngày thi công
+                {Number.isFinite(selectedPackageForDetail.duration_days)?`${selectedPackageForDetail.duration_days} ngày thi công`:'Chưa có thời gian kế hoạch từ nguồn đọc'}
               </span>
               <span className="text-[11px] text-amber-800">
                 Kế hoạch: {selectedPackageForDetail.date_range}
@@ -117,21 +155,21 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Phương án kỹ thuật sửa chữa tổng quát của gói (Do PM nhập) */}
+          {/* Phương án kỹ thuật sửa chữa (PM nhập) — đọc từ GET chi tiết hạng mục */}
           <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200/80 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
                 <Icon name="build" className="text-sm text-brand-gold" />
-                <span>Phương án kỹ thuật sửa chữa tổng quát (PM đề xuất):</span>
+                <span>Phương án kỹ thuật sửa chữa (PM đề xuất):</span>
               </span>
               <span className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded font-mono border border-slate-200">
-                methodDescription
+                Theo chi tiết hạng mục
               </span>
             </div>
-            <p className="text-slate-800 text-xs leading-relaxed font-medium">
-              {selectedPackageForDetail.technical_method ||
-                'Cào bóc xử lý hư hỏng theo quy trình bảo trì mặt đường'}
-            </p>
+            {planLoading && !plans.length && <p className="text-slate-500 text-xs">Đang đọc phương án từ chi tiết hạng mục…</p>}
+            {plans.map((p,i)=><p key={i} className="text-slate-800 text-xs leading-relaxed font-medium whitespace-pre-wrap">{p}</p>)}
+            {!planLoading && !plans.length && !planErrors.length && items.length>0 && <p className="text-slate-600 text-xs">Chi tiết hạng mục đã đọc nhưng không có nội dung phương án.</p>}
+            {planErrors.length>0 && <p role="alert" className="text-rose-700 text-xs">Không đọc được chi tiết hạng mục ({planErrors.length}/{items.length}): {[...new Set(planErrors)].join(' · ')}</p>}
             <div className="text-[11px] text-slate-600 pt-1.5 border-t border-amber-200/60 flex items-center gap-3 flex-wrap">
               <span>Quy mô: <strong className="text-slate-800">{selectedPackageForDetail.technical_scope}</strong></span>
             </div>
@@ -139,115 +177,78 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
 
           {/* Danh sách RepairItems chi tiết */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
               <h4 className="font-bold text-sm text-brand-dark">
-                Danh sách hạng mục sửa chữa chi tiết (RepairItems - {selectedPackageForDetail.defect_count})
+                Danh sách hạng mục sửa chữa ({items.length})
               </h4>
               <span className="text-[11px] text-slate-500 font-medium">
-                Tiến độ thẩm định: {selectedPackageForDetail.approved_items}/{selectedPackageForDetail.total_items} mục đạt
+                Đã có quyết định phê duyệt: {decided}/{items.length} hạng mục · chưa phản ánh tiến độ thi công/nghiệm thu
               </span>
             </div>
 
             <div className="rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-              <div className="p-3 bg-slate-50/70 flex items-center justify-between gap-3 text-slate-600 font-semibold text-[11px]">
-                <span className="w-24">Mã hư hỏng</span>
-                <span className="w-32">Lý trình / Vị trí</span>
-                <span className="flex-1">Phương án kỹ thuật &amp; Vật tư</span>
-                <span className="w-32 text-right">Khối lượng &amp; Quy cách</span>
-                <span className="w-24 text-right">Trạng thái</span>
-              </div>
-
-              <div className="p-3 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3">
-                <span className="w-24 font-mono font-bold text-slate-900">DEF-102</span>
-                <span className="w-32 font-mono text-slate-600">Km 1029+200 (Làn phải)</span>
-                <span className="flex-1 text-slate-700">Cào bóc 5cm, trám thảm BTN C19 lu lèn tiêu chuẩn</span>
-                <span className="w-32 text-right font-mono font-semibold text-slate-900">0.45 m² (Sâu 5.2cm)</span>
-                <span className="w-24 text-right">
-                  <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    Đã duyệt
-                  </span>
-                </span>
-              </div>
-
-              <div className="p-3 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3">
-                <span className="w-24 font-mono font-bold text-slate-900">DEF-105</span>
-                <span className="w-32 font-mono text-slate-600">Km 1029+800 (Tim đường)</span>
-                <span className="flex-1 text-slate-700">Xẻ rãnh làm sạch, thổi bụi và rót nhựa mastic polymer</span>
-                <span className="w-32 text-right font-mono font-semibold text-slate-900">0.85 m² (Sâu 3.1cm)</span>
-                <span className="w-24 text-right">
-                  <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    Đã duyệt
-                  </span>
-                </span>
-              </div>
-
-              <div className="p-3 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3">
-                <span className="w-24 font-mono font-bold text-slate-900">DEF-108</span>
-                <span className="w-32 font-mono text-slate-600">Km 1030+150 (Vệt bánh)</span>
-                <span className="flex-1 text-slate-700">Cào bóc sâu 4.5cm, bù vênh đá dăm lu lèn lớp mặt C19</span>
-                <span className="w-32 text-right font-mono font-semibold text-slate-900">1.25 m² (Sâu 4.5cm)</span>
-                <span className="w-24 text-right">
-                  <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-amber-100 text-amber-800">
-                    Chờ duyệt
-                  </span>
-                </span>
-              </div>
+              {items.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-xs">
+                  Chưa có hạng mục sửa chữa chi tiết nào trong gói này.
+                </div>
+              ) : items.map((item,i) => {
+                const d=detailOf(item.id)
+                return (
+                  <div key={item.id} className="p-3 hover:bg-slate-50/80 transition-colors space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-slate-900">Hạng mục {i+1} <span className="text-slate-400 font-normal">· {item.id.slice(0,8).toUpperCase()}</span></span>
+                      <span className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${STATE_BADGE(item.state)}`}>{item.mode}: {item.state}</span>
+                        {isPM&&item.mode==='Normal'&&item.state==='ReadyToAssign'&&<button type="button" onClick={()=>dispatchTo(item.id)} className="rg-btn text-xs font-semibold text-[#8C6D1F]"><Icon name="local_shipping" size={13} className="mr-1 inline"/>Giao việc</button>}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-slate-600">
+                      <div><span className="text-slate-500">Phạm vi: </span><span className="font-mono">{selectedPackageForDetail.chainage_display}</span></div>
+                      <div><span className="text-slate-500">Checklist: </span>{!d?<span>Đang đọc chi tiết…</span>:d.error?<span className="text-rose-700">Không đọc được chi tiết hạng mục</span>:<strong className="text-slate-800">{d.item?.checklistVersion||'Chưa có'}</strong>}</div>
+                      <div className="md:col-span-2"><span className="text-slate-500">Phương án: </span>{!d?<span>Đang đọc chi tiết…</span>:d.error?<span role="alert" className="text-rose-700">{d.error}</span>:<span className="text-slate-800 whitespace-pre-wrap">{d.item?.repairPlan?.trim()||'Chi tiết hạng mục không có nội dung phương án.'}</span>}</div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
+
+          {/* Khối thao tác theo vai trò — xếp dọc, đầy đủ chiều rộng */}
+          {isSupervisor && items.some(i=>i.mode==='Normal') && (
+            <div className="rg-subcard space-y-2 text-xs">
+              <h4 className="font-bold text-sm text-brand-dark flex items-center gap-1.5"><Icon name="fact_check" size={16} className="text-emerald-700"/>Phê duyệt hạng mục Normal</h4>
+              <label className="block">Hạng mục Normal cần duyệt<select aria-label="Hạng mục Normal phê duyệt" value={itemId} disabled={busy} onChange={e=>{setItemId(e.target.value);setReason('')}} className="rg-field block w-full"><option value="">Chọn hạng mục từ hồ sơ</option>{items.filter(i=>i.mode==='Normal'&&i.state==='AwaitingApproval').map((i,n)=><option key={i.id} value={i.id}>Hạng mục {n+1} · {i.state}</option>)}</select></label>
+              <textarea aria-label="Lý do phê duyệt Normal" placeholder={held?'Lý do đang được giữ trong journal':'Nhập căn cứ phê duyệt'} value={held?.body.reason||reason} disabled={busy||!!held} onChange={e=>setReason(e.target.value)} maxLength={2000} className="rg-field block w-full"/>
+              <button type="button" disabled={busy||!!journalError||!itemId||(!held&&!reason.trim())||(!held&&items.find(i=>i.id===itemId)?.state!=='AwaitingApproval')} onClick={approve} className="rg-btn text-emerald-800">{busy?'Đang gửi…':held?'Đối chiếu quyết định đã gửi':'Phê duyệt hạng mục Normal'}</button>
+              {items.some(i=>i.mode==='Normal'&&i.state==='AwaitingApproval')&&<p data-testid="sup-reject-limit" className="rg-hint">Giới hạn hiện tại: máy chủ chưa có API cho Giám sát yêu cầu sửa/từ chối đề xuất Normal đang chờ duyệt (chỉ có phê duyệt). Không dùng "Hiệu chỉnh quyết định" thay thế; cần BE bổ sung thao tác.</p>}
+              {items.filter(i=>i.mode==='Normal'&&i.state!=='AwaitingApproval').map((i,n)=>{const d=detailOf(i.id);return <div key={i.id} data-testid="approval-readonly" className="text-[11px] text-slate-600 border-t border-slate-100 pt-1">Hạng mục {i.id.slice(0,8).toUpperCase()}: <strong className="text-slate-800">{i.state}</strong> · kết quả BE: <strong className="text-slate-800">{(d?.item?.result||i.result)||'Chưa có'}</strong>{i.effectiveDecisionId?' · đã có quyết định hiệu lực':''} <span className="text-slate-400">(chỉ đọc)</span></div>})}
+            </div>
+          )}
+          <RepairItemActions projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} isPM={isPM} isSupervisor={isSupervisor} onDone={()=>setReload(n=>n+1)} />
+          {isPM && <PlanningPanel key={`plan:${selectedPackageForDetail.id}`} projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} onSaved={()=>{setReload(n=>n+1);window.dispatchEvent(new Event('repair-workflow-refresh'))}} />}
+          <SourceDefectPanel key={selectedPackageForDetail.id} projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />
+          {isPM && <NotificationSupervisorPanel projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />}
+          {isPM && <RepairSafetyPanel projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />}
+          {items.some(i=>i.mode==='FastTrack') && (
+            <div className="flex flex-wrap gap-2">
+              {items.filter(i=>i.mode==='FastTrack').map((item,n)=><button key={item.id} type="button" onClick={()=>navigate(`${isSupervisor?'/sup':'/pm'}/fast-track?${new URLSearchParams({projectId:selectedPackageForDetail.route_id,defectId:selectedPackageForDetail.defect_id||'',itemId:item.id,open:'prepare'})}`)} className="rg-btn text-xs font-semibold text-[#8C6D1F]">{isPM?'Điều phối Fast Track có điều kiện':'Đọc độ phủ & điều phối Fast Track'} · Hạng mục {n+1}</button>)}
+            </div>
+          )}
         </div>
 
-        {/* Footer hành động theo vai trò */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+        {/* Footer */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 flex-wrap">
           <div className="text-xs text-slate-500">
             Người lập: <strong className="text-slate-800">{selectedPackageForDetail.created_by_name}</strong> •{' '}
             {selectedPackageForDetail.created_at}
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedPackageForDetail(null)}
-              type="button"
-              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
-            >
-              Đóng
-            </button>
-
-            {/* Nếu Supervisor và gói đang SUBMITTED */}
-            {isSupervisor && selectedPackageForDetail.status === 'SUBMITTED' && (
-              <button
-                onClick={() => {
-                  handleQuickApprove(selectedPackageForDetail.id, selectedPackageForDetail.code)
-                  setSelectedPackageForDetail((prev) =>
-                    prev
-                      ? { ...prev, status: 'DECIDED', status_label: 'Đã phê duyệt', approved_items: prev.total_items }
-                      : null
-                  )
-                }}
-                type="button"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
-              >
-                <Icon name="check" className="text-base" />
-                <span>Phê duyệt chính thức gói</span>
-              </button>
-            )}
-
-            {/* Nếu PM và gói đang DRAFT */}
-            {isPM && selectedPackageForDetail.status === 'DRAFT' && (
-              <button
-                onClick={() => {
-                  handleSubmitDraftPackage(selectedPackageForDetail.id, selectedPackageForDetail.code)
-                  setSelectedPackageForDetail((prev) =>
-                    prev ? { ...prev, status: 'SUBMITTED', status_label: 'Chờ duyệt' } : null
-                  )
-                }}
-                type="button"
-                className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
-              >
-                <Icon name="send" className="text-sm" />
-                <span>Khóa &amp; Trình duyệt gói</span>
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => setSelectedPackageForDetail(null)}
+            type="button"
+            className="px-4 py-2 bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+          >
+            Đóng
+          </button>
         </div>
       </div>
     </div>

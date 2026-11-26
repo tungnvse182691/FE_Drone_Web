@@ -5,12 +5,14 @@ import { DossierDetailModal } from './DossierDetailModal'
 import { TimeRangeModal } from './TimeRangeModal'
 
 export interface RiskModalsProps {
+  busy?:boolean;pending?:boolean;received?:boolean;journalKey?:string;error?:string;detailError?:string
   isExportModalOpen: boolean
   setIsExportModalOpen: (open: boolean) => void
   exportForm: {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean
@@ -20,6 +22,7 @@ export interface RiskModalsProps {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean
@@ -36,6 +39,7 @@ export interface RiskModalsProps {
 }
 
 export const RiskModals: React.FC<RiskModalsProps> = ({
+  busy,pending,received,journalKey,error,detailError,
   isExportModalOpen,
   setIsExportModalOpen,
   exportForm,
@@ -52,6 +56,7 @@ export const RiskModals: React.FC<RiskModalsProps> = ({
   return (
     <>
       <NewExportModal
+        busy={busy} pending={pending} received={received} journalKey={journalKey} error={error}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         exportForm={exportForm}
@@ -60,6 +65,7 @@ export const RiskModals: React.FC<RiskModalsProps> = ({
       />
 
       <DossierDetailModal
+        error={detailError}
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
         record={selectedRecordForDetail}
@@ -71,7 +77,7 @@ export const RiskModals: React.FC<RiskModalsProps> = ({
         onClose={() => setIsTimeRangeModalOpen(false)}
         onApply={() => {
           setIsTimeRangeModalOpen(false)
-          showToast('Đã áp dụng khung thời gian mới cho toàn bộ chỉ số KPI!')
+          showToast('Khung thời gian KPI chưa có nguồn dữ liệu; chưa thay đổi số liệu. Dùng bộ lọc kỳ để lọc ngày tạo hồ sơ.')
         }}
       />
     </>

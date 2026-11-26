@@ -1,26 +1,31 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { getMapLibreStyle } from '../../../utils/maplibre'
+import { getMapLibreStyle, hasMapBaseStyle } from '../../../utils/maplibre'
+import type { PavementPreview } from './alignmentPavementDisplay'
 import { SegmentItem } from './types'
 import { initAlignmentMapLayers, syncMapDataDirect } from './alignmentMapSetup'
+import { setSlabGridVisibility } from './alignmentSlabLayers'
+import { buildSlabsAndJointsGeoJSON } from './data'
 import {
   calculateCoordsLengthKm,
   calculateStationFromCoordinate
 } from './alignmentGeometryHelpers'
 
 export interface UseAlignmentMapStateParams {
+  savedPavement?: PavementPreview
   segments: SegmentItem[]
   currentCoords: [number, number][]
   currentKmPoints: number[]
   selectedSegmentId: string | null
   setSelectedSegmentId: (id: string | null) => void
   showToast: (msg: string) => void
-  slabLengthM: number
-  slabThicknessCm: number
-  contractionSpacingM: number
-  expansionSpacingM: number
-  expansionGapMm: number
+  stripWidthMeters: number | string
+  slabLengthM: number | string
+  slabThicknessCm: number | string
+  contractionSpacingM: number | string
+  expansionSpacingM: number | string
+  expansionGapMm: number | string
   initialCoords: [number, number][]
   initialStationText: string
   branches?: any[]
@@ -29,11 +34,13 @@ export interface UseAlignmentMapStateParams {
 
 export function useAlignmentMapState({
   segments,
+  savedPavement,
   currentCoords,
   currentKmPoints,
   selectedSegmentId,
   setSelectedSegmentId,
   showToast,
+  stripWidthMeters,
   slabLengthM,
   slabThicknessCm,
   contractionSpacingM,
@@ -51,6 +58,7 @@ export function useAlignmentMapState({
 
   const [mapLayer, setMapLayer] = useState<'SATELLITE' | 'VECTOR'>('SATELLITE')
   const [showSlabsAndJoints, setShowSlabsAndJoints] = useState<boolean>(true)
+  const slabGridVisible = useRef(showSlabsAndJoints); slabGridVisible.current = showSlabsAndJoints
   const [rulerActive, setRulerActive] = useState<boolean>(false)
   const [rulerPoints, setRulerPoints] = useState<[number, number][]>([])
 
@@ -71,6 +79,11 @@ export function useAlignmentMapState({
   // Ref theo dõi tọa độ và lý trình trục chính để tránh stale closure trong các event listener của bản đồ
   const coordsRef = useRef<[number, number][]>(currentCoords)
   const kmPointsRef = useRef<number[]>(currentKmPoints)
+  const customCfg = { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }
+  const pavementPreview = useMemo(() => savedPavement || buildSlabsAndJointsGeoJSON(segments, currentCoords, currentKmPoints, customCfg, branches),
+    [savedPavement, segments, currentCoords, currentKmPoints, branches, stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
+  const latestMapData = useRef({ segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg, pavementPreview })
+  latestMapData.current = { segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg, pavementPreview }
 
   useEffect(() => {
     coordsRef.current = currentCoords
@@ -78,10 +91,10 @@ export function useAlignmentMapState({
   }, [currentCoords, currentKmPoints])
 
   const [cursorPos, setCursorPos] = useState({
-    lng: initialCoords[0] ? initialCoords[0][0] : 108.0825,
-    lat: initialCoords[0] ? initialCoords[0][1] : 16.2731,
+    lng: initialCoords[0] ? initialCoords[0][0] : Number.NaN,
+    lat: initialCoords[0] ? initialCoords[0][1] : Number.NaN,
     station: initialStationText.split(' ')[0],
-    elevation: '+14.2m'
+    elevation: 'Chưa có dữ liệu'
   })
 
   // Cập nhật các Marker HTML đánh dấu điểm chấm trên bản đồ tức thời (0 delay)
@@ -125,13 +138,15 @@ export function useAlignmentMapState({
       setSelectedSegmentId,
       showToast,
       {
+        stripWidthMeters,
         slabLenM: slabLengthM,
         thicknessCm: slabThicknessCm,
         contractionSpacingM,
         expansionSpacingM,
         expansionGapMm
       },
-      brList
+      brList,
+      savedPavement || (updatedSegs === segments && coords === currentCoords && kmPts === currentKmPoints && brList === branches ? pavementPreview : undefined)
     )
   }
 
@@ -149,7 +164,7 @@ export function useAlignmentMapState({
       center: initialCenter,
       zoom: 11.2,
       minZoom: 4,
-      maxZoom: 20,
+      maxZoom: 22,
       maxPitch: 60,
       pitch: 32,
       bearing: -18
@@ -174,7 +189,7 @@ export function useAlignmentMapState({
         lng: parseFloat(lng.toFixed(4)),
         lat: parseFloat(lat.toFixed(4)),
         station: stationStr,
-        elevation: `+${(12.0 + ((lng * 100) % 20)).toFixed(1)}m`
+        elevation: 'Chưa có dữ liệu'
       })
     })
 
@@ -256,26 +271,19 @@ export function useAlignmentMapState({
       }
     })
 
-    map.on('load', () => {
+    map.on('style.load', () => {
       initAlignmentMapLayers({
         map,
-        segments,
-        currentCoords,
-        currentKmPoints,
-        selectedSegmentId,
+        ...latestMapData.current,
         popupRef,
         markersRef,
         onSelectSegmentId: setSelectedSegmentId,
         showToast,
-        branches,
         isPickingRef,
         onSelectSegmentRef
       })
-      if (currentCoords && currentCoords.length > 0) {
-        const bounds = new maplibregl.LngLatBounds()
-        currentCoords.forEach((c) => bounds.extend(c))
-        map.fitBounds(bounds, { padding: 60, speed: 1.1 })
-      }
+      setSlabGridVisibility(map, slabGridVisible.current)
+      if (latestMapData.current.currentCoords.length) handleFitBounds(latestMapData.current.currentCoords)
     })
 
     mapRef.current = map
@@ -287,6 +295,11 @@ export function useAlignmentMapState({
     }
   }, [])
 
+  // A popup describes a source feature; remove it when its configuration changes.
+  useEffect(() => {
+    popupRef.current?.remove()
+  }, [segments, stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
+
   // Đồng bộ GeoJSON và Markers khi state thay đổi
   useEffect(() => {
     syncMap(segments, selectedSegmentId, currentCoords, currentKmPoints, branches)
@@ -296,18 +309,20 @@ export function useAlignmentMapState({
     currentCoords,
     currentKmPoints,
     branches,
+    stripWidthMeters,
     slabLengthM,
     slabThicknessCm,
     contractionSpacingM,
     expansionSpacingM,
-    expansionGapMm
+    expansionGapMm,
+    savedPavement
   ])
 
   // Chuyển đổi lớp bản đồ
   useEffect(() => {
     if (!mapRef.current) return
     const map = mapRef.current
-    if (!map.isStyleLoaded()) return
+    if (!hasMapBaseStyle(map)) return
 
     if (map.getLayer('satellite-layer')) {
       map.setLayoutProperty('satellite-layer', 'visibility', mapLayer === 'SATELLITE' ? 'visible' : 'none')
@@ -321,24 +336,9 @@ export function useAlignmentMapState({
   useEffect(() => {
     if (!mapRef.current) return
     const map = mapRef.current
-    if (!map.isStyleLoaded()) return
+    if (!hasMapBaseStyle(map)) return
 
-    const slabLayers = [
-      'slabs-outline-shadow',
-      'slabs-outline-layer',
-      'slabs-label-layer',
-      'joints-contraction-layer',
-      'joints-expansion-layer',
-      'joints-expansion-label-layer',
-      'edges-dimension-line-layer',
-      'edges-label-layer'
-    ]
-
-    slabLayers.forEach((layerId) => {
-      if (map.getLayer(layerId)) {
-        map.setLayoutProperty(layerId, 'visibility', showSlabsAndJoints ? 'visible' : 'none')
-      }
-    })
+    setSlabGridVisibility(map, showSlabsAndJoints)
   }, [showSlabsAndJoints])
 
   // Đổi con trỏ chuột sang crosshair khi đang trong chế độ chấm điểm
@@ -517,6 +517,7 @@ export function useAlignmentMapState({
   }
 
   const handleFitBounds = (coords: [number, number][] = currentCoords) => {
+    if (!hasMapBaseStyle(mapRef.current)) return
     if (mapRef.current) {
       if (coords.length > 0) {
         const bounds = new maplibregl.LngLatBounds()
@@ -535,6 +536,7 @@ export function useAlignmentMapState({
   }
 
   return {
+    pavementPreview,
     mapContainerRef,
     mapRef,
     popupRef,

@@ -1,20 +1,23 @@
+import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
 import React from 'react'
 import { ReviewDetailDrawer } from './ReviewDetailDrawer'
 import { TriageCase } from './types'
 
 export interface ReviewDetailModalProps {
+  onDefectRecorded?: (message: string) => void
+  evidenceRequest?: CaseEvidenceRequestState
+  loading?: boolean
+  error?: string
+  onRetry?: () => void
   isOpen: boolean
   onClose: () => void
   selectedCase: TriageCase
   setSelectedCaseId: (id: string) => void
   cases: TriageCase[]
-  detailViewMode: 'PHOTO' | 'GIS_MAP'
-  setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP') => void
-  drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
-  currentSeverity: TriageCase['severity']
-  setCurrentSeverity: (s: TriageCase['severity']) => void
-  currentUrgency: TriageCase['urgency']
-  setCurrentUrgency: (u: TriageCase['urgency']) => void
+  currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  setCurrentSeverity: (s: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
+  currentUrgency: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  setCurrentUrgency: (u: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
   currentArea: number
   setCurrentArea: (a: number) => void
   currentDepth: number
@@ -31,7 +34,6 @@ export interface ReviewDetailModalProps {
   onNavigateFastTrack: (c?: TriageCase) => void
   onUnlinkReport: (code: string) => void
   onOpenTriageProject: (c: TriageCase) => void
-  onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void
   onOpenMergeModal: (c: TriageCase) => void
   onToggleClusterItem: (code: string) => void
@@ -39,6 +41,7 @@ export interface ReviewDetailModalProps {
 
 export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
   isOpen,
+  loading = false, error = '', onRetry,
   onClose,
   ...drawerProps
 }) => {
@@ -50,10 +53,14 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl max-w-7xl w-full max-h-[95vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <ReviewDetailDrawer {...drawerProps} onClose={onClose} />
+        {loading || error || !drawerProps.selectedCase.id ? <div className="p-6 space-y-3">
+          {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : <p role="status" className="text-sm text-slate-500">Đang tải chi tiết hồ sơ...</p>}
+          {error && <button type="button" onClick={onRetry} className="text-xs underline">Thử lại</button>}
+          <button type="button" onClick={onClose} className="rg-btn text-xs">Đóng lại</button>
+        </div> : <ReviewDetailDrawer {...drawerProps} onClose={onClose} />}
       </div>
     </div>
   )

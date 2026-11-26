@@ -1,128 +1,175 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { DefectPublicationPanel } from './defect-verify/DefectPublicationPanel'
+import { DefectRecurrenceHistory } from './defect-verify/DefectRecurrenceHistory'
+import { DefectRecurrenceForm } from './defect-verify/DefectRecurrenceForm'
+import type { RecurrenceInput } from '../../api/services/defectRecurrenceService'
 import { Card } from '../../components/ui/Card'
-import { mockDefects } from '../../api/mock/data'
-import { surveyService } from '../../api/services'
+import {
+  surveyService,
+  BackendDefectDto,
+  CandidateMatchItemDto,
+  formatDefectTypeLabel
+} from '../../api/services/surveyService'
+import { projectService } from '../../api/services/projectService'
+import { aiApiErrorText } from '../../api/services/aiRunDetailService'
 import { triageService } from '../../api/services/triageService'
 import { DefectStatus, Severity, DefectType, RoleCode } from '../../types/enums'
 import { Defect } from '../../types/domain'
 import { useAuthStore } from '../../store/authStore'
 import { AIDetectionItem } from './drone-review/types'
-import { INITIAL_DETECTIONS } from './drone-review/mockData'
 import { Icon } from '../../components/ui/Icon'
 import { DefectVerifyHeader } from './defect-verify/DefectVerifyHeader'
 import { DefectBoundingBoxViewer } from './defect-verify/DefectBoundingBoxViewer'
 import { DefectTemporalComparison } from './defect-verify/DefectTemporalComparison'
 import { DefectGisMapViewer } from './defect-verify/DefectGisMapViewer'
 import { DefectVerifyForm } from './defect-verify/DefectVerifyForm'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
-// Bản đồ ảnh thực tế tương ứng với từng loại hư hỏng mặt đường
-const DETECTION_SURFACE_IMAGES: Record<string, { image: string; prevImage: string; type: DefectType }> = {
-  'DET-01': {
-    image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.POTHOLE
-  },
-  'DET-02': {
-    image: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.LONGITUDINAL_CRACK
-  },
-  'DET-03': {
-    image: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.POTHOLE
-  },
-  'DET-04': {
-    // False Positive: Vũng nước đọng phản xạ ánh nắng mặt trời
-    image: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.POTHOLE
-  },
-  'DET-05': {
-    image: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.TRANSVERSE_CRACK
-  },
-  'DET-06': {
-    image: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.RAVELING
-  },
-  'DET-07': {
-    image: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.RUTTING
-  },
-  'DET-08': {
-    image: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.TRANSVERSE_CRACK
-  }
+const STANDARD_DEFECT_CODES = new Set<string>([
+  DefectType.LONGITUDINAL_CRACK,
+  DefectType.POTHOLE,
+  DefectType.TRANSVERSE_CRACK,
+  DefectType.ALLIGATOR_CRACK,
+  DefectType.RUTTING,
+  DefectType.RAVELING
+])
+
+function resolveDomainDefectType(rawCode?: string | null): DefectType {
+  const upper = (rawCode || '').toUpperCase()
+  if (upper === 'POTHOLE') return DefectType.POTHOLE
+  if (upper === 'TRANSVERSE_CRACK') return DefectType.TRANSVERSE_CRACK
+  if (upper === 'ALLIGATOR_CRACK') return DefectType.ALLIGATOR_CRACK
+  if (upper === 'RUTTING') return DefectType.RUTTING
+  if (upper === 'RAVELING') return DefectType.RAVELING
+  return DefectType.LONGITUDINAL_CRACK
 }
 
-function convertDetectionToDefect(item?: AIDetectionItem | null): Defect {
-  const safeItem = item || INITIAL_DETECTIONS[0]
-  const surfaceInfo = (safeItem?.id && DETECTION_SURFACE_IMAGES[safeItem.id]) || {
-    image: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80',
-    prevImage: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-    type: DefectType.POTHOLE
-  }
+function mapDetectionToDefect(
+  item: AIDetectionItem,
+  projectId: string,
+  projectName: string,
+  companionRunItem?: AIDetectionItem | null
+): Defect {
+  const bboxX = item.rawBbox?.x ?? (parseFloat(item.bbox?.left || '20%') / 100 || 0.2)
+  const bboxY = item.rawBbox?.y ?? (parseFloat(item.bbox?.top || '20%') / 100 || 0.2)
+  const bboxW = item.rawBbox?.width ?? (parseFloat(item.bbox?.width || '30%') / 100 || 0.3)
+  const bboxH = item.rawBbox?.height ?? (parseFloat(item.bbox?.height || '25%') / 100 || 0.25)
 
-  // Parse bounding box percentages to 0..1 ratio an toàn
-  const bboxX = parseFloat(safeItem?.bbox?.left || '30%') / 100 || 0.3
-  const bboxY = parseFloat(safeItem?.bbox?.top || '30%') / 100 || 0.3
-  const bboxW = parseFloat(safeItem?.bbox?.width || '30%') / 100 || 0.3
-  const bboxH = parseFloat(safeItem?.bbox?.height || '30%') / 100 || 0.3
-
-  // Status mapping
   let status = DefectStatus.OPEN
-  if (safeItem?.status === 'APPROVED') status = DefectStatus.VERIFIED
-  if (safeItem?.status === 'REJECTED') status = DefectStatus.REJECTED
+  if (item.status === 'APPROVED') status = DefectStatus.VERIFIED
+  if (item.status === 'REJECTED') status = DefectStatus.REJECTED
 
-  // Severity mapping an toàn
-  let severity = Severity.MEDIUM
-  const sev = safeItem?.severityLevel || ''
-  if (sev.includes('L3') || sev.includes('Khẩn cấp')) {
+  let severity = Severity.HIGH
+  const sev = (item.severityLevel || '').toUpperCase()
+  if (sev.includes('CRITICAL') || sev.includes('L3') || sev.includes('KHẨN CẤP')) {
     severity = Severity.CRITICAL
-  } else if (sev.includes('L2') || sev.includes('Trung bình') || sev.includes('Cần xử lý')) {
+  } else if (sev.includes('HIGH') || sev.includes('L2') || sev.includes('CẦN XỬ LÝ') || sev.includes('NGHIÊM TRỌNG')) {
     severity = Severity.HIGH
-  } else if (sev.includes('L1') || sev.includes('Nhẹ') || sev.includes('Bỏ qua')) {
+  } else if (sev.includes('LOW') || sev.includes('L1') || sev.includes('NHẸ')) {
     severity = Severity.LOW
+  } else if (sev.includes('MEDIUM') || sev.includes('TRUNG BÌNH')) {
+    severity = Severity.MEDIUM
   }
 
-  const lengthM = parseFloat(safeItem?.metrics?.length?.replace(' m', '') || '0.85') || 0.85
-  const widthM = parseFloat(safeItem?.metrics?.crackWidth?.replace(' mm', '') || '0.65') / (safeItem?.metrics?.crackWidth ? 1000 : 1) || 0.65
-  const depthMm = safeItem?.metrics?.depth
-    ? parseFloat(safeItem.metrics.depth.replace(' cm', '')) * 10
-    : undefined
+  const defectType = resolveDomainDefectType(item.rawTypeCode)
+  const kmVal = typeof item.kmValue === 'number' ? item.kmValue : Number.NaN
+
+  let prevBbox = undefined
+  if (companionRunItem) {
+    prevBbox = companionRunItem.rawBbox || {
+      x: parseFloat(companionRunItem.bbox?.left || '20%') / 100 || 0.2,
+      y: parseFloat(companionRunItem.bbox?.top || '20%') / 100 || 0.2,
+      width: parseFloat(companionRunItem.bbox?.width || '30%') / 100 || 0.3,
+      height: parseFloat(companionRunItem.bbox?.height || '25%') / 100 || 0.25
+    }
+  }
 
   return {
-    id: safeItem?.id?.toLowerCase() || 'det-01',
-    code: safeItem?.defectCode || safeItem?.code || '#DET-01',
-    survey_id: 'srv-01',
-    project_id: 'prj-ql1a-02',
-    project_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
-    chainage_km: safeItem?.kmValue || 1024.35,
-    gps_lat: parseFloat((16.2405 - ((safeItem?.kmValue || 1024.35) - 1024) * 0.007).toFixed(4)),
-    gps_lng: parseFloat((108.1310 + ((safeItem?.kmValue || 1024.35) - 1024) * 0.006).toFixed(4)),
-    defect_type: surfaceInfo.type,
+    id: item.id,
+    code: item.code,
+    survey_id: item.runId || projectId,
+    project_id: projectId,
+    project_name: projectName,
+    chainage_km: kmVal,
+    // BE không cung cấp GPS cho phát hiện; vị trí lấy từ hình học phân đoạn (xem DefectGisMapViewer)
+    gps_lat: NaN,
+    gps_lng: NaN,
+    defect_type: defectType,
     severity,
-    confidence_score: (safeItem?.confidence || 90) / 100,
+    confidence_score: (item.confidence || 80) / 100,
     status,
-    image_url: surfaceInfo.image,
-    previous_epoch_image_url: surfaceInfo.prevImage,
+    image_url: '',
+    previous_epoch_image_url: undefined,
+    previous_epoch_frame_id: companionRunItem?.frameFileId,
+    previous_epoch_bbox: prevBbox,
+    previous_epoch_label: companionRunItem
+      ? `Kỳ khảo sát trước (${companionRunItem.fixtureVersion || 'Road-YOLOv9'} • ${companionRunItem.type} ${companionRunItem.confidence}%)`
+      : undefined,
+    current_epoch_label: `Kỳ khảo sát hiện tại (${item.fixtureVersion || 'Road-YOLOv9'} • ${item.type} ${item.confidence}%)`,
     bounding_box: {
       x: bboxX,
       y: bboxY,
       width: bboxW,
       height: bboxH
     },
-    length_m: lengthM,
-    width_m: widthM,
-    depth_mm: depthMm,
-    batch_id: 'pkg-05',
-    created_at: '2026-09-24'
+    created_at: new Date().toISOString().slice(0, 10),
+    source_kind: 'AI_DETECTION',
+    run_id: item.runId,
+    fixture_version: item.fixtureVersion,
+    frame_file_id: item.frameFileId,
+    timestamp_ms: item.timestampMs,
+    source_version: item.sourceVersion,
+    geometry_version: item.geometryVersion,
+    route_version_id: item.routeVersionId,
+    disposition_id: item.disposition?.decisionId || null,
+    disposition_version: item.disposition?.version || null,
+    decision_kind: item.decisionKind,
+    linked_defect_id: item.decisionKind === 'LINK_EXISTING' ? item.defectId : null
+  }
+}
+
+function mapBackendDefectDtoToDomain(
+  dto: BackendDefectDto,
+  projectId: string,
+  projectName: string
+): Defect {
+  const sevMap: Record<string, Severity> = {
+    CRITICAL: Severity.CRITICAL,
+    HIGH: Severity.HIGH,
+    MEDIUM: Severity.MEDIUM,
+    LOW: Severity.LOW
+  }
+  const status =
+    dto.status === 'VERIFIED'
+      ? DefectStatus.VERIFIED
+      : dto.status === 'REJECTED'
+      ? DefectStatus.REJECTED
+      : DefectStatus.OPEN
+
+  return {
+    id: dto.id,
+    code: `#DEF-${dto.id.slice(0, 8).toUpperCase()}`,
+    survey_id: projectId,
+    project_id: projectId,
+    project_name: projectName,
+    // BE không trả lý trình cho khiếm khuyết (DefectViewDto không có trường này)
+    chainage_km: Number.NaN,
+    // BE không cung cấp GPS cho khiếm khuyết; vị trí lấy từ hình học phân đoạn (xem DefectGisMapViewer)
+    gps_lat: NaN,
+    gps_lng: NaN,
+    defect_type: resolveDomainDefectType(dto.defectTypeCode),
+    severity: sevMap[dto.severity || 'HIGH'] || Severity.HIGH,
+    confidence_score: 1.0,
+    status,
+    image_url: '',
+    bounding_box: { x: 0, y: 0, width: 0, height: 0 },
+    created_at: new Date().toISOString().slice(0, 10),
+    source_kind: 'DEFECT',
+    route_version_id: dto.roadSectionVersionId,
+    version: dto.version,
+    verification_status: dto.status,
+    lifecycle_status: dto.status
   }
 }
 
@@ -130,95 +177,343 @@ export const DefectDetailVerify: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
-  const fallbackReturnUrl = isSupervisor ? '/sup/ai-inbox' : '/pm/surveys/srv-01/review'
+  const fallbackReturnUrl = isSupervisor ? '/sup/ai-inbox' : '/pm/ai-inbox'
   const returnUrl = (location.state as any)?.from || fallbackReturnUrl
 
-  const [detections, setDetections] = useState<AIDetectionItem[]>(INITIAL_DETECTIONS)
-  const [localStatusOverride, setLocalStatusOverride] = useState<DefectStatus | null>(null)
-  const [localCodeOverride, setLocalCodeOverride] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  const decisionGuard = useSubmitGuard()
+  const [apiError, setApiError] = useState<string | null>(null)
 
-  // Tải danh sách detections từ store để đảm bảo đồng bộ mới nhất
-  useEffect(() => {
-    const fetchDetections = async () => {
-      try {
-        const list = await surveyService.getSurveyDetections('srv-01')
-        if (list && list.length > 0) {
-          setDetections(list)
+  const [allDetections, setAllDetections] = useState<
+    Array<{ item: AIDetectionItem; projectId: string; projectName: string }>
+  >([])
+  const [allDefects, setAllDefects] = useState<
+    Array<{ dto: BackendDefectDto; projectId: string; projectName: string }>
+  >([])
+  const [candidateMatches, setCandidateMatches] = useState<CandidateMatchItemDto[]>([])
+
+  const [customDefectType, setCustomDefectType] = useState<DefectType | string | null>(null)
+  const [customTypeText, setCustomTypeText] = useState<string>('')
+  const [severity, setSeverity] = useState<Severity>(Severity.HIGH)
+  const [notes, setNotes] = useState('Đã kiểm tra đối chiếu khung nhận diện AI và tọa độ trên CSDL.')
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [isRecurrent, setIsRecurrent] = useState(false)
+  const [linkedPriorCode, setLinkedPriorCode] = useState<string | null>(null)
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 4000)
+  }
+
+  const loadBackendData = useCallback(async (silent: boolean = false) => {
+    if (!silent) setIsLoading(true)
+    setApiError(null)
+    try {
+      let projects = projectService.getProjects()
+      if (!projects || projects.length === 0) {
+        projects = await projectService.fetchProjects()
+      }
+
+      const scopedProjects = isSupervisor
+        ? projects
+        : projects.filter((p) => {
+            if (!user) return true
+            const uEmail = (user.email || '').toLowerCase()
+            const pmEmail = (p.pm_email || '').toLowerCase()
+            const pmName = (p.pm_name || '').toLowerCase()
+            if (user.id && p.pm_user_id && user.id === p.pm_user_id) return true
+            if (uEmail && pmEmail && uEmail === pmEmail) return true
+            if (uEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
+            if (uEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
+            return false
+          })
+
+      const targetProjects = scopedProjects.length > 0 ? scopedProjects : projects
+
+      const detEntries: Array<{ item: AIDetectionItem; projectId: string; projectName: string }> = []
+      const defEntries: Array<{ dto: BackendDefectDto; projectId: string; projectName: string }> = []
+
+      for (const proj of targetProjects) {
+        try {
+          const dets = await surveyService.getAllProjectAiDetections(proj.id)
+          for (const d of dets) {
+            detEntries.push({ item: d, projectId: proj.id, projectName: proj.name })
+          }
+        } catch (err) {
+          console.warn(`Không thể tải AI detections của dự án ${proj.id}:`, err)
+          setApiError(aiApiErrorText(err, `Không tải được phát hiện AI của dự án ${proj.name}`))
         }
-      } catch (e) {
-        console.warn('Lỗi khi tải detections:', e)
+
+        try {
+          const defs = await surveyService.getProjectDefects(proj.id)
+          for (const df of defs) {
+            defEntries.push({ dto: df, projectId: proj.id, projectName: proj.name })
+          }
+        } catch (err) {
+          console.warn(`Không thể tải Defects của dự án ${proj.id}:`, err)
+        }
       }
+
+      const rawTargetId = (id || '').toLowerCase()
+      const isDirectDet = detEntries.some(
+        (e) =>
+          e.item.id.toLowerCase() === rawTargetId ||
+          ((e.item as any).legacyId && (e.item as any).legacyId.toLowerCase() === rawTargetId) ||
+          e.item.code.toLowerCase() === rawTargetId
+      )
+      const isDirectDef = defEntries.some((e) => e.dto.id.toLowerCase() === rawTargetId)
+
+      if (rawTargetId && !isDirectDet && !isDirectDef) {
+        let lookupErr = ''
+        try {
+          const allSurveys = await surveyService.getSurveys().catch((e) => { lookupErr = e instanceof Error ? e.message : 'Không tải được danh sách khảo sát'; return [] })
+          for (const srv of allSurveys) {
+            const srvDets = await surveyService.getSurveyDetections(srv.id).catch((e) => { lookupErr = lookupErr || (e instanceof Error ? e.message : 'Không tải được phát hiện AI'); return [] })
+            const matched = srvDets.find(
+              (sd) =>
+                sd.id.toLowerCase() === rawTargetId ||
+                ((sd as any).legacyId && (sd as any).legacyId.toLowerCase() === rawTargetId) ||
+                sd.code.toLowerCase() === rawTargetId
+            )
+            if (matched) {
+              detEntries.push({
+                item: matched,
+                projectId: srv.project_id,
+                projectName: srv.project_name
+              })
+              break
+            }
+          }
+          if (lookupErr && !detEntries.some((e) => e.item.id.toLowerCase() === rawTargetId)) setApiError(`Không tra cứu được phát hiện AI từ máy chủ: ${lookupErr}`)
+        } catch {}
+      }
+
+      if (rawTargetId && !isDirectDet && !isDirectDef && /^[0-9a-f-]{36}$/i.test(rawTargetId)) {
+        try {
+          const caseDetail = await triageService.getCaseById(rawTargetId)
+          if (caseDetail && caseDetail.project_id) {
+            const pDefs = await surveyService.getProjectDefects(caseDetail.project_id)
+            for (const df of pDefs) {
+              if (!defEntries.some((x) => x.dto.id === df.id)) {
+                defEntries.push({
+                  dto: df,
+                  projectId: caseDetail.project_id,
+                  projectName: caseDetail.project_name
+                })
+              }
+            }
+          }
+        } catch {}
+      }
+
+      setAllDetections(detEntries)
+      setAllDefects(defEntries)
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Không thể tải dữ liệu khiếm khuyết từ CSDL Backend.'
+      setApiError(msg)
+    } finally {
+      setIsLoading(false)
     }
-    fetchDetections()
-  }, [id])
+  }, [id, isSupervisor, user])
 
-  // Chuẩn hóa ID tìm kiếm
-  const targetId = (id || 'det-01').toLowerCase()
+  useEffect(() => {
+    loadBackendData()
+  }, [loadBackendData])
 
-  // Tìm trong detections đợt bay trước
-  const matchedDetection = useMemo(() => {
-    return detections.find(
-      (d) => d.id.toLowerCase() === targetId || d.code.toLowerCase() === targetId || (targetId === 'det-03' && d.id === 'DET-03')
+  const targetId = (id || '').toLowerCase()
+
+  const activeRecord = useMemo(() => {
+    const matchedDet = allDetections.find(
+      (d) =>
+        d.item.id.toLowerCase() === targetId ||
+        ((d.item as any).legacyId && (d.item as any).legacyId.toLowerCase() === targetId) ||
+        d.item.code.toLowerCase() === targetId
     )
-  }, [detections, targetId])
-
-  // Tìm trong mockDefects
-  const matchedMockDefect = useMemo(() => {
-    return mockDefects.find((d) => d.id.toLowerCase() === targetId)
-  }, [targetId])
-
-  // Đối tượng Defect hiển thị hiện tại
-  const [customDefectType, setCustomDefectType] = useState<DefectType | null>(null)
-  const [customDimensions, setCustomDimensions] = useState<{ lengthM: number; widthM: number } | null>(null)
-  const [isBboxModified, setIsBboxModified] = useState<boolean>(false)
-
-  const defect: Defect = useMemo(() => {
-    if (matchedDetection) {
-      const converted = convertDetectionToDefect(matchedDetection)
-      if (localStatusOverride) converted.status = localStatusOverride
-      if (localCodeOverride) converted.code = localCodeOverride
-      if (customDefectType) converted.defect_type = customDefectType
-      if (customDimensions) {
-        converted.length_m = customDimensions.lengthM
-        converted.width_m = customDimensions.widthM
+    if (matchedDet) {
+      const companion = allDetections.find(
+        (other) =>
+          other.projectId === matchedDet.projectId &&
+          other.item.id !== matchedDet.item.id &&
+          other.item.runId !== matchedDet.item.runId
+      )
+      return {
+        kind: 'AI_DETECTION' as const,
+        segmentSetId: matchedDet.item.segmentSetId,
+        segmentId: matchedDet.item.segmentId,
+        rawTypeCode: matchedDet.item.rawTypeCode,
+        defect: mapDetectionToDefect(
+          matchedDet.item,
+          matchedDet.projectId,
+          matchedDet.projectName,
+          companion?.item || null
+        )
       }
-      return converted
     }
-    if (matchedMockDefect) {
-      const copy = { ...matchedMockDefect }
-      if (localStatusOverride) copy.status = localStatusOverride
-      if (localCodeOverride) copy.code = localCodeOverride
-      if (customDefectType) copy.defect_type = customDefectType
-      if (customDimensions) {
-        copy.length_m = customDimensions.lengthM
-        copy.width_m = customDimensions.widthM
-      }
-      return copy
-    }
-    // Fallback sang DET-01
-    const fallback = convertDetectionToDefect(detections[0] || INITIAL_DETECTIONS[0])
-    if (localStatusOverride) fallback.status = localStatusOverride
-    if (localCodeOverride) fallback.code = localCodeOverride
-    if (customDefectType) fallback.defect_type = customDefectType
-    if (customDimensions) {
-      fallback.length_m = customDimensions.lengthM
-      fallback.width_m = customDimensions.widthM
-    }
-    return fallback
-  }, [matchedDetection, matchedMockDefect, detections, localStatusOverride, localCodeOverride, customDefectType, customDimensions])
 
-  // Danh sách chuyển đổi nhanh giữa các khuyết tật trong header
+    const matchedDef = allDefects.find((d) => d.dto.id.toLowerCase() === targetId)
+    if (matchedDef) {
+      return {
+        kind: 'DEFECT' as const,
+        segmentSetId: undefined as string | undefined,
+        segmentId: matchedDef.dto.segmentId,
+        rawTypeCode: matchedDef.dto.defectTypeCode,
+        defect: mapBackendDefectDtoToDomain(matchedDef.dto, matchedDef.projectId, matchedDef.projectName)
+      }
+    }
+
+    // Không tìm thấy đúng ID trên URL: trả null để báo rõ, KHÔNG chọn bản ghi đầu tiên thay thế.
+    return null
+  }, [allDetections, allDefects, targetId])
+
+  const defect = useMemo(() => {
+    if (!activeRecord) return null
+    const copy = { ...activeRecord.defect }
+    if (customDefectType && STANDARD_DEFECT_CODES.has(customDefectType)) {
+      copy.defect_type = customDefectType as DefectType
+    }
+    // Không gán URL trực tiếp để tránh trình duyệt tự gọi GET /files/{id}/content không có Bearer token
+    copy.image_url = ''
+    copy.previous_epoch_image_url = undefined
+    return copy
+  }, [activeRecord, customDefectType])
+
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string>('')
+  const [resolvedPrevImageUrl, setResolvedPrevImageUrl] = useState<string>('')
+  const [imageError, setImageError] = useState<string>('')
+  const [retrying, setRetrying] = useState(false)
+
+  // Phát hiện AI đang xem: nếu không đọc được trạng thái thẩm định (khác "chưa có quyết định") thì khóa mọi thao tác ghi.
+  const detectionItem = activeRecord?.kind === 'AI_DETECTION' && defect
+    ? allDetections.find((d) => d.item.id.toLowerCase() === defect.id.toLowerCase())?.item
+    : undefined
+  const writeLocked = !!detectionItem?.stateUnknown
+  const retryDetectionState = async () => {
+    if (!detectionItem) return
+    setRetrying(true)
+    try {
+      const fresh = await surveyService.refreshDetection(detectionItem)
+      setAllDetections((prev) => prev.map((e) => (e.item.id === fresh.id ? { ...e, item: fresh } : e)))
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Không đọc lại được trạng thái phát hiện AI.')
+    } finally { setRetrying(false) }
+  }
+
+  // Tải nội dung ảnh bằng phiên Web cookie (GET /files/{id}/content) rồi tạo Blob URL; lỗi hiển thị thật, không im lặng.
+  useEffect(() => {
+    let isMounted = true
+    setImageError('')
+
+    const currentFrameId = activeRecord?.defect?.frame_file_id
+    if (currentFrameId) {
+      setResolvedImageUrl('')
+      surveyService.getFileContentUrl(currentFrameId).then((url) => {
+        if (!isMounted) return
+        if (url) setResolvedImageUrl(url)
+        else setImageError(surveyService.fileContentError(currentFrameId) || 'Không tải được ảnh khung hình từ máy chủ.')
+      })
+    } else {
+      setResolvedImageUrl('')
+    }
+
+    const prevFrameId = (activeRecord?.defect as any)?.previous_epoch_frame_id
+    if (prevFrameId) {
+      surveyService.getFileContentUrl(prevFrameId).then((url) => {
+        if (isMounted && url) {
+          setResolvedPrevImageUrl(url)
+        }
+      })
+    } else {
+      setResolvedPrevImageUrl('')
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [activeRecord?.defect?.frame_file_id, (activeRecord?.defect as any)?.previous_epoch_frame_id])
+
+  const defectWithAuthImage = useMemo(() => {
+    if (!defect) return null
+    return {
+      ...defect,
+      image_url: resolvedImageUrl || '',
+      previous_epoch_image_url: resolvedPrevImageUrl || undefined
+    }
+  }, [defect, resolvedImageUrl, resolvedPrevImageUrl])
+
+  useEffect(() => {
+    if (!defect || defect.source_kind !== 'AI_DETECTION') {
+      setCandidateMatches([])
+      return
+    }
+    let isMounted = true
+    surveyService
+      .getCandidateMatches(defect.project_id, 'AI_DETECTION', defect.id)
+      .then((page) => {
+        if (isMounted) {
+          setCandidateMatches(page.items || [])
+        }
+      })
+      .catch((err) => {
+        console.warn('Không thể tải candidate matches:', err)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [defect?.id, defect?.project_id, defect?.source_kind])
+
+  useEffect(() => {
+    if (defect) {
+      setSeverity(defect.severity)
+
+      setCustomDefectType(null)
+      setCustomTypeText('')
+
+      setIsRecurrent(defect.decision_kind === 'LINK_EXISTING')
+      setLinkedPriorCode(
+        defect.decision_kind === 'LINK_EXISTING' && defect.linked_defect_id
+          ? `#DEF-${defect.linked_defect_id.slice(0, 8).toUpperCase()}`
+          : null
+      )
+    }
+  }, [defect?.id, defect?.decision_kind, defect?.disposition_id, defect?.linked_defect_id])
+
+  const projectExistingDefects = useMemo(() => {
+    if (!defect) return []
+    return allDefects.filter((d) => d.projectId === defect.project_id).map((d) => d.dto)
+  }, [allDefects, defect])
+
   const availableItems = useMemo(() => {
-    return detections.map((d) => ({
-      id: d.id.toLowerCase(),
-      label: `${d.code} (${d.stationing} • ${d.type}${d.status === 'APPROVED' ? ' [ĐÃ DUYỆT]' : d.status === 'REJECTED' ? ' [BỎ QUA]' : ''})`
+    const decisionViMap: Record<string, string> = {
+      KEEP_NEW: 'Chấp nhận',
+      LINK_EXISTING: 'Đã gom lỗi cũ',
+      REJECT: 'Báo sai'
+    }
+    const statusViMap: Record<string, string> = {
+      VERIFIED: 'Đã xác minh',
+      REJECTED: 'Báo sai',
+      OPEN: 'Chờ xử lý'
+    }
+    const aiOpts = allDetections.map((d) => ({
+      id: d.item.id,
+      label: `${d.item.code} (${d.projectName} • ${d.item.type} ${d.item.confidence}%${
+        d.item.decisionKind ? ` [${decisionViMap[d.item.decisionKind] || d.item.decisionKind}]` : ' [Chờ duyệt]'
+      })`
     }))
-  }, [detections])
+    const defOpts = allDefects.map((d) => ({
+      id: d.dto.id,
+      label: `#DEF-${d.dto.id.slice(0, 8).toUpperCase()} (${d.projectName} • ${formatDefectTypeLabel(d.dto.defectTypeCode)} [${statusViMap[d.dto.status || ''] || d.dto.status}])`
+    }))
+    return [...aiOpts, ...defOpts]
+  }, [allDetections, allDefects])
 
-  // Tab chuyển đổi (đồng bộ theo route verify-a hoặc verify-b)
   const isTemporalRoute = location.pathname.includes('/verify-b')
   const [viewMode, setViewMode] = useState<'SINGLE' | 'TEMPORAL' | 'GIS_MAP'>(
     isTemporalRoute ? 'TEMPORAL' : 'SINGLE'
@@ -232,135 +527,239 @@ export const DefectDetailVerify: React.FC = () => {
     }
   }, [location.pathname])
 
-  const [severity, setSeverity] = useState<Severity>(defect.severity)
-  const [notes, setNotes] = useState('Đã đối chiếu với kích thước thước đo thực tế')
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg)
-    setTimeout(() => setToastMessage(null), 3500)
-  }
-
-  useEffect(() => {
-    setSeverity(defect.severity)
-    setLocalStatusOverride(null)
-    setLocalCodeOverride(null)
-    setCustomDefectType(null)
-    setCustomDimensions(null)
-    setIsBboxModified(false)
-  }, [id, defect.id])
-
-  const handleVerify = async (newStatus: DefectStatus) => {
+  const handleVerify = async (newStatus: DefectStatus, recurrence?: RecurrenceInput) => {
+    if (!defect) return
+    if (writeLocked) { showToast('Chưa xác định được trạng thái thẩm định (không đọc được từ máy chủ). Bấm Thử lại trước khi ghi quyết định để tránh tạo trùng.'); return }
+    if (recurrence && (user?.role !== RoleCode.PROJECT_MANAGER || defect.source_kind !== 'AI_DETECTION' || newStatus !== DefectStatus.VERIFIED)) return
     if (!notes.trim()) {
-      showToast('Vui lòng nhập ý kiến / lý do thẩm định trước khi xác nhận hoặc từ chối!')
+      showToast('Vui lòng nhập ý kiến / lý do thẩm định trước khi bấm Chấp nhận hoặc Báo sai!')
       return
     }
 
-    setLocalStatusOverride(newStatus)
-    setSeverity(severity)
-
-    // Xác định chính xác detection ID trong surveyService (ví dụ: DET-01, DET-04)
-    const rawId = id || defect.id || 'det-01'
-    const cleanDetId = rawId.toUpperCase().replace('DEF-', 'DET-').replace('DET-2026-', 'DET-')
-    const finalDetId = cleanDetId.startsWith('DET-') ? cleanDetId : `DET-${cleanDetId.slice(-2)}`
-
-    const newDefectCode =
-      defect.code.startsWith('DEF-')
-        ? defect.code
-        : `DEF-2026-0${finalDetId.replace('DET-', '')}0`
-
-    if (newStatus === DefectStatus.VERIFIED) {
-      setLocalCodeOverride(newDefectCode)
+    const effectiveType = customDefectType || defect.defect_type
+    const isCustom = effectiveType === 'CUSTOM'
+    if (isCustom && !customTypeText.trim()) {
+      showToast('Vui lòng nhập tên loại khiếm khuyết!')
+      return
     }
+
+    let resolvedTypeCode = String(effectiveType)
+    let resolvedCustomLabel: string | undefined = undefined
+
+    if (isCustom) {
+      const slug = customTypeText
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/gi, 'd')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 28)
+      resolvedTypeCode = slug ? `CUSTOM_${slug}` : 'CUSTOM_DEFECT'
+      resolvedCustomLabel = customTypeText.trim()
+    } else if (effectiveType === DefectType.LONGITUDINAL_CRACK && !customDefectType) {
+      resolvedTypeCode = 'CRACK'
+    }
+
+    if (!decisionGuard.acquire()) return
+    setIsSubmitting(true)
+    setApiError(null)
 
     try {
-      await surveyService.updateSurveyDetection('srv-01', finalDetId, {
-        status: newStatus === DefectStatus.VERIFIED ? 'APPROVED' : 'REJECTED',
-        defectCode: newStatus === DefectStatus.VERIFIED ? newDefectCode : undefined,
-        type: (customDefectType || defect.defect_type) as any,
-        metrics: {
-          reviewer: 'KS. Đỗ Quốc Hoàng (PM)',
-          dismissReason: newStatus === DefectStatus.REJECTED ? notes : undefined,
-          length: `${customDimensions?.lengthM ?? defect.length_m ?? 1.2} m`,
-          crackWidth: `${customDimensions?.widthM ?? defect.width_m ?? 0.8} m`
-        }
+      if (defect.source_kind === 'DEFECT') {
+        const evidenceIds = await surveyService.resolveDefectEvidenceIds(defect.project_id, defect.id)
+
+        await surveyService.assessDefect(defect.project_id, defect.id, {
+          defectTypeCode: resolvedTypeCode,
+          customTypeLabel: resolvedCustomLabel,
+          severity: severity as any,
+          reason: notes.trim(),
+          evidenceIds
+        })
+
+        await surveyService.verifyDefect(defect.project_id, defect.id, {
+          decision: newStatus === DefectStatus.VERIFIED ? 'CONFIRM' : 'REJECT',
+          verificationMethod: 'EXISTING_EVIDENCE',
+          reason: notes.trim(),
+          evidenceIds
+        })
+
+        showToast(
+          `✅ Đã lưu quyết định (${newStatus === DefectStatus.VERIFIED ? 'Chấp nhận' : 'Báo sai'}) cho [${defect.code}] vào CSDL!`
+        )
+        await loadBackendData(true)
+      } else {
+        const decisionRes = await surveyService.decideCandidate(defect.project_id, {
+          sourceKind: 'AI_DETECTION',
+          sourceId: defect.id,
+          runId: defect.run_id,
+          segmentId: (defect as any).segment_id ?? null,
+          decision: newStatus === DefectStatus.VERIFIED ? 'KEEP_NEW' : 'REJECT',
+          defectTypeCode: resolvedTypeCode,
+          customTypeLabel: resolvedCustomLabel,
+          severity: severity as any,
+          reason: notes.trim(),
+          recurrence
+        })
+
+        const isVerify = newStatus === DefectStatus.VERIFIED
+        const targetDecisionKind = isVerify ? 'KEEP_NEW' : 'REJECT'
+        setAllDetections((prev) =>
+          prev.map((entry) => {
+            if (
+              entry.projectId === defect.project_id && entry.item.id.toLowerCase() === defect.id.toLowerCase()
+            ) {
+              return {
+                ...entry,
+                item: {
+                  ...entry.item,
+                  status: isVerify ? 'APPROVED' : 'REJECTED',
+                  decisionKind: targetDecisionKind,
+                  defectId: decisionRes.defectId || null
+                }
+              }
+            }
+            return entry
+          })
+        )
+
+        const newDefCode = decisionRes.defectId
+          ? `#DEF-${decisionRes.defectId.slice(0, 8).toUpperCase()}`
+          : defect.code
+
+        const msg = recurrence ? `Đã tạo [${newDefCode}] và đối chiếu liên kết tái phát trên máy chủ.` :
+          newStatus === DefectStatus.VERIFIED
+            ? `✅ Đã lưu quyết định Chấp nhận! Tạo hồ sơ khiếm khuyết [${newDefCode}] từ [${defect.code}].`
+            : `✅ Đã lưu quyết định Báo sai cho [${defect.code}].`
+        showToast(msg)
+        await loadBackendData(true)
+      }
+    } catch (err: any) {
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Lỗi khi lưu quyết định thẩm định lên CSDL Backend.'
+      setApiError(errMsg)
+      showToast(`❌ Lỗi Backend: ${errMsg}`)
+    } finally {
+      decisionGuard.release()
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleLinkRecurrence = async (
+    targetDefectId: string,
+    targetVersion: string,
+    notesText: string
+  ) => {
+    if (!defect) return
+    if (writeLocked) { showToast('Chưa xác định được trạng thái thẩm định (không đọc được từ máy chủ). Bấm Thử lại trước khi ghi quyết định để tránh tạo trùng.'); return }
+    if (!decisionGuard.acquire()) return
+    setIsSubmitting(true)
+    setApiError(null)
+
+    try {
+      await surveyService.decideCandidate(defect.project_id, {
+        sourceKind: 'AI_DETECTION',
+        sourceId: defect.id,
+        decision: 'LINK_EXISTING',
+        targetDefectId,
+        targetVersion,
+        reason: notesText.trim() || `Gom ứng viên AI vào hồ sơ khiếm khuyết hiện hữu ${targetDefectId}`
       })
-    } catch (err) {
-      console.warn('Sync to survey detections warning:', err)
-    }
-
-    const msg =
-      newStatus === DefectStatus.VERIFIED
-        ? `Đã xác nhận khiếm khuyết [${newDefectCode}] (${finalDetId} - ${customDefectType || defect.defect_type}) hợp lệ vào hồ sơ kỹ thuật.`
-        : `Đã từ chối khiếm khuyết [${finalDetId}] (Báo sai AI / False Positive).`
-    showToast(msg)
-
-    setTimeout(() => {
-      navigate(returnUrl)
-    }, 1200)
-  }
-
-  const handleRequestSurvey = async (reason: string, mode: 'DRONE_RESURVEY' | 'MEASURE_ONLY') => {
-    const rawId = id || defect.id || 'det-01'
-    const cleanDetId = rawId.toUpperCase().replace('DEF-', 'DET-').replace('DET-2026-', 'DET-')
-    const finalDetId = cleanDetId.startsWith('DET-') ? cleanDetId : `DET-${cleanDetId.slice(-2)}`
-
-    if (mode === 'DRONE_RESURVEY') {
-      try {
-        await surveyService.updateSurveyDetection('srv-01', finalDetId, {
-          status: 'PENDING',
-          metrics: { dismissReason: `Yêu cầu bay bổ sung KS11/BR-43: ${reason}` }
-        })
-      } catch (e) {}
-      try {
-        await triageService.updateCase(rawId, {
-          status: 'NEED_SURVEY',
-          status_label: 'Cần đo đạc',
-          conclusion: 'NEED_SURVEY',
-          survey_assignment: {
-            mode: 'DRONE_RESURVEY',
-            reason: reason || 'Yêu cầu bay Drone bổ sung',
-            assigned_crew: 'Đội bay Drone Hoàng Hải 01 - Phi công: Lê Minh Khôi',
-            sla_hours: 24,
-            created_at: new Date().toLocaleTimeString('vi-VN')
-          }
-        })
-      } catch (e) {}
-      showToast(`Đã tạo Lệnh Bay Bổ Sung (KS11 / BR-43) tại Km ${defect.chainage_km}. Tiếp tục rà soát đợt bay.`)
-      setTimeout(() => {
-        navigate(returnUrl)
-      }, 1200)
-    } else {
-      setLocalStatusOverride(DefectStatus.OPEN)
-      try {
-        await surveyService.updateSurveyDetection('srv-01', finalDetId, {
-          status: 'PENDING',
-          metrics: { depth: 'Chờ đo thực địa AI13', reviewer: 'Chờ kết quả đo' }
-        })
-      } catch (e) {}
-      try {
-        await triageService.updateCase(rawId, {
-          status: 'NEED_SURVEY',
-          status_label: 'Cần đo đạc',
-          conclusion: 'NEED_SURVEY',
-          survey_assignment: {
-            mode: 'MEASURE_ONLY',
-            reason: reason || 'Yêu cầu đo đạc hiện trường bổ sung',
-            assigned_crew: 'Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035)',
-            sla_hours: 24,
-            created_at: new Date().toLocaleTimeString('vi-VN')
-          }
-        })
-      } catch (e) {}
-      showToast(`Đã giao nhiệm vụ Đo Đạc Hiện Trường (AI13 / TN01) tại Km ${defect.chainage_km}.`)
-      setTimeout(() => {
-        navigate(returnUrl)
-      }, 1200)
+      showToast(`✅ Đã lưu và đọc lại quyết định gom [${defect.code}] vào [#DEF-${targetDefectId.slice(0, 8).toUpperCase()}].`)
+      await loadBackendData(true)
+    } catch (err: any) {
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Lỗi khi gom vào khiếm khuyết hiện hữu trên CSDL Backend.'
+      setApiError(errMsg)
+      showToast(`❌ Lỗi Backend: ${errMsg}`)
+    } finally {
+      decisionGuard.release()
+      setIsSubmitting(false)
     }
   }
+
+  if (isLoading) {
+    return (
+      <div className="p-12 bg-white rounded-2xl border border-slate-200 text-center space-y-3">
+        <div className="w-10 h-10 rounded-full border-2 border-[#C9A227] border-t-transparent animate-spin mx-auto" />
+        <p className="text-sm font-bold text-slate-800">
+          Đang tải dữ liệu ứng viên AI &amp; khiếm khuyết từ CSDL...
+        </p>
+      </div>
+    )
+  }
+
+  if (!defect) {
+    return (
+      <div className="p-10 bg-white rounded-2xl border border-slate-200 text-center space-y-4">
+        <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+          <Icon name="error" size={24} />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-base font-bold text-slate-900">
+            Không có dữ liệu khiếm khuyết trong CSDL
+          </h2>
+          <p className="text-xs text-slate-600 max-w-md mx-auto">
+            {`Không tìm thấy phát hiện AI hoặc Defect có ID "${id || ''}" trong CSDL Backend. Không hiển thị bản ghi khác thay thế.`}{apiError ? ` ${apiError}` : ''}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(returnUrl)}
+          className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer"
+        >
+          Quay lại
+        </button>
+      </div>
+    )
+  }
+
+  const effectiveCustomLabel =
+    customDefectType === 'CUSTOM' ? customTypeText.trim() || 'Loại lỗi tự nhập' : undefined
 
   return (
     <div className="space-y-6">
+      {/* Error Banner minh bạch nếu API trả lỗi */}
+      {apiError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 flex items-start justify-between gap-3 text-xs">
+          <div className="flex items-start gap-2.5">
+            <Icon name="error" size={18} className="text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold">Thông báo lỗi từ CSDL Backend</div>
+              <div className="mt-0.5 text-rose-800">{apiError}</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setApiError(null)}
+            className="text-rose-500 hover:text-rose-800 cursor-pointer"
+          >
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+      )}
+
+      {writeLocked && detectionItem && (
+        <div role="alert" data-testid="ai-detection-state-unknown" className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start justify-between gap-3 text-xs">
+          <div>
+            <div className="font-bold">Chưa xác định được trạng thái thẩm định của {detectionItem.code}</div>
+            <div className="mt-0.5 break-words">{detectionItem.stateError}</div>
+            <div className="mt-0.5">Các thao tác ghi quyết định đang bị khóa để tránh tạo quyết định trùng. Phát hiện khác không bị ảnh hưởng.</div>
+          </div>
+          <button type="button" disabled={retrying} onClick={() => { void retryDetectionState() }} className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-amber-300 font-bold cursor-pointer disabled:opacity-50">{retrying ? 'Đang đọc…' : 'Thử lại'}</button>
+        </div>
+      )}
+      {imageError && (
+        <div role="alert" data-testid="ai-frame-image-error" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs break-words">{imageError}</div>
+      )}
+
       {/* 1. Header & Switcher */}
       <DefectVerifyHeader
         defect={defect}
@@ -370,50 +769,54 @@ export const DefectDetailVerify: React.FC = () => {
         onBack={() => navigate(returnUrl)}
         availableItems={availableItems}
         basePath={basePath}
+        isRecurrent={isRecurrent}
+        linkedPriorCode={linkedPriorCode}
       />
 
       {/* 2. Main Grid: Left is Photo Viewer / GIS Map, Right is Verification Form */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: 2 Columns on Desktop */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
-            {viewMode === 'GIS_MAP' && (
-              <DefectGisMapViewer defect={defect} severity={severity} />
-            )}
+            {viewMode === 'GIS_MAP' && <DefectGisMapViewer defect={defectWithAuthImage || defect} severity={severity} segmentSetId={activeRecord?.segmentSetId} segmentId={activeRecord?.segmentId} />}
 
             {viewMode === 'SINGLE' && (
               <DefectBoundingBoxViewer
-                defect={defect}
+                defect={defectWithAuthImage || defect}
                 currentType={customDefectType || defect.defect_type}
-                onBboxChange={(_newBbox, lengthM, widthM) => {
-                  setIsBboxModified(true)
-                  setCustomDimensions({ lengthM, widthM })
-                }}
+                customTypeLabel={effectiveCustomLabel}
               />
             )}
 
-            {viewMode === 'TEMPORAL' && (
-              <DefectTemporalComparison defect={defect} />
-            )}
+            {viewMode === 'TEMPORAL' && <DefectTemporalComparison defect={defectWithAuthImage || defect} />}
           </Card>
         </div>
 
-        {/* Right: Verification Form */}
         <div className="space-y-4">
           <DefectVerifyForm
             defect={defect}
             currentType={customDefectType || defect.defect_type}
             onTypeChange={(newType) => setCustomDefectType(newType)}
-            dimensions={customDimensions || { lengthM: defect.length_m || 1.2, widthM: defect.width_m || 0.8 }}
-            isBboxModified={isBboxModified}
+            customTypeText={customTypeText}
+            onCustomTypeTextChange={setCustomTypeText}
+            liveBbox={defect.bounding_box}
             severity={severity}
             setSeverity={setSeverity}
             notes={notes}
             setNotes={setNotes}
             onVerify={handleVerify}
-            onRequestSurvey={handleRequestSurvey}
+            onLinkRecurrence={handleLinkRecurrence}
+            existingDefects={projectExistingDefects}
+            candidateMatches={candidateMatches}
+            isSubmitting={isSubmitting || writeLocked}
             isSupervisor={isSupervisor}
           />
+          {user?.role === RoleCode.PROJECT_MANAGER && defect.source_kind === 'AI_DETECTION' && defect.project_id && !defect.decision_kind && (
+            <DefectRecurrenceForm key={`${authEpoch}:${defect.project_id}:${defect.id}`} projectId={defect.project_id} busy={isSubmitting || writeLocked}onSubmit={input => { void handleVerify(DefectStatus.VERIFIED, input) }} />
+          )}
+          {!isSupervisor && defect.status === DefectStatus.VERIFIED && defect.project_id && <DefectPublicationPanel projectId={defect.project_id} defectId={defect.id} />}
+          {user?.role === RoleCode.PROJECT_MANAGER && activeRecord?.kind === 'DEFECT' && defect.id.toLowerCase() === targetId && defect.project_id && (
+            <DefectRecurrenceHistory key={`${authEpoch}:${defect.project_id}:${defect.id}`} projectId={defect.project_id} defectId={defect.id} />
+          )}
         </div>
       </div>
 
@@ -421,7 +824,7 @@ export const DefectDetailVerify: React.FC = () => {
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
           <Icon name="check_circle" size={18} className="text-emerald-400 shrink-0" />
-          <span className="text-xs font-medium">{toastMessage}</span>
+          <span role="status" className="text-xs font-medium">{toastMessage}</span>
           <button
             type="button"
             onClick={() => setToastMessage(null)}

@@ -1,8 +1,11 @@
+import { displayKm, displayMeters } from '../../../utils/projectDistanceDisplay'
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { Segment } from './types'
 
 interface ProjectSegmentsTableProps {
+  hasRoutes?:boolean;readError?:string;canSetup?:boolean
+  serverReadOnly?: boolean
   projectId: string
   segments: Segment[]
   branches?: any[]
@@ -16,6 +19,8 @@ interface ProjectSegmentsTableProps {
 }
 
 export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
+  hasRoutes=false,readError='',canSetup=false,
+  serverReadOnly = false,
   projectId,
   segments,
   branches = [],
@@ -59,11 +64,14 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           type="button"
           className="text-xs text-[#8C6D1F] hover:text-[#C9A227] flex items-center gap-1 font-bold cursor-pointer shrink-0 transition-colors"
         >
-          <span>Xem bản đồ GIS phân đoạn (WF-02)</span>
+          <span>Xem bản đồ GIS phân đoạn</span>
           <Icon name="chevron_right" size={16} />
         </button>
       </div>
 
+      {serverReadOnly ? <>
+        {readError ? <p role="alert" className="text-xs text-rose-700">{readError}</p> : !segments.length ? <div className="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500">{hasRoutes?'PM chưa công bố phân đoạn.':'Chưa có tim tuyến hiện hành.'}{!hasRoutes&&canSetup&&<button onClick={()=>onNavigate(`${basePath}/projects/${projectId}/alignment`)} className="block mx-auto mt-3 text-brand-gold font-semibold">Thiết lập tim tuyến</button>}</div> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-50 border-y"><tr><th className="p-3">Tuyến / Phân đoạn đã công bố ({segments.length})</th><th>Phạm vi lý trình</th><th>Chiều dài</th><th>Loại tuyến</th><th/></tr></thead><tbody>{segments.map(row=><tr key={row.code} className="border-b"><td className="p-3">{row.label}</td><td>{row.stationing}</td><td>{displayKm(row.length_km)}</td><td>{row.routeKind==='MAIN'?'Tuyến chính':row.routeKind==='BRANCH'?'Tuyến phụ':'Chưa phân loại'}</td><td><button className="px-3 py-1 rounded-lg bg-slate-100" onClick={()=>onViewSegment(row.code)}>Xem</button></td></tr>)}</tbody></table></div>}
+      </> : <>
       {/* Tab Switcher dạng Pill */}
       <div className="flex items-center gap-2 border-b border-[#EDEFF2] pb-3">
         <button
@@ -80,7 +88,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-bold ${
             currentTab === 'MAINLINE' ? 'bg-white/20 text-white' : 'bg-white text-slate-700 border border-slate-200'
           }`}>
-            {segments.length} đoạn • {mainlineLengthKm > 0 ? `${mainlineLengthKm}km` : '0km'}
+            {serverReadOnly ? 'Chưa tải phân đoạn server' : `${segments.length} đoạn`} • {Number.isFinite(mainlineLengthKm) ? displayKm(mainlineLengthKm!) : 'Chưa có phân loại tuyến'}
           </span>
         </button>
 
@@ -100,8 +108,9 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           }`}>
             {(() => {
               const branchesSegmentsCount = branches.reduce((acc, b) => acc + (b.segments && Array.isArray(b.segments) && b.segments.length > 0 ? b.segments.length : 1), 0)
+              if (serverReadOnly) return Number.isFinite(branchesLengthKm) ? `${branches.length} nhánh • ${displayKm(branchesLengthKm!)}` : 'Chưa có phân loại nhánh'
               return branches.length > 0
-                ? `${branches.length} nhánh (${branchesSegmentsCount} đoạn) • ${branchesLengthKm}km`
+                ? `${branches.length} nhánh (${branchesSegmentsCount} đoạn) • ${displayKm(branchesLengthKm!)}`
                 : '0 nhánh'
             })()}
           </span>
@@ -117,7 +126,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                 <Icon name="alt_route" size={22} />
               </div>
               <div className="max-w-md">
-                <h4 className="text-xs font-bold text-slate-800">Chưa có phân đoạn lý trình nào trên tuyến chính</h4>
+                <h4 className="text-xs font-bold text-slate-800">{serverReadOnly ? 'Phân đoạn đã lưu được đọc trong hồ sơ tuyến' : 'Chưa có phân đoạn lý trình nào trên tuyến chính'}</h4>
                 <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Dự án mới khởi tạo. Kỹ sư PM cần nạp tọa độ GPX/KML và thiết lập tim tuyến để hệ thống tự động sinh các phân đoạn quản lý.
                 </p>
@@ -128,7 +137,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                 className="px-3.5 py-1.5 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 mt-1 shadow-2xs"
               >
                 <Icon name="add" size={14} />
-                <span>Thiết lập tim tuyến (WF-02)</span>
+                <span>Thiết lập tim tuyến</span>
               </button>
             </div>
           ) : (
@@ -154,7 +163,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                     >
                       <td className="py-3 px-3 font-mono font-bold text-slate-900">{seg.code}</td>
                       <td className="py-3 px-3 font-mono text-slate-700">{seg.stationing}</td>
-                      <td className="py-3 px-3 font-mono font-semibold text-slate-800">{seg.length_km} km</td>
+                      <td className="py-3 px-3 font-mono font-semibold text-slate-800">{Number.isFinite(seg.length_km) ? displayKm(seg.length_km) : 'Chưa có dữ liệu'}</td>
                       <td className="py-3 px-3">
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold ${
@@ -198,8 +207,9 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
         </>
       )}
 
+      </>}
       {/* CONTENT TAB 2: TUYẾN PHỤ (BRANCHES) */}
-      {currentTab === 'BRANCHES' && (
+      {!serverReadOnly && currentTab === 'BRANCHES' && (
         <>
           {branches.length === 0 ? (
             <div className="p-8 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center flex flex-col items-center justify-center gap-2.5">
@@ -218,7 +228,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                 className="px-3.5 py-1.5 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 mt-1 shadow-2xs"
               >
                 <Icon name="add" size={14} />
-                <span>Thêm tuyến nhánh phụ (WF-02)</span>
+                <span>Thêm tuyến nhánh phụ</span>
               </button>
             </div>
           ) : (
@@ -236,11 +246,11 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                 </thead>
                 <tbody className="divide-y divide-[#EDEFF2]">
                   {branches.map((b: any) => {
-                    const bLen = b.lengthKm || (b.coords && b.coords.length >= 2 ? 0.5 : 0)
+                    const bLen = b.lengthKm
                     const divergeKmText = b.divergeStationKm !== undefined
-                      ? `Km ${b.divergeStationKm.toFixed(3).replace('.', '+')}`
-                      : 'Đầu tuyến'
-                    const sideText = b.divergeSide === 'LEFT' ? 'Bên Trái' : 'Bên Phải'
+                      ? displayKm(b.divergeStationKm)
+                      : 'Chưa có lý trình nút giao'
+                    const sideText = b.divergeSide === 'LEFT' ? 'Bên Trái' : b.divergeSide === 'RIGHT' ? 'Bên Phải' : 'Chưa có hướng nhánh'
 
                     return (
                       <tr key={b.id || b.code} className="hover:bg-slate-50/80 transition-colors">
@@ -255,15 +265,15 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                           <span className="ml-1 text-[11px] text-slate-500">({sideText})</span>
                         </td>
                         <td className="py-3 px-3 font-mono font-bold text-slate-900">
-                          {bLen >= 1 ? `${bLen.toFixed(2)} km` : `${Math.round(bLen * 1000)} m`}
+                          {Number.isFinite(bLen) ? bLen >= 1 ? displayKm(bLen) : displayMeters(bLen * 1000) : 'Chưa có dữ liệu'}
                         </td>
                         <td className="py-3 px-3 text-slate-700">
-                          <div className="font-semibold">Rộng {b.roadWidthM || 8.0}m • {b.laneCount || 2} làn</div>
-                          <div className="text-[11px] text-slate-500 font-mono">{b.surfaceMaterial || 'Mặt BTN C12.5'}</div>
+                          <div className="font-semibold">Rộng {Number.isFinite(b.roadWidthM) ? `${b.roadWidthM} m` : 'chưa có dữ liệu'} • {Number.isFinite(b.laneCount) ? `${b.laneCount} làn` : 'chưa có dữ liệu làn'}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">{b.surfaceMaterial || 'Chưa có vật liệu'}</div>
                         </td>
                         <td className="py-3 px-3 text-center">
                           <span className="font-mono font-semibold text-slate-800">
-                            {b.segments && b.segments.length > 0 ? `${b.segments.length} đoạn` : '1 đoạn'}
+                            {b.segments && b.segments.length > 0 ? `${b.segments.length} đoạn` : 'Chưa tải phân đoạn server'}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-right">

@@ -1,22 +1,7 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 
-export interface FastTrackBannerProps {
-  sourceCase: {
-    code: string
-    title: string
-    stationing: string
-    isEligible: boolean
-  } | null
-  onClose: () => void
-}
-
-export const FastTrackBanner: React.FC<FastTrackBannerProps> = ({
-  sourceCase,
-  onClose
-}) => {
-  if (!sourceCase) return null
-
+export const FastTrackBanner: React.FC = () => {
   return (
     <div
       className="rounded-[20px] overflow-hidden relative shadow-2xs animate-in fade-in transition-all duration-300"
@@ -42,33 +27,25 @@ export const FastTrackBanner: React.FC<FastTrackBannerProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-xs text-[#1A1D20]">
-                ĐÃ TỰ ĐỘNG CHỌN HỒ SƠ TỪ HỘP THƯ TIẾP NHẬN:
+                Hồ sơ nguồn &amp; Điều kiện xử lý
               </span>
-              <span className="font-mono font-bold text-xs bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 text-amber-900 shadow-2xs">
-                {sourceCase.code}
+              <span className="font-bold text-xs bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 text-amber-900 shadow-2xs">
+                Chưa cập nhật
               </span>
-              {sourceCase.isEligible ? (
-                <span className="text-[11px] font-bold px-[14px] py-[5px] rounded-full bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
-                  ✓ Đủ tiêu chuẩn Xử lý nhanh trực tiếp
-                </span>
-              ) : (
-                <span className="text-[11px] font-bold px-[14px] py-[5px] rounded-full bg-[#FEF2F2] text-[#B91C1C] border border-[#E6A8A8]">
-                  ⚠ Vượt ngưỡng xử lý nhanh (Chuyển sang Chế độ Đo đạc)
-                </span>
-              )}
+              <span className="text-[11px] font-bold px-[14px] py-[5px] rounded-full bg-slate-50 text-slate-500 border border-slate-200">Chưa cập nhật</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              <strong className="text-slate-800">{sourceCase.title}</strong> • Lý trình: <span className="font-semibold text-slate-700">{sourceCase.stationing}</span>. Hệ thống đã tự động tick chọn khiếm khuyết này và thiết lập chế độ phù hợp.
+              Hồ sơ: Chưa cập nhật • Lý trình: Chưa cập nhật. Chỉ sử dụng nguồn được xác nhận trên máy chủ, không tự chọn hoặc giao việc từ hộp thư.
             </p>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={onClose}
+          disabled
           className="self-start sm:self-center px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-[#E2E5E9] hover:bg-slate-50 rounded-xl cursor-pointer transition-colors shadow-2xs shrink-0"
         >
-          Đóng
+          Chưa cập nhật
         </button>
       </div>
     </div>

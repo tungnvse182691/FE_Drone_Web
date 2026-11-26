@@ -1,3 +1,4 @@
+import { displayStatus, readableTime } from './alignmentLabels'
 import React from 'react'
 import {
   SplitSquareVertical,
@@ -9,8 +10,18 @@ import { SidebarSegmentsTab } from './SidebarSegmentsTab'
 import { SidebarWidthProfileTab } from './SidebarWidthProfileTab'
 import { SidebarSlabsTab } from './SidebarSlabsTab'
 import { SidebarFooterKpis } from './SidebarFooterKpis'
+import type { usePavementWorkflow } from './usePavementWorkflow'
+import { AsBuiltPanel } from './AsBuiltPanel'
+import { MapPublicationPanel } from './MapPublicationPanel'
 
 export interface AlignmentSidebarProps {
+  routeLabel?: string
+  draftContentSaved?: boolean
+  segmentCount?: number | null
+  segmentCountMessage?: string
+  segmentPlanning?: boolean
+  segmentSetStatus?: string
+  pavementWorkflow?: ReturnType<typeof usePavementWorkflow>
   rightTab: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   onSetRightTab: (tab: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS') => void
   segments: SegmentItem[]
@@ -26,18 +37,20 @@ export interface AlignmentSidebarProps {
   currentCoords?: [number, number][]
   currentKmPoints: number[]
   importedLengthKm: number
-  slabLengthM: number
-  onSetSlabLengthM: (val: number) => void
-  slabThicknessCm: number
-  onSetSlabThicknessCm: (val: number) => void
+  stripWidthMeters: number | string
+  onSetStripWidthMeters: (val: number | string) => void
+  slabLengthM: number | string
+  onSetSlabLengthM: (val: number | string) => void
+  slabThicknessCm: number | string
+  onSetSlabThicknessCm: (val: number | string) => void
   syncJointWithSlab: boolean
   onSetSyncJointWithSlab: (val: boolean) => void
-  contractionSpacingM: number
-  onSetContractionSpacingM: (val: number) => void
-  expansionSpacingM: number
-  onSetExpansionSpacingM: (val: number) => void
-  expansionGapMm: number
-  onSetExpansionGapMm: (val: number) => void
+  contractionSpacingM: number | string
+  onSetContractionSpacingM: (val: number | string) => void
+  expansionSpacingM: number | string
+  onSetExpansionSpacingM: (val: number | string) => void
+  expansionGapMm: number | string
+  onSetExpansionGapMm: (val: number | string) => void
   onOpenSplitModal: (seg: SegmentItem) => void
   onEditSegment: (seg: SegmentItem) => void
   onDeleteSegment: (id: string) => void
@@ -56,10 +69,18 @@ export interface AlignmentSidebarProps {
   onClearMainline?: () => void
   onOpenImportModal?: () => void
   mainlineLengthKm?: number
+  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'
+  editingDisabled?: boolean
+  isSupervisor?: boolean
 }
 
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   rightTab,
+  routeLabel,
+  draftContentSaved = false,
+  segmentCount = null, segmentCountMessage = 'Chưa chọn set',
+  pavementWorkflow,
+  segmentPlanning = false, segmentSetStatus,
   onSetRightTab,
   segments,
   selectedSegmentId,
@@ -74,6 +95,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   currentCoords = [],
   currentKmPoints,
   importedLengthKm,
+  stripWidthMeters,
+  onSetStripWidthMeters,
   slabLengthM,
   onSetSlabLengthM,
   slabThicknessCm,
@@ -102,7 +125,10 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   onClearAllSegments,
   onClearMainline,
   onOpenImportModal,
-  mainlineLengthKm
+  mainlineLengthKm,
+  alignmentStatus,
+  isSupervisor,
+  editingDisabled = false
 }) => {
   return (
     <div className="xl:col-span-4 flex flex-col gap-3">
@@ -121,7 +147,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             <SplitSquareVertical className="w-3.5 h-3.5 text-brand-gold" />
             <span className="truncate">Phân đoạn</span>
             <span className="text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-brand-gold">
-              {segments.length}
+              {segmentCount ?? segmentCountMessage}
             </span>
           </button>
           <button
@@ -135,9 +161,6 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           >
             <Sliders className="w-3.5 h-3.5 text-brand-gold" />
             <span className="truncate">Bề rộng (m)</span>
-            <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-              v2.2
-            </span>
           </button>
           <button
             type="button"
@@ -150,15 +173,16 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           >
             <Grid className="w-3.5 h-3.5 text-brand-gold" />
             <span className="truncate">Tấm & Khe</span>
-            <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-              TCVN
-            </span>
           </button>
         </div>
 
         {/* TAB CONTENT: SEGMENTS */}
         {rightTab === 'SEGMENTS' && (
           <SidebarSegmentsTab
+            routeLabel={routeLabel}
+            draftContentSaved={draftContentSaved}
+            segmentPlanning={segmentPlanning}
+            segmentSetStatus={segmentSetStatus}
             segments={segments}
             selectedSegmentId={selectedSegmentId}
             onSelectSegment={onSelectSegment}
@@ -186,6 +210,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             onClearMainline={onClearMainline}
             onOpenImportModal={onOpenImportModal}
             mainlineLengthKm={mainlineLengthKm}
+            alignmentStatus={alignmentStatus}
+            isSupervisor={isSupervisor || editingDisabled}
           />
         )}
 
@@ -196,12 +222,23 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             selectedSegmentId={selectedSegmentId}
             onUpdateSegmentWidth={onUpdateSegmentWidth}
             onUpdateAllWidths={onUpdateAllWidths}
+            isReadOnly={!['DRAFT','REJECTED'].includes(alignmentStatus || '') || isSupervisor || editingDisabled}
           />
         )}
 
         {/* TAB CONTENT: SLABS & JOINTS CONFIG */}
         {rightTab === 'SLABS' && (
+          <>
+          {pavementWorkflow && <AsBuiltPanel workflow={pavementWorkflow} readOnly={!!isSupervisor} />}
+          <fieldset disabled={isSupervisor || editingDisabled || pavementWorkflow?.asBuilt.active || pavementWorkflow?.snapshot?.kind === 'AS_BUILT'} className="min-w-0 border-0 p-0 m-0">
           <SidebarSlabsTab
+            asBuiltDraft={!!pavementWorkflow?.asBuilt.preview}
+            layoutKind={pavementWorkflow?.asBuilt.preview ? 'AS_BUILT' : pavementWorkflow?.snapshot?.kind}
+            serverSnapshot={!!pavementWorkflow?.display}
+            stripWidthMeters={stripWidthMeters}
+            onSetStripWidthMeters={onSetStripWidthMeters}
+            segments={segments}
+            selectedSegmentId={selectedSegmentId}
             slabLengthM={slabLengthM}
             onSetSlabLengthM={onSetSlabLengthM}
             slabThicknessCm={slabThicknessCm}
@@ -217,13 +254,28 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             slabs={slabs}
             showToast={showToast}
           />
+          </fieldset>
+          </>
         )}
+        {rightTab === 'SLABS' && pavementWorkflow && <>
+          {pavementWorkflow.layoutDiscoveryMessage && <p role="status" className="text-xs text-slate-600">{pavementWorkflow.layoutDiscoveryMessage}</p>}
+          {pavementWorkflow.listError && <button type="button" onClick={pavementWorkflow.retry} className="rg-btn text-xs">Thử lại danh sách cấu hình</button>}
+          {pavementWorkflow.layouts?.length > 0 && <label className="block text-xs text-slate-600">Cấu hình đang xem<select aria-label="Cấu hình đang xem" value={pavementWorkflow.layoutId} disabled={pavementWorkflow.busy || pavementWorkflow.asBuilt.active || !!pavementWorkflow.asBuilt.pending} onChange={event => pavementWorkflow.openLayout(event.target.value)} className="rg-field max-w-full"><option value="">Chọn cấu hình theo loại và thời gian lưu</option>{pavementWorkflow.layouts.map((row, index) => <option key={row.layoutId} value={row.layoutId}>{displayStatus(row.kind)} {index + 1} · {pavementWorkflow.layoutDescriptions[row.layoutId] || 'Đang đọc kích thước…'} · {readableTime(row.createdAt)}</option>)}</select></label>}
+
+          {pavementWorkflow.layoutDescriptionError && <p role="alert" className="text-xs text-slate-600">{pavementWorkflow.layoutDescriptionError}</p>}
+          <MapPublicationPanel workflow={pavementWorkflow} readOnly={!!isSupervisor} />
+          {!isSupervisor && !pavementWorkflow.asBuilt.active && !pavementWorkflow.asBuilt.pending && pavementWorkflow.snapshot?.kind !== 'AS_BUILT' && <button type="button" disabled={pavementWorkflow.busy || (!pavementWorkflow.pending && !!pavementWorkflow.disabledReason)} title={pavementWorkflow.disabledReason} onClick={() => { void pavementWorkflow.save() }} className="px-3 py-2 rounded-lg border border-brand-gold text-brand-dark text-xs font-semibold disabled:opacity-50">{pavementWorkflow.busy ? 'Đang lưu/đọc lại…' : pavementWorkflow.actionLabel}</button>}
+          {(pavementWorkflow.message || pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage) && <p role="status" className="text-xs text-slate-600">{[pavementWorkflow.message, !isSupervisor && (pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage)].filter(Boolean).join(' ')}</p>}
+        </>}
       </div>
 
       {/* KPI TỔNG KẾT DƯỚI SIDEBAR */}
       <SidebarFooterKpis
+        segmentCount={segmentCount}
+        segmentCountMessage={segmentCountMessage}
         segments={segments}
         importedLengthKm={importedLengthKm}
+        alignmentStatus={selectedTargetType === 'MAINLINE' ? alignmentStatus : 'DRAFT'}
       />
     </div>
   )

@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useToastStore } from '../../../store/toastStore'
+import { requestPasswordRecoveryApi } from '../../../api/auth'
 
 export interface LoginFormProps {
   email: string
@@ -12,6 +13,7 @@ export interface LoginFormProps {
   setRememberMe: (val: boolean) => void
   loginError: boolean
   setLoginError: (val: boolean) => void
+  errorMessage?: string
   isLoading: boolean
   onSubmit: (e: React.FormEvent) => void
   onSwitchToForce?: () => void
@@ -28,12 +30,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   setRememberMe,
   loginError,
   setLoginError,
+  errorMessage,
   isLoading,
   onSubmit,
   onSwitchToForce
 }) => {
   const toast = useToastStore()
-
+  // API-008: dùng email đang nhập ở ô Email; BE trả 202 chung cho mọi email (không lộ tài khoản).
+  const requestRecovery = async () => {
+    if (!email.trim()) { toast.info('Nhập email công vụ vào ô Email rồi bấm "Quên mật khẩu?" để gửi yêu cầu khôi phục.'); return }
+    try {
+      await requestPasswordRecoveryApi(email)
+      toast.success('Đã ghi nhận yêu cầu khôi phục mật khẩu. Nếu email thuộc tài khoản hợp lệ, hướng dẫn sẽ được gửi.')
+    } catch (e) {
+      const err = e as { response?: { status?: number; data?: { code?: string; title?: string } }; message?: string }
+      toast.error(err.response ? `Không gửi được yêu cầu khôi phục: HTTP ${err.response.status} ${err.response.data?.code || err.response.data?.title || ''}` : `Không gửi được yêu cầu khôi phục: ${err.message}`)
+    }
+  }
   return (
     <section className="space-y-5">
       <div>
@@ -47,12 +60,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
       {/* Thông báo lỗi đăng nhập */}
       {loginError && (
-        <div className="p-3.5 rounded-xl bg-[#FDECEC] border border-[#E5484D]/30 text-[#E5484D] text-xs leading-relaxed flex items-start gap-2.5">
+        <div role="alert" className="p-3.5 rounded-xl bg-[#FDECEC] border border-[#E5484D]/30 text-[#E5484D] text-xs leading-relaxed flex items-start gap-2.5">
           <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
             error
           </span>
           <div className="flex-1">
-            <span className="font-semibold">Đăng nhập không thành công:</span> Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.
+            <span className="font-semibold">Đăng nhập không thành công:</span> {errorMessage || 'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.'}
           </div>
           <button
             type="button"
@@ -80,9 +93,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="pmhoang@gmail.com hoặc suphoang@gmail.com"
+              placeholder="Nhập email tài khoản"
               required
-              className="aurora-input-light font-mono"
+              className="aurora-input-light"
             />
           </div>
         </div>
@@ -131,7 +144,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
           <button
             type="button"
-            onClick={() => toast.info('Vui lòng liên hệ Quản trị viên để đặt lại mật khẩu công vụ.')}
+            onClick={() => { void requestRecovery() }}
             className="text-xs font-medium text-[#8C6D1F] hover:text-[#6B5219] transition-colors cursor-pointer"
           >
             Quên mật khẩu?
@@ -190,48 +203,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </button>
         </div>
       )}
-
-      {/* 2 nút tài khoản dùng thử: PM | Giám sát */}
-      <div className="pt-4 border-t border-[#E2E5E9]">
-        <span className="text-[11px] font-medium text-slate-400 block mb-2.5">
-          Tài khoản kiểm thử nhanh (Mật khẩu mặc định: 123456):
-        </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('pmhoang@gmail.com')
-              setPassword('123456')
-            }}
-            className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
-          >
-            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">badge</span>
-              <span className="truncate">PM Dùng thử</span>
-            </div>
-            <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
-              pmhoang@gmail.com
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('suphoang@gmail.com')
-              setPassword('123456')
-            }}
-            className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
-          >
-            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">supervisor_account</span>
-              <span className="truncate">Giám sát Dùng thử</span>
-            </div>
-            <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
-              suphoang@gmail.com
-            </div>
-          </button>
-        </div>
-      </div>
     </section>
   )
 }

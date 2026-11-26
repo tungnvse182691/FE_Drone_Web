@@ -1,4 +1,5 @@
 import * as maplibregl from 'maplibre-gl'
+import { hasMapBaseStyle } from '../../../utils/maplibre'
 import { SegmentItem } from './types'
 import {
   buildSegmentsSurfaceGeoJSON,
@@ -12,6 +13,7 @@ import {
 import { setupAlignmentSourcesAndLayers } from './alignmentMapLayers'
 import { setupAlignmentMapInteractions } from './alignmentMapInteractions'
 import { renderAlignmentMarkers } from './alignmentMapMarkers'
+import type { PavementPreview } from './alignmentPavementDisplay'
 
 export { renderAlignmentMarkers }
 
@@ -28,6 +30,8 @@ export interface InitMapLayersOptions {
   branches?: any[]
   isPickingRef?: React.RefObject<boolean>
   onSelectSegmentRef?: React.RefObject<((id: string, branchId?: string, feature?: any) => void) | null>
+  customCfg?: SlabsCustomConfig
+  pavementPreview?: PavementPreview
 }
 
 export function initAlignmentMapLayers({
@@ -42,10 +46,12 @@ export function initAlignmentMapLayers({
   showToast,
   branches = [],
   isPickingRef,
-  onSelectSegmentRef
+  onSelectSegmentRef,
+  customCfg,
+  pavementPreview
 }: InitMapLayersOptions) {
   // 1. Setup GeoJSON sources & visualization layers
-  setupAlignmentSourcesAndLayers(map, segments, currentCoords, currentKmPoints, selectedSegmentId, branches)
+  setupAlignmentSourcesAndLayers(map, segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg, pavementPreview)
 
   // 2. Setup map interaction handlers (clicks, hovers, popups)
   setupAlignmentMapInteractions(map, popupRef, onSelectSegmentId, isPickingRef, onSelectSegmentRef)
@@ -76,14 +82,15 @@ export function syncMapDataDirect(
   onSelectSegmentId: (id: string) => void,
   showToast: (msg: string) => void,
   customCfg?: SlabsCustomConfig,
-  branches: any[] = []
+  branches: any[] = [],
+  pavementPreview?: PavementPreview
 ) {
-  if (!map || !map.isStyleLoaded()) return
+  if (!hasMapBaseStyle(map)) return
 
   // Đảm bảo các nguồn và lớp luôn tồn tại trước khi cập nhật dữ liệu
   if (!map.getSource('segments-source') || !map.getSource('segments-surface-source')) {
     try {
-      setupAlignmentSourcesAndLayers(map, updatedSegs, coords, kmPts, selId, branches)
+      setupAlignmentSourcesAndLayers(map, updatedSegs, coords, kmPts, selId, branches, customCfg, pavementPreview)
     } catch (e) {
       console.warn('setupAlignmentSourcesAndLayers warning:', e)
     }
@@ -117,7 +124,7 @@ export function syncMapDataDirect(
   }
 
   try {
-    const { slabsGeoJSON, jointsGeoJSON, edgesGeoJSON } = buildSlabsAndJointsGeoJSON(
+    const { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON } = pavementPreview || buildSlabsAndJointsGeoJSON(
       updatedSegs,
       coords,
       kmPts,
@@ -126,6 +133,10 @@ export function syncMapDataDirect(
     )
     const slabsSrc = map.getSource('slabs-source') as maplibregl.GeoJSONSource
     if (slabsSrc) slabsSrc.setData(slabsGeoJSON)
+    const labelsSrc = map.getSource('slabs-labels-source') as maplibregl.GeoJSONSource
+    if (labelsSrc) labelsSrc.setData(slabLabelsGeoJSON)
+    const jointLabelsSrc = map.getSource('joints-labels-source') as maplibregl.GeoJSONSource
+    if (jointLabelsSrc) jointLabelsSrc.setData(jointLabelsGeoJSON)
 
     const jointsSrc = map.getSource('joints-source') as maplibregl.GeoJSONSource
     if (jointsSrc) jointsSrc.setData(jointsGeoJSON)

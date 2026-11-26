@@ -37,3 +37,82 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #A8A8A8;
 }
+
+/* RoadGuard MapLibre Dark Popups */
+.roadguard-maplibre-popup .maplibregl-popup-content {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.roadguard-maplibre-popup .maplibregl-popup-tip {
+  border-top-color: #0f172a !important;
+  border-bottom-color: #0f172a !important;
+}
+
+.roadguard-maplibre-popup .maplibregl-popup-close-button {
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  padding: 4px 8px !important;
+  top: 6px !important;
+  right: 6px !important;
+  border-radius: 4px !important;
+  transition: color 0.15s, background-color 0.15s !important;
+}
+
+.roadguard-maplibre-popup .maplibregl-popup-close-button:hover {
+  color: #f8fafc !important;
+  background-color: #334155 !important;
+}
+
+
+/* UI đồng bộ 2026-11-16: control chuẩn cho panel nối API (xem docs/integration/UI-DONG-BO-20261116.md) */
+@layer components {
+  .rg-field {
+    @apply px-3 py-2 text-xs bg-white border border-brand-border rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-gold disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
+  }
+  .rg-btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-brand-border rounded-lg transition-colors cursor-pointer hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-gold disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
+
+/* Hiện đại hóa panel nối API 2026-11-17: chuẩn card/tiêu đề/nhãn/nút/trạng thái (xem UI-DONG-BO-20261116.md) */
+@layer components {
+  .rg-panel { @apply rounded-xl border border-brand-border bg-white shadow-xs p-4 space-y-3 text-xs text-slate-700; }
+  .rg-panel-head { @apply flex flex-wrap items-center gap-x-3 gap-y-2 pb-3 border-b border-brand-border; }
+  .rg-panel-icon { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-surfaceAlt border border-brand-border text-brand-navy; }
+  .rg-panel-title { @apply font-headline text-sm font-bold text-brand-dark leading-tight; }
+  .rg-panel-sub { @apply mt-0.5 text-[11px] text-slate-500 leading-snug; }
+  .rg-section-title { @apply flex items-center gap-1.5 text-xs font-bold text-brand-dark; }
+  .rg-subcard { @apply rounded-lg border border-brand-border bg-brand-surfaceAlt/60 p-3 space-y-2; }
+  .rg-label { @apply block mb-1 text-[11px] font-semibold text-slate-500; }
+  .rg-hint { @apply mt-1 text-[11px] text-slate-400; }
+  .rg-grid { @apply grid grid-cols-12 gap-3; }
+  .rg-footer { @apply flex flex-wrap items-center justify-end gap-2 pt-1; }
+  .rg-kv { @apply grid gap-x-4 gap-y-2 grid-cols-2 lg:grid-cols-3; }
+  .rg-kv-k { @apply text-[11px] text-slate-500 leading-tight; }
+  .rg-kv-v { @apply mt-0.5 text-xs font-semibold text-brand-dark break-words; }
+  .rg-btn-primary { @apply bg-brand-navy text-white border-brand-navy hover:bg-[#1f2633]; }
+  .rg-btn-danger { @apply text-red-700 bg-red-50 border-red-200 hover:bg-red-100; }
+  .rg-alert { @apply flex items-start gap-2 rounded-lg border px-3 py-2 text-xs; }
+  .rg-alert-error { @apply bg-red-50 border-red-200 text-red-800; }
+  .rg-alert-ok { @apply bg-emerald-50 border-emerald-200 text-emerald-800; }
+  .rg-alert-warn { @apply bg-amber-50 border-amber-200 text-amber-800; }
+  .rg-empty { @apply flex items-center gap-2 rounded-lg border border-dashed border-brand-border bg-brand-surfaceAlt/60 px-3 py-3 text-slate-500; }
+  .rg-pill { @apply inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-none; }
+  .rg-pill-ok { @apply bg-emerald-50 border-emerald-200 text-emerald-700; }
+  .rg-pill-bad { @apply bg-red-50 border-red-200 text-red-700; }
+  .rg-pill-warn { @apply bg-amber-50 border-amber-200 text-amber-700; }
+  .rg-pill-info { @apply bg-blue-50 border-blue-200 text-blue-700; }
+  .rg-pill-neutral { @apply bg-slate-100 border-slate-200 text-slate-600; }
+  .rg-row { @apply rounded-lg border border-brand-border bg-white p-3 transition-colors hover:bg-brand-surfaceAlt/70; }
+  .rg-spin { @apply inline-block h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent; }
+  .rg-skeleton { @apply animate-pulse rounded-lg bg-slate-100 h-9; }
+  input.rg-field, select.rg-field { height: 2.25rem; }
+  textarea.rg-field { @apply resize-y; }
+}

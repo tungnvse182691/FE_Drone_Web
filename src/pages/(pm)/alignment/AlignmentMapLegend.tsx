@@ -30,28 +30,28 @@ export const AlignmentMapLegend: React.FC = () => {
       {!isMinimized && (
         <div className="flex flex-col gap-1.5 pt-0.5">
           <div className="flex items-center gap-2">
-            <span className="w-4 h-1.5 rounded-full bg-brand-gold"></span>
+            <span className="w-4 h-1 border-b-2 border-dashed border-brand-gold"></span>
             <span className="text-slate-200 text-[11px]">Tim tuyến chính</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-1 rounded bg-sky-400 inline-block"></span>
-            <span className="text-sky-300 text-[11px]">Mép trái (-W/2)</span>
+            <span className="w-4 h-1 rounded bg-[#22D3EE] inline-block"></span>
+            <span className="text-cyan-300 text-[11px]">Mép trái (W/2)</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-1 rounded bg-amber-400 inline-block"></span>
-            <span className="text-amber-300 text-[11px]">Mép phải (+W/2)</span>
+            <span className="w-4 h-1 rounded bg-[#FB7185] inline-block"></span>
+            <span className="text-rose-300 text-[11px]">Mép phải (W/2)</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-1 rounded bg-[#38BDF8] inline-block"></span>
-            <span className="text-slate-200 text-[11px]">Khe co giãn</span>
+            <span className="w-4 h-1 border-b-2 border-dashed border-[#EF4444] inline-block"></span>
+            <span className="text-red-300 text-[11px]">Khe co — KC1, KC2…</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-1.5 rounded bg-[#EF4444] inline-block"></span>
-            <span className="text-slate-200 text-[11px]">Khe giãn nở</span>
+            <span className="w-4 h-1.5 rounded bg-[#F59E0B] inline-block"></span>
+            <span className="text-orange-300 text-[11px]">Khe giãn — KG1, KG2…</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3.5 h-3 rounded border border-white/80 bg-slate-700 inline-block"></span>
-            <span className="text-slate-200 text-[11px]">Lưới tấm BTXM</span>
+            <span className="w-3.5 h-3 rounded border border-white/80 bg-slate-300/[0.14] inline-block"></span>
+            <span className="text-slate-200 text-[11px]">Tấm BTXM — T1, T2… (preview)</span>
           </div>
           <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
             <span className="w-4 h-1 border-b-2 border-dashed border-amber-400 inline-block"></span>

@@ -1,22 +1,23 @@
 import React from 'react'
 import { Plus, Edit2, ShieldCheck } from 'lucide-react'
-import { DefectCatalogItem } from '../../../types/domain'
+import { DefectTypeOption } from '../../../api/services/defectTypeCatalog'
+import { DEFECT_CATALOG_READONLY } from './useSystemControlState'
+import { DefectTypeAdminPanel } from './DefectTypeAdminPanel'
 
 export interface DefectCatalogTabProps {
-  defectCatalog: DefectCatalogItem[]
-  onToggleActive: (code: string, newActive: boolean) => void
-  onOpenCreate: () => void
-  onOpenEdit: (item: DefectCatalogItem) => void
-  isSupervisor: boolean
+  defectCatalog: DefectTypeOption[]
+  loading: boolean
+  error: string | null
+  isPM: boolean
 }
 
 export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
   defectCatalog,
-  onToggleActive,
-  onOpenCreate,
-  onOpenEdit,
-  isSupervisor
+  loading,
+  error,
+  isPM
 }) => {
+  const NA = 'Máy chủ chưa cung cấp'
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-2xs p-5 flex flex-col gap-4">
       {/* Action Bar trên cùng */}
@@ -36,12 +37,12 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
         </div>
 
         {/* Nút thêm mới loại lỗi */}
-        {isSupervisor && (
+        {isPM && (
           <button
             type="button"
-            onClick={onOpenCreate}
-            className="px-3.5 py-2 text-xs font-bold text-slate-900 bg-brand-gold hover:bg-amber-400 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs shrink-0 self-start sm:self-auto"
-            title="Thêm mới loại khiếm khuyết kỹ thuật chuẩn TCVN theo QT04"
+            disabled
+            className="px-3.5 py-2 text-xs font-bold text-slate-900 bg-brand-gold rounded-xl transition flex items-center gap-1.5 cursor-not-allowed opacity-50 shadow-2xs shrink-0 self-start sm:self-auto"
+            title={DEFECT_CATALOG_READONLY}
           >
             <Plus className="w-4 h-4 text-slate-900" />
             <span>Thêm Mới Khiếm Khuyết</span>
@@ -50,27 +51,32 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
       </div>
 
       {/* Danh sách các loại khiếm khuyết */}
+      {isPM && <p className="text-[11px] text-slate-500">{DEFECT_CATALOG_READONLY}.</p>}
+
+      {!isPM && <DefectTypeAdminPanel />}
+      {isPM && loading && (
+        <div className="p-4 text-center text-xs text-slate-500">Đang tải danh mục loại lỗi từ máy chủ...</div>
+      )}
+      {isPM && error && (
+        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">{error}</div>
+      )}
+      {isPM && !loading && !error && defectCatalog.length === 0 && (
+        <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          Không có dữ liệu trong CSDL
+        </div>
+      )}
+
       <div className="space-y-3">
         {defectCatalog.map((item) => (
           <div
             key={item.code}
             className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-colors gap-3 ${
-              item.is_active
-                ? 'bg-slate-50/70 border-slate-200 hover:bg-slate-50'
-                : 'bg-slate-100/50 border-slate-200/60 opacity-80'
+              'bg-slate-50/70 border-slate-200 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-start gap-3">
               <div
-                className={`w-3.5 h-3.5 rounded-full mt-1 shrink-0 ${
-                  item.code === 'POTHOLE'
-                    ? 'bg-rose-600'
-                    : item.code === 'ALLIGATOR_CRACK'
-                    ? 'bg-amber-500'
-                    : item.code === 'RUTTING'
-                    ? 'bg-purple-600'
-                    : 'bg-slate-600'
-                }`}
+                className="w-3.5 h-3.5 rounded-full mt-1 shrink-0 bg-slate-600"
               ></div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -81,20 +87,11 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
                     {item.name}
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-blue-700 font-bold">
-                    {item.standard_ref}
+                    {NA}
                   </span>
-                  {item.is_active ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-emerald-700">
-                      Đang áp dụng
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-200 border border-slate-300 rounded text-slate-600">
-                      Tạm ngưng
-                    </span>
-                  )}
                 </div>
                 <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                  {item.description}
+                  {NA}
                 </p>
               </div>
             </div>
@@ -102,12 +99,12 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
             {/* Các hành động CRUD: Nút Sửa & Công tắc Bật/Tắt */}
             <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200">
               {/* Nút Sửa (Update) */}
-              {isSupervisor && (
+              {(
                 <button
                   type="button"
-                  onClick={() => onOpenEdit(item)}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1 transition shadow-2xs cursor-pointer"
-                  title="Chỉnh sửa thông tin quy chuẩn của mã này"
+                  disabled
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold flex items-center gap-1 transition shadow-2xs cursor-not-allowed opacity-50"
+                  title={DEFECT_CATALOG_READONLY}
                 >
                   <Edit2 className="w-3.5 h-3.5 text-slate-500" />
                   <span>Sửa</span>
@@ -117,14 +114,15 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
               {/* Công tắc Bật/Tắt (Soft-Disable thay Delete) */}
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-600">
-                  {item.is_active ? 'Áp dụng' : 'Ngưng'}
+                  —
                 </span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    disabled={!isSupervisor}
-                    checked={item.is_active}
-                    onChange={(e) => onToggleActive(item.code, e.target.checked)}
+                    disabled
+                    checked={false}
+                    readOnly
+                    title={DEFECT_CATALOG_READONLY}
                     className="sr-only peer"
                   />
                   <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-gold"></div>

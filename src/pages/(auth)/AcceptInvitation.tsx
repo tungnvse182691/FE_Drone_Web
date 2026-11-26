@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore'
+import React, { useState, useRef, useEffect } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { invitationAcceptService, type InvitationPreview } from '../../api/services/invitationAcceptService'
 import { RoleCode } from '../../types/enums'
 import { ShieldCheck } from 'lucide-react'
 import { InvitationDemoState } from './accept-invitation/types'
@@ -10,14 +10,33 @@ import { ExpiredInvitationView } from './accept-invitation/ExpiredInvitationView
 
 export const AcceptInvitation: React.FC = () => {
   const navigate = useNavigate()
-  const { token } = useParams<{ token?: string }>()
-  const { login } = useAuthStore()
+  const [searchParams] = useSearchParams()
+  const { token: paramToken } = useParams<{ token?: string }>()
+  const activeToken = searchParams.get('token') || paramToken || ''
 
-  // Chế độ xem Demo: 'valid' (Token hợp lệ) hoặc 'expired' (Token hết hạn)
+  // Trạng thái lời mời do máy chủ quyết định (POST /invitations/preview): hợp lệ → form; 404 → màn "hết hạn/không hợp lệ".
   const [demoState, setDemoState] = useState<InvitationDemoState>('valid')
+  const [preview, setPreview] = useState<InvitationPreview | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState('')
+  useEffect(() => {
+    if (!activeToken) { setPreview(null); setPreviewError('Không tìm thấy mã lời mời trong đường dẫn.'); setDemoState('expired'); return }
+    const ctl = new AbortController()
+    setPreviewLoading(true); setPreviewError(''); setPreview(null)
+    invitationAcceptService.preview(activeToken, ctl.signal).then((data) => { if (!ctl.signal.aborted) { setPreview(data); setDemoState('valid') } }).catch((e: any) => {
+      if (ctl.signal.aborted) return
+      if (e?.response?.status === 404) { setDemoState('expired'); setPreviewError('Lời mời không hợp lệ, đã hết hạn, bị thu hồi hoặc đã được dùng.') }
+      else setPreviewError(e?.response ? `Không đọc được lời mời: HTTP ${e.response.status} ${e.response.data?.code || ''}` : (e?.message || 'Không đọc được lời mời.'))
+    }).finally(() => { if (!ctl.signal.aborted) setPreviewLoading(false) })
+    return () => ctl.abort()
+  }, [activeToken])
 
   // Form state
-  const [fullName, setFullName] = useState('Đỗ Quốc Hoàng')
+  const [fullName, setFullName] = useState('')
+  const projectName = ''
+  const currentToken=useRef(activeToken);currentToken.current=activeToken
+  useEffect(()=>{setFullName('');setPassword('');setConfirmPassword('');setStatusMessage(null);setIsSubmitting(false)},[activeToken])
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -57,24 +76,38 @@ export const AcceptInvitation: React.FC = () => {
 
   const strength = getStrength()
   const isMatched = confirmPassword.length > 0 && password === confirmPassword
-  const isFormValid = rules.length && rules.case && rules.special && isMatched && agreementChecked
+  const isFormValid = Boolean(fullName.trim()) && rules.length && rules.case && rules.special && isMatched && agreementChecked
 
   const handleFillStrongPassword = () => {
-    const strongPass = 'RoadGuard@2026Secure'
-    setPassword(strongPass)
-    setConfirmPassword(strongPass)
+    setStatusMessage('Người nhận tự nhập mật khẩu riêng; không dùng mật khẩu mẫu dùng chung.')
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isFormValid) return
+    if (!isFormValid || isSubmitting) return
 
+    if (!activeToken) {
+      alert('Không tìm thấy token kích hoạt trong đường dẫn thư mời.')
+      return
+    }
+
+    const startedToken=activeToken
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
-      login(RoleCode.PROJECT_MANAGER)
-      navigate('/pm/dashboard')
-    }, 900)
+    setStatusMessage(null)
+
+    try {
+      await invitationAcceptService.accept({invitationToken:activeToken,displayName:fullName,password})
+      if(currentToken.current!==startedToken)return
+      setPassword('');setConfirmPassword('')
+      alert('Đã chấp nhận lời mời. Vui lòng đăng nhập bằng tài khoản được mời để xác minh vai trò và phân công.')
+      navigate('/login')
+    } catch (err: any) {
+      if(currentToken.current!==startedToken)return
+      const code=err?.response?.data?.code
+      setStatusMessage(code==='identity_email_conflict'?'Email đã có tài khoản hoặc xung đột với lời mời. Hãy đối chiếu trước khi thử lại.':code==='not_found'?'Không tìm thấy lời mời hợp lệ. Kiểm tra lại đường dẫn từ email.':err?.response ? `Không chấp nhận được lời mời: HTTP ${err.response.status} ${code||''}. Chưa xác nhận kích hoạt tài khoản.` : err?.message||'Chưa rõ kết quả chấp nhận lời mời. Giữ nguyên nội dung, không bấm lại bằng yêu cầu mới.')
+    } finally {
+      if(currentToken.current===startedToken)setIsSubmitting(false)
+    }
   }
 
   return (
@@ -123,37 +156,6 @@ export const AcceptInvitation: React.FC = () => {
       {/* Main Content */}
       <main className="relative z-10 w-full flex-1 flex flex-col items-center justify-center px-4 py-6">
         <div className="flex flex-col w-full items-center justify-center relative">
-          {/* Interactive Floating Mode Switcher (Demo State Toggle) */}
-          {import.meta.env.DEV && (
-            <div className="fixed top-4 right-4 z-50 flex items-center p-1 bg-white/95 backdrop-blur-md rounded-full shadow-lg border border-slate-200">
-              <div className="flex items-center text-xs mr-2 pl-3 text-slate-500 font-medium">
-                <span>Chế độ Demo:</span>
-              </div>
-              <button
-                onClick={() => setDemoState('valid')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  demoState === 'valid'
-                    ? 'bg-brand-gold text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                Token hợp lệ
-              </button>
-              <button
-                onClick={() => setDemoState('expired')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  demoState === 'expired'
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                Token hết hạn
-              </button>
-            </div>
-          )}
-
           {/* Decorative Highway Stationing Watermark Badge */}
           <div className="hidden lg:flex items-center gap-2 mb-4 px-3.5 py-1 bg-slate-200/70 rounded-full border border-slate-300/40 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
@@ -173,7 +175,13 @@ export const AcceptInvitation: React.FC = () => {
                 style={{ background: 'linear-gradient(90deg, #C9A227 0%, #B38E1F 50%, #E8D385 100%)' }}
               />
               <div className="p-6 sm:p-8 md:p-9 flex flex-col">
-                <InvitationCard token={token} />
+                {previewError && demoState === 'valid' && <div className="p-3 mb-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold" role="alert">{previewError}</div>}
+                {statusMessage && (
+                  <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                    {statusMessage}
+                  </div>
+                )}
+                <InvitationCard projectName={projectName} preview={preview} previewLoading={previewLoading} />
                 <AcceptForm
                   fullName={fullName}
                   setFullName={setFullName}
@@ -206,6 +214,7 @@ export const AcceptInvitation: React.FC = () => {
             <ExpiredInvitationView
               onBackToLogin={() => navigate('/login')}
               onSwitchToValidDemo={() => setDemoState('valid')}
+              reason={previewError}
             />
           )}
 

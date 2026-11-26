@@ -1,83 +1,168 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
-import { alignmentService, projectService } from '../../../api/services'
 import { SegmentItem, AssignedProjectOption } from './types'
-import { PM_ASSIGNED_PROJECTS, SEGMENT_COLORS, getAvailableAssignedProjects } from './data'
 import {
-  checkAndEnrichSegmentsContinuity,
-  generateMockSlabs,
-  calculateCoordsLengthKm
+  checkAndEnrichSegmentsContinuity
 } from './alignmentGeometryHelpers'
-import { computeSplitSegmentPair } from './alignmentSplitHelpers'
+import { computeSplitSegmentPair, computeAutoSplitSegments, checkMainlineSegmentsContinuity } from './alignmentSplitHelpers'
+import { prepareBranchPreview } from './alignmentBranchHelpers'
+import { coordinateDraftInput, useGeometryDraftWorkflow } from './useGeometryDraftWorkflow'
+import { useGeometryReadModel } from './useGeometryReadModel'
 import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
 import { useAlignmentImportState } from './useAlignmentImportState'
+import { sameCoordinateDraftContent, restoreCoordinateDraft, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
+import { previewCenterlineCoordinates } from './alignmentImportHelpers'
+import { planMainlinePavement } from './alignmentPavementHelpers'
+import { confirmedGeometryDisplay } from './confirmedGeometryDisplay'
+import { usePavementWorkflow } from './usePavementWorkflow'
+import { useAsBuiltMapEditing } from './useAsBuiltMapEditing'
 
 export function useAlignmentState() {
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
+  const navigate = useNavigate()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
-  const [assignedProjects, setAssignedProjects] = useState<AssignedProjectOption[]>(() => getAvailableAssignedProjects())
+  const [assignedProjects, setAssignedProjects] = useState<AssignedProjectOption[]>([])
 
   // Lấy dự án từ URL (nếu có: /pm/projects/:id/alignment hoặc /sup/projects/:id/alignment)
   const { id: urlProjectId } = useParams<{ id?: string }>()
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
-    const list = getAvailableAssignedProjects()
-    if (urlProjectId && list.some((p) => p.id === urlProjectId)) {
-      return urlProjectId
-    }
-    return list[0]?.id || PM_ASSIGNED_PROJECTS[0].id
+    return urlProjectId || ''
   })
 
   const activeProject = useMemo(() => {
-    return assignedProjects.find((p) => p.id === selectedProjectId) || assignedProjects[0] || PM_ASSIGNED_PROJECTS[0]
+    return (
+      assignedProjects.find((p) => p.id === selectedProjectId || p.code === selectedProjectId) ||
+      {
+        id: selectedProjectId || '',
+        code: '',
+        name: 'Chưa có dự án',
+        stationOriginText: 'Chưa xác định',
+        stationOriginKm: Number.NaN,
+        endKm: Number.NaN,
+        crs: 'Chưa xác định',
+        lengthKm: 0.0,
+        defaultCoords: [],
+        defaultKmPoints: [],
+        defaultSegments: [],
+        defaultManualText: '',
+        defaultBranches: []
+      }
+    )
   }, [assignedProjects, selectedProjectId])
 
   // Trạng thái tim tuyến: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
-  const [alignmentStatus, setAlignmentStatus] = useState<'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'>(() => {
-    return alignmentService.getAlignmentState(selectedProjectId).status
-  })
+  const [alignmentStatus, setAlignmentStatus] = useState<'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'>('DRAFT')
 
+  // Hàm nạp gói tim tuyến chính thức trực tiếp từ CSDL Backend Candidate3 (API-104)
+  const geometryRead = useGeometryReadModel(selectedProjectId)
+  const scopeKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}${geometryRead.newSectionDraft?':new:'+geometryRead.newSectionDraft:''}`
+  const [editorScope, setEditorScope] = useState(scopeKey)
+  const currentScope = useRef(scopeKey); currentScope.current = scopeKey
+  const branchGeneration = useRef(0), branchVersion = branchGeneration.current
+  const editorDraft = useRef('')
+  const confirmedGeometryScope = useRef('')
+  const pendingConfirmedPavement = useRef<{ key: string; value: { stripWidthMeters: number | string; slabLengthM: number | string; slabThicknessCm: number | string; contractionSpacingM: number | string; expansionSpacingM: number | string; expansionGapMm: number | string; syncJointWithSlab: boolean } } | null>(null)
+  const [fileDraft, setFileDraft] = useState<CoordinateDraftSource | null>(null)
+  const appliedFileDraft = useRef<CoordinateDraftSource | null>(null)
+  const [filePreviewCoords, setFilePreviewCoords] = useState<[number, number][] | null>(null)
   useEffect(() => {
-    const state = alignmentService.getAlignmentState(selectedProjectId)
-    setAlignmentStatus(state.status)
-  }, [selectedProjectId])
-
-  useEffect(() => {
-    const handleStateChange = () => {
-      const list = getAvailableAssignedProjects()
-      setAssignedProjects(list)
-      const state = alignmentService.getAlignmentState(selectedProjectId)
-      setAlignmentStatus(state.status)
+    setAssignedProjects(geometryRead.projects.map(project => ({id:project.projectId,code:project.projectCode,name:project.name,defaultCoords:[],defaultKmPoints:[],defaultSegments:[],stationOriginKm:Number.NaN,stationOriginText:'Chưa cập nhật',endKm:Number.NaN,lengthKm:Number.NaN,crs:'Chưa xác định',defaultManualText:''})))
+    if (geometryRead.error) showToast(geometryRead.error)
+  }, [geometryRead.projects, geometryRead.error])
+  const resetEditor = (preservePavement = false) => {
+    const pavement = preservePavement ? { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } : null
+    setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
+    segmentsState.setSegments([]); segmentsState.setSlabs([]); setBranches([])
+    segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null); segmentsState.setIsAddSegmentModalOpen(false)
+    segmentsState.setSelectedSegmentId(null); segmentsState.setSplitDistance(Number.NaN)
+    segmentsState.setNewSegForm(old => ({ ...old, code: '', startKm: Number.NaN, endKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '' }))
+    setSelectedTargetType('MAINLINE'); setIsAddBranchModalOpen(false)
+    setAlignmentStatus('DRAFT')
+    setStripWidthMeters(Number.NaN); setSlabLengthM(Number.NaN); setSlabThicknessCm(Number.NaN); setContractionSpacingM(Number.NaN); setExpansionSpacingM(Number.NaN); setExpansionGapMm(Number.NaN)
+    segmentsState.setCustomSplitKm(Number.NaN); segmentsState.setSplitSortOrder('asc')
+    setSyncJointWithSlab(true)
+    if (pavement) {
+      setStripWidthMeters(pavement.stripWidthMeters); setSlabLengthM(pavement.slabLengthM); setSlabThicknessCm(pavement.slabThicknessCm)
+      setContractionSpacingM(pavement.contractionSpacingM); setExpansionSpacingM(pavement.expansionSpacingM); setExpansionGapMm(pavement.expansionGapMm); setSyncJointWithSlab(pavement.syncJointWithSlab)
     }
-    window.addEventListener('roadguard_state_change', handleStateChange)
-    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
-  }, [selectedProjectId])
+    setLocalDraftDirty(false); setLocalWidthsDirty(false)
+    setFileDraft(null)
+    setFilePreviewCoords(null)
+    branchDistances.current.clear()
+    branchGeneration.current++
+  }
+
+  useEffect(() => {
+    const draft = geometryRead.draft?.data
+    const draftStatus = draft?.id === geometryRead.draftId && draft.projectId === selectedProjectId ? draft.status : undefined
+    const geometry = geometryRead.geometry?.projectId === selectedProjectId &&
+      (!geometryRead.draftId || geometryRead.geometry.sourceDraftId === geometryRead.draftId) &&
+      (!geometryRead.versionReference || geometryRead.geometry.routeVersionId === geometryRead.versionReference) &&
+      (!geometryRead.roadReference || geometryRead.geometry.roadSectionId === geometryRead.roadReference) ? geometryRead.geometry : null
+    if (localDraftDirty && draftStatus !== 'CONFIRMED' && draftStatus !== 'SUBMITTED') return
+    setAlignmentStatus(draftStatus === 'REJECTED' ? 'REJECTED' : draftStatus === 'SUBMITTED' ? 'SUBMITTED' : draftStatus === 'CONFIRMED' || !['DRAFT','REJECTED'].includes(draftStatus || '') && geometry?.sourceDraftId && geometry.approvedAt && geometry.approvedBy && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
+    if (draftStatus === 'SUBMITTED') return // The draft preview owns the map until confirmed geometry exists.
+    setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
+    if (geometry) {
+      const restored = confirmedGeometryDisplay(geometry)
+      setImportedLengthKm(restored.lengthKm); setCurrentCoords(restored.coordinates); setCurrentKmPoints(restored.kmPoints)
+      const scope = `${selectedProjectId}:${geometry.roadSectionId}:${geometry.routeVersionId}:${JSON.stringify(geometry.widthProfile || [])}`
+      const pendingKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometry.sourceDraftId || ''}:${geometry.roadSectionId}:${geometry.routeVersionId}`
+      const pendingPavement = pendingConfirmedPavement.current?.key === pendingKey ? pendingConfirmedPavement.current.value : null
+      if (pendingPavement && geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId && geometryRead.draft.data.projectId === selectedProjectId && geometryRead.draft.data.roadSectionId === geometry.roadSectionId && geometry.sourceDraftId === geometryRead.draftId && geometry.roadSectionId === geometryRead.roadReference && geometry.routeVersionId === geometryRead.versionReference) {
+        setStripWidthMeters(pendingPavement.stripWidthMeters); setSlabLengthM(pendingPavement.slabLengthM); setSlabThicknessCm(pendingPavement.slabThicknessCm)
+        setContractionSpacingM(pendingPavement.contractionSpacingM); setExpansionSpacingM(pendingPavement.expansionSpacingM); setExpansionGapMm(pendingPavement.expansionGapMm); setSyncJointWithSlab(pendingPavement.syncJointWithSlab)
+        pendingConfirmedPavement.current = null
+      }
+      if (!localDraftDirty && confirmedGeometryScope.current !== scope && Array.isArray(geometry.widthProfile) && Number.isFinite(geometry.stationOriginMeters)) {
+        confirmedGeometryScope.current = scope
+        segmentsState.setSegments(geometry.widthProfile.map((width, index) => ({
+          id: `confirmed-width-${scope}-${index}`, code: `Khoảng bề rộng ${index + 1}`,
+          startKm: (geometry.stationOriginMeters! + width.fromOffsetMeters) / 1000,
+          endKm: (geometry.stationOriginMeters! + width.toOffsetMeters) / 1000,
+          lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
+          laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: geometry.approvedAt && geometry.approvedBy ? 'HÌNH HỌC ĐÃ XÁC NHẬN' : 'HÌNH HỌC SERVER — CHƯA ĐỦ XÁC NHẬN', color: '#C9A227'
+        })))
+      }
+      if (restored.warnings.length) showToast(restored.warnings.join(' '))
+    } else if (!geometryRead.roadReference || !geometryRead.versionReference) {
+      confirmedGeometryScope.current = ''
+    }
+  }, [geometryRead.geometry, geometryRead.draft?.data.status, geometryRead.draftId, geometryRead.roadReference, geometryRead.versionReference, selectedProjectId])
 
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
+  const [pavementWidthRevision, setPavementWidthRevision] = useState(0)
+  const [pavementEditRevision, setPavementEditRevision] = useState(0)
+  const [localDraftDirty, setLocalDraftDirty] = useState(false)
+  const [localWidthsDirty, setLocalWidthsDirty] = useState(false)
+  const markLocalDraft = () => setLocalDraftDirty(true)
+  const markWidthDraft = () => { setPavementWidthRevision(n => n + 1); setPavementEditRevision(n => n + 1); setLocalDraftDirty(true); if (selectedTargetType === 'MAINLINE') setLocalWidthsDirty(true) }
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
   // Cấu hình Kích thước tấm BTXM & Khe co giãn / Khe giãn nở
-  const [slabLengthM, setSlabLengthM] = useState<number>(5.0)
-  const [slabThicknessCm, setSlabThicknessCm] = useState<number>(26)
-  const [contractionSpacingM, setContractionSpacingM] = useState<number>(5.0)
-  const [expansionSpacingM, setExpansionSpacingM] = useState<number>(50.0)
-  const [expansionGapMm, setExpansionGapMm] = useState<number>(20)
+  const [stripWidthMeters, setStripWidthMeters] = useState<number | string>(Number.NaN)
+  const [slabLengthM, setSlabLengthM] = useState<number | string>(Number.NaN)
+  const [slabThicknessCm, setSlabThicknessCm] = useState<number | string>(Number.NaN)
+  const [contractionSpacingM, setContractionSpacingM] = useState<number | string>(Number.NaN)
+  const [expansionSpacingM, setExpansionSpacingM] = useState<number | string>(Number.NaN)
+  const [expansionGapMm, setExpansionGapMm] = useState<number | string>(Number.NaN)
   const [syncJointWithSlab, setSyncJointWithSlab] = useState<boolean>(true)
 
   // Quản lý Tuyến nhánh (Branch Alignment)
-  const [branches, setBranches] = useState<any[]>(() => {
-    const saved = alignmentService.getAlignmentData(selectedProjectId)
-    if (saved.branches !== undefined) return saved.branches
-    return activeProject.defaultBranches || []
-  })
+  // Nếu là Giám sát (Supervisor) mà trạng thái dự án là DRAFT (PM chưa trình duyệt), Giám sát xem như chưa có tuyến
+  const [branches, setBranches] = useState<any[]>([])
   const [selectedTargetType, setSelectedTargetType] = useState<'MAINLINE' | string>('MAINLINE')
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState<boolean>(false)
+  const branchDistances = useRef(new Map<string, number>())
+  const branchEditor = useRef({ branches, selectedTargetType })
+  branchEditor.current = { branches, selectedTargetType }
 
-  const roadWidthM = 8.0
+  const roadWidthM = Number.NaN
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -87,88 +172,56 @@ export function useAlignmentState() {
   }
 
   // State tọa độ tim tuyến và mốc lý trình đồng bộ toàn cục
-  const [currentCoords, setCurrentCoords] = useState<[number, number][]>(() => {
-    const saved = alignmentService.getAlignmentData(selectedProjectId)
-    if (saved.coords !== undefined) return saved.coords
-    return activeProject.defaultCoords || []
-  })
-  const [currentKmPoints, setCurrentKmPoints] = useState<number[]>(() => {
-    const saved = alignmentService.getAlignmentData(selectedProjectId)
-    if (saved.kmPoints !== undefined) return saved.kmPoints
-    return activeProject.defaultKmPoints || []
-  })
-  const [importedLengthKm, setImportedLengthKm] = useState<number>(() => {
-    const saved = alignmentService.getAlignmentData(selectedProjectId)
-    if (saved.coords && saved.coords.length >= 2) {
-      return calculateCoordsLengthKm(saved.coords)
-    }
-    if (activeProject.defaultCoords && activeProject.defaultCoords.length >= 2) {
-      return activeProject.lengthKm
-    }
-    return 0.0
-  })
+  const [currentCoords, setCurrentCoords] = useState<[number, number][]>([])
+  const [currentKmPoints, setCurrentKmPoints] = useState<number[]>([])
+  const [importedLengthKm, setImportedLengthKm] = useState<number>(0)
 
   // Tính tổng quãng đường: Trục chính + Các tuyến nhánh phụ
   const branchesTotalLengthKm = useMemo(() => {
-    return branches.reduce((sum, b) => {
-      const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
-      return sum + len
-    }, 0)
+    return branches.reduce((sum, branch) => sum + (Number.isFinite(branch.lengthKm) ? branch.lengthKm : 0), 0)
   }, [branches])
 
   const totalProjectLengthKm = useMemo(() => {
-    return parseFloat((importedLengthKm + branchesTotalLengthKm).toFixed(3))
+    return importedLengthKm + branchesTotalLengthKm
   }, [importedLengthKm, branchesTotalLengthKm])
 
-  const handleAddBranch = (newBranch: any) => {
-    const updatedBranches = [...branches, newBranch]
-    setBranches(updatedBranches)
-    setSelectedTargetType(newBranch.id)
-    if (newBranch.segments && newBranch.segments.length > 0) {
-      segmentsState.setSelectedSegmentId(newBranch.segments[0].id)
-    } else {
-      segmentsState.setSelectedSegmentId(newBranch.id)
-    }
-
-    // Tự động tính tổng quãng đường mới và lưu tức thì
-    const bLen = updatedBranches.reduce((sum, b) => {
-      const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
-      return sum + len
-    }, 0)
-    const newTotalKm = parseFloat((importedLengthKm + bLen).toFixed(3))
-
-    alignmentService.saveAlignmentData(selectedProjectId, {
-      coords: currentCoords,
-      kmPoints: currentKmPoints,
-      segments: segmentsState.segments,
-      branches: updatedBranches
-    })
-    projectService.updateProjectAlignment(selectedProjectId, {
-      length_km: newTotalKm,
-      kml_status: 'CONFIRMED'
-    })
-
-    showToast(`Đã tạo thành công tuyến nhánh [${newBranch.code}] ${newBranch.name}`)
+  const commitBranches = (updated: any[], selection: string | null = segmentsState.selectedSegmentId) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion) return
+    branchEditor.current.branches = updated; setBranches(updated); markLocalDraft()
+    mapState.syncMap(segmentsState.segments, selectedTargetType !== 'MAINLINE' && selection === 'ALL' ? selectedTargetType : selection, currentCoords, currentKmPoints, updated)
+  }
+  const handleAddBranch = (input: any) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion) return
+    try {
+      if (branchEditor.current.branches.some(branch => branch.id === input.id)) throw new Error('ID nhánh cục bộ đã tồn tại.')
+      const branch = prepareBranchPreview(input, currentCoords, currentKmPoints)
+      commitBranches([...branchEditor.current.branches, branch], branch.segments[0].id)
+      selectAlignmentTarget(branch.id)
+      showToast('Đã thêm nhánh từ hình học nguồn; lý trình nối chỉ là tham chiếu, chưa lưu/xác nhận.')
+    } catch (error) { showToast(error instanceof Error ? error.message : 'Dữ liệu nhánh không hợp lệ.') }
   }
 
   // Hook 1: Segments & Slabs State
-  const initialSegments = useMemo(() => {
-    const saved = alignmentService.getAlignmentData(selectedProjectId)
-    return saved.segments || activeProject.defaultSegments
-  }, [selectedProjectId, activeProject])
+  const initialSegments: SegmentItem[] = []
 
   const segmentsState = useAlignmentSegmentsState({
     initialSegments,
+    stationOriginKm: fileDraft ? fileDraft.stationOriginMeters / 1000 : geometryRead.draft?.data.stationOriginMeters !== undefined ? geometryRead.draft.data.stationOriginMeters / 1000 : Number.NaN,
     currentKmPoints,
     currentCoords,
     importedLengthKm,
     roadWidthM,
-    showToast,
+    showToast: message => showToast(`${message} — bản chỉnh cục bộ, chưa lưu máy chủ.`),
     syncMap: (...args) => mapState.syncMap(...args),
-    mapRef: { current: null }, // updated dynamically below
-    popupRef: { current: null },
+    mapRef: { get current() { return mapState.mapRef.current } },
+    popupRef: { get current() { return mapState.popupRef.current } },
     handleFitBounds: () => mapState.handleFitBounds()
   })
+  // Tự động tính toán lại danh sách tấm Slab khi thay đổi chiều dài L, chiều dày hoặc phân đoạn mặt đường
+  useEffect(() => {
+    const plan = planMainlinePavement(segmentsState.segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm })
+    segmentsState.setSlabs(plan.slabs)
+  }, [stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, segmentsState.segments, rightTab, currentCoords, currentKmPoints])
 
   // Refs theo dõi danh sách tuyến nhánh và phân đoạn mới nhất để tránh stale closure khi click trên map
   const branchesRef = useRef<any[]>(branches)
@@ -184,6 +237,7 @@ export function useAlignmentState() {
   const onSelectSegmentRef = useRef<((id: string, branchId?: string, feature?: any) => void) | null>(null)
 
   const handleSelectSegmentFromMap = (segId: string, branchId?: string, _feature?: any) => {
+    pavementWorkflow.asBuilt.selectFeature(_feature)
     const allBranches = branchesRef.current || []
     const allSegs = segmentsRef.current || []
 
@@ -235,12 +289,30 @@ export function useAlignmentState() {
     onSelectSegmentRef.current = handleSelectSegmentFromMap
   })
 
+  const pavementGeometry = geometryRead.geometry?.projectId === selectedProjectId &&
+    geometryRead.geometry.roadSectionId === geometryRead.roadReference && geometryRead.geometry.routeVersionId === geometryRead.versionReference &&
+    (!geometryRead.draftId || geometryRead.geometry.sourceDraftId === geometryRead.draftId) ? geometryRead.geometry : null
+  const pavementOrigin = pavementGeometry ? pavementGeometry.stationOriginMeters : fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters
+  const pavementWorkflow = usePavementWorkflow(selectedProjectId, geometryRead.roadReference || geometryRead.draft?.data.roadSectionId || '',
+    { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm },
+    !localWidthsDirty && pavementGeometry && Number.isFinite(pavementOrigin) ? pavementGeometry.widthProfile || [] : !pavementGeometry && fileDraft && !localWidthsDirty ? fileDraft.widthProfile : [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => ({
+      fromOffsetMeters: Number.isFinite(pavementOrigin) ? segment.startKm * 1000 - pavementOrigin! : Number.NaN,
+      toOffsetMeters: Number.isFinite(pavementOrigin) ? segment.endKm * 1000 - pavementOrigin! : Number.NaN, widthMeters: segment.roadWidthM
+    })), localWidthsDirty, selectedTargetType === 'MAINLINE',
+    layout => {
+      pendingConfirmedPavement.current = null
+      setStripWidthMeters(layout?.stripWidthMeters ?? Number.NaN); setSlabLengthM(layout?.slabLengthMeters ?? Number.NaN)
+      setSlabThicknessCm(layout?.slabThicknessCentimeters ?? Number.NaN); setContractionSpacingM(layout?.contractionJointSpacingMeters ?? Number.NaN)
+      setExpansionSpacingM(layout?.expansionJointSpacingMeters ?? Number.NaN); setExpansionGapMm(layout?.expansionJointGapMillimeters ?? Number.NaN)
+    }, showToast, pavementEditRevision, pavementWidthRevision)
+
   // Hook 2: Map State & Interactions
   const mapState = useAlignmentMapState({
-    segments: segmentsState.segments,
-    currentCoords,
-    currentKmPoints,
-    selectedSegmentId: segmentsState.selectedSegmentId,
+    segments: pavementWorkflow.previewBase?.segments || segmentsState.segments,
+    savedPavement: pavementWorkflow.display?.preview,
+    currentCoords: pavementWorkflow.previewBase ? pavementWorkflow.display ? pavementWorkflow.previewBase.coordinates : pavementWorkflow.previewBase.previewCoordinates : currentCoords,
+    currentKmPoints: pavementWorkflow.previewBase ? pavementWorkflow.previewBase.kmPoints : currentKmPoints,
+    selectedSegmentId: pavementWorkflow.previewBase && !pavementWorkflow.previewBase.segments.some(segment => segment.id === segmentsState.selectedSegmentId) ? 'ALL' : selectedTargetType !== 'MAINLINE' && segmentsState.selectedSegmentId === 'ALL' ? selectedTargetType : segmentsState.selectedSegmentId,
     setSelectedSegmentId: (id: string | null) => {
       if (id) {
         handleSelectSegmentFromMap(id)
@@ -249,6 +321,7 @@ export function useAlignmentState() {
       }
     },
     showToast,
+    stripWidthMeters,
     slabLengthM,
     slabThicknessCm,
     contractionSpacingM,
@@ -260,8 +333,25 @@ export function useAlignmentState() {
     onSelectSegmentRef
   })
 
+  useAsBuiltMapEditing(mapState.mapRef, pavementWorkflow.asBuilt)
+
   // Hook 3: Import State
   const importState = useAlignmentImportState({
+    inputScope: `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}`,
+    onDraftInput: markLocalDraft,
+    contextReady: geometryRead.context?.projectId === selectedProjectId,
+    roadSectionCount: geometryRead.context?.projectId === selectedProjectId ? geometryRead.context.roadSections.length : undefined,
+    engineeringCrs: geometryRead.context?.projectId === selectedProjectId ? geometryRead.context.engineeringUtmSrid : null,
+    onRoadGuardDraft: (draft, preview) => {
+      // Applying a checked file is independent of project prerequisites for saving.
+      resetEditor()
+      setFileDraft(draft)
+      setFilePreviewCoords(preview || [])
+      draftWorkflow.setForm(old => ({ ...old, profileId: '', origin: '', reason: '', surveyWidth: '', widths: '' }))
+      if (draft) setRightTab('WIDTH_PROFILE')
+      else setImportedLengthKm(Number.NaN)
+      return !!preview && preview.length >= 2
+    },
     stationOriginKm: activeProject.stationOriginKm,
     splitDistance: segmentsState.splitDistance,
     roadWidthM,
@@ -280,77 +370,143 @@ export function useAlignmentState() {
     setCurrentKmPoints,
     importedLengthKm,
     setImportedLengthKm,
-    onAutoSave: (coords, kmPoints, segs) => {
-      const mainLen = calculateCoordsLengthKm(coords)
-      const bLen = branches.reduce((sum, b) => {
-        const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
-        return sum + len
-      }, 0)
-      const totalKm = parseFloat((mainLen + bLen).toFixed(3))
 
-      alignmentService.saveAlignmentData(selectedProjectId, {
-        coords,
-        kmPoints,
-        segments: segs,
-        branches
-      })
-      projectService.updateProjectAlignment(selectedProjectId, {
-        length_km: totalKm,
-        kml_status: 'CONFIRMED',
-        stationing_text: `Km 0+000 ➔ Km ${totalKm.toFixed(3).replace('.', '+')}`
-      })
-    }
   })
+
+  // Sidebar values are authoritative; preserve exact source offsets when only width changed.
+  const editedFileDraft = fileDraft ? { ...fileDraft, widthProfile: [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => {
+    const origin = fileDraft.stationOriginMeters
+    const originalFrom = fileDraft.widthProfile.find(width => segment.startKm === (origin + width.fromOffsetMeters) / 1000)
+    const originalTo = fileDraft.widthProfile.find(width => segment.endKm === (origin + width.toOffsetMeters) / 1000)
+    return {
+      fromOffsetMeters: originalFrom ? originalFrom.fromOffsetMeters : segment.startKm * 1000 - origin,
+      toOffsetMeters: originalTo ? originalTo.toOffsetMeters : segment.endKm * 1000 - origin,
+      widthMeters: segment.roadWidthM
+    }
+  }) } : null
+  const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast, importState.hasUnverifiedFile, editorScope === scopeKey ? editedFileDraft : null)
+
+  let draftContentSaved = false
+  const savedDraft = geometryRead.draft?.data
+  if (['DRAFT','REJECTED'].includes(savedDraft?.status || '') && savedDraft?.id === geometryRead.draftId && savedDraft?.projectId === selectedProjectId && geometryRead.draft?.etag === `"${savedDraft.version}"` && editorScope === scopeKey) {
+    try { draftContentSaved = sameCoordinateDraftContent(coordinateDraftInput(draftWorkflow.form, importState.manualCoordsText, geometryRead, editedFileDraft, false), savedDraft) }
+    catch { /* Invalid or unverified local input is never marked saved. */ }
+  }
+
+  useEffect(() => {
+    if (!fileDraft || editorScope !== scopeKey) return
+    if (appliedFileDraft.current === fileDraft && localDraftDirty && !['CONFIRMED','SUBMITTED'].includes(geometryRead.draft?.data.status || '')) return
+    appliedFileDraft.current = fileDraft
+    const confirmedDraft = geometryRead.draft?.data
+    const confirmedGeometry = geometryRead.geometry
+    if (confirmedDraft?.projectId === selectedProjectId && confirmedDraft.status === 'SUBMITTED') return
+    if (confirmedDraft?.projectId === selectedProjectId && confirmedDraft.status === 'CONFIRMED' &&
+      confirmedDraft.id === geometryRead.draftId && confirmedGeometry?.projectId === selectedProjectId &&
+      confirmedGeometry.sourceDraftId === confirmedDraft.id &&
+      (!geometryRead.roadReference || confirmedGeometry.roadSectionId === geometryRead.roadReference) &&
+      (!geometryRead.versionReference || confirmedGeometry.routeVersionId === geometryRead.versionReference)) return
+    const origin = fileDraft.stationOriginMeters
+    draftWorkflow.setForm(old => ({ ...old, origin: String(origin), reason: fileDraft.changeReason ?? old.reason,
+      surveyWidth: String(fileDraft.surveyWidthMeters),
+      widths: localWidthsDirty ? old.widths : fileDraft.widthProfile.map(width => `${width.fromOffsetMeters}, ${width.toOffsetMeters}, ${width.widthMeters}`).join('\n') }))
+    importState.setManualCoordsText(fileDraft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
+    setAlignmentStatus(confirmedDraft?.status === 'REJECTED' ? 'REJECTED' : 'DRAFT')
+    let length = 0
+    for (let i = 1; i < fileDraft.coordinates.length; i++) {
+      const a = fileDraft.coordinates[i - 1], b = fileDraft.coordinates[i]
+      length += Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2)
+    }
+    setImportedLengthKm(length / 1000)
+    if (!localWidthsDirty) segmentsState.setSegments(fileDraft.widthProfile.map((width, index) => ({
+      id: `file-width-${index}`, code: `Khoảng bề rộng ${index + 1}`,
+      startKm: (origin + width.fromOffsetMeters) / 1000, endKm: (origin + width.toOffsetMeters) / 1000,
+      lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
+      laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'BẢN CHỈNH CHƯA LƯU', color: '#C9A227'
+    })))
+  }, [fileDraft, geometryRead.draft, geometryRead.geometry])
+
+  // Display coordinates only; engineering coordinates/length/profile remain authoritative.
+  useEffect(() => {
+    if (!filePreviewCoords || editorScope !== scopeKey) return
+    let offset = 0
+    const kmPoints = fileDraft?.coordinates.map((point, index) => {
+      if (index) { const previous = fileDraft.coordinates[index - 1]; offset += Math.sqrt((point.x - previous.x) ** 2 + (point.y - previous.y) ** 2) }
+      return (fileDraft.stationOriginMeters + offset) / 1000
+    }) || []
+    setCurrentCoords(filePreviewCoords); setCurrentKmPoints(filePreviewCoords.length ? kmPoints : [])
+    mapState.handleFitBounds(filePreviewCoords)
+  }, [filePreviewCoords, fileDraft, scopeKey])
+
+  // Reset this hook before children can render the new draft with the previous draft's edits.
+  if (editorScope !== scopeKey) {
+    const draftScope = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}::`
+    const targetPendingKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId || ''}:${geometryRead.roadReference}:${geometryRead.versionReference}`
+    if (pendingConfirmedPavement.current && pendingConfirmedPavement.current.key !== targetPendingKey) pendingConfirmedPavement.current = null
+    // Source identity must already belong to this draft. An unbound editor has no
+    // receipt identity here, so opening a newly discovered draft cannot borrow it.
+    if (geometryRead.draftId && editorScope === draftScope && geometryRead.roadReference && geometryRead.versionReference) {
+      pendingConfirmedPavement.current = { key: targetPendingKey, value: { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } }
+    }
+    setEditorScope(scopeKey)
+    editorDraft.current = ''
+    confirmedGeometryScope.current = ''
+    resetEditor(false)
+    importState.setManualCoordsText('')
+    setToastMessage(null)
+  }
+
+  useEffect(() => {
+    const context = geometryRead.context
+    if (context?.projectId !== selectedProjectId) return
+    const section = geometryRead.draftId ? geometryRead.draft?.data.roadSectionId : geometryRead.newSectionDraft || (context.roadSections.length === 1 ? context.roadSections[0].roadSectionId : '')
+    if (section) draftWorkflow.setForm(old => old.sectionId ? old : { ...old, sectionId: section })
+  }, [geometryRead.context, geometryRead.draft?.data.roadSectionId, geometryRead.newSectionDraft, selectedProjectId])
+  useEffect(() => {
+    const draft = geometryRead.draft?.data
+    if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === `${draft.id}:${draft.status}` || localDraftDirty && draft.status !== 'SUBMITTED' || draftWorkflow.busy || draftWorkflow.conflict) return
+    if (draft.status === 'CONFIRMED') return
+    if (['DRAFT','REJECTED','SUBMITTED'].includes(draft.status || '') && draft.sourceKind === 'COORDINATES') {
+      if (geometryRead.context?.projectId !== selectedProjectId) return
+      try {
+        if (!geometryRead.draft?.etag || !draft.version || geometryRead.draft.etag !== `"${draft.version}"`) throw new Error('version: bản nháp chưa có ETag khớp phiên bản máy chủ.')
+        if (draft.roadSectionId && !geometryRead.context.roadSections.some(road => road.roadSectionId === draft.roadSectionId)) throw new Error('roadSectionId: tuyến của bản nháp không thuộc context dự án.')
+        if (draft.sourceCrs !== geometryRead.context.engineeringUtmSrid) throw new Error('sourceCrs: không khớp engineeringUtmSrid dự án.')
+        const source = restoreCoordinateDraft(draft)
+        editorDraft.current = `${draft.id}:${draft.status}`
+        setFileDraft(source)
+        if (draft.status === 'SUBMITTED') {
+          setLocalDraftDirty(false);setLocalWidthsDirty(false)
+          segmentsState.setSegments(source.widthProfile.map((w,i)=>({id:`submitted-width-${draft.id}-${i}`,code:`Khoảng bề rộng ${i+1}`,startKm:(source.stationOriginMeters+w.fromOffsetMeters)/1000,endKm:(source.stationOriginMeters+w.toOffsetMeters)/1000,lengthKm:(w.toOffsetMeters-w.fromOffsetMeters)/1000,roadWidthM:w.widthMeters,laneCount:Number.NaN,surfaceMaterial:'',status:'VALID',statusText:'HỒ SƠ ĐÃ TRÌNH',color:'#C9A227'})))
+          setImportedLengthKm((source.widthProfile.at(-1)?.toOffsetMeters || 0)/1000)
+        }
+        try { setFilePreviewCoords(previewCenterlineCoordinates(source.coordinates.map(point => [point.x, point.y]), source.sourceCrs)) }
+        catch (error) { showToast(error instanceof Error ? error.message : 'sourceCrs: chưa hỗ trợ preview bản nháp.'); setFilePreviewCoords([]) }
+      } catch (error) { showToast(error instanceof Error ? error.message : 'Không khôi phục được metadata bản nháp.') }
+      return
+    }
+    editorDraft.current = `${draft.id}:${draft.status}`
+    if (!Number.isFinite(draft.stationOriginMeters)) return
+    const origin = draft.stationOriginMeters
+    segmentsState.setSegments((draft.widthProfile || []).map((width, index) => ({
+      id: `draft-width-${draft.id}-${index}`, code: `Khoảng bề rộng ${index + 1}`,
+      startKm: (origin + width.fromOffsetMeters) / 1000, endKm: (origin + width.toOffsetMeters) / 1000,
+      lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
+      laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: draft.status === 'SUBMITTED' ? 'HỒ SƠ ĐÃ TRÌNH' : 'BẢN NHÁP ĐÃ ĐỌC', color: '#C9A227'
+    })))
+  }, [geometryRead.draft, geometryRead.draftId, geometryRead.context, selectedProjectId, localDraftDirty, draftWorkflow.busy, draftWorkflow.conflict])
+  useEffect(() => {
+    if (draftWorkflow.conflict || draftWorkflow.busy || !localWidthsDirty || selectedTargetType !== 'MAINLINE') return
+    const origin = Number(draftWorkflow.form.origin)
+    if (!draftWorkflow.form.origin.trim() || !Number.isFinite(origin)) return
+    draftWorkflow.setForm(old => ({ ...old, widths: [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => `${segment.startKm * 1000 - origin}, ${segment.endKm * 1000 - origin}, ${Number.isFinite(segment.roadWidthM) ? segment.roadWidthM : ''}`).join('\n') }))
+  }, [segmentsState.segments, localWidthsDirty, selectedTargetType, draftWorkflow.busy, draftWorkflow.conflict])
 
   // Chuyển đổi dự án PM phụ trách
   const handleSwitchProject = (prjId: string) => {
-    const list = getAvailableAssignedProjects()
-    setAssignedProjects(list)
-    const target = list.find((p) => p.id === prjId)
-    if (!target) return
+    if (!prjId) return
+    geometryRead.invalidate()
+    if (prjId !== urlProjectId) navigate(`${isSupervisor ? '/sup' : '/pm'}/projects/${prjId}/alignment`)
     setSelectedProjectId(prjId)
-
-    const saved = alignmentService.getAlignmentData(prjId)
-    const coords = saved.coords !== undefined ? saved.coords : (target.defaultCoords || [])
-    const kmPoints = saved.kmPoints !== undefined ? saved.kmPoints : (target.defaultKmPoints || [])
-    const branchesData = saved.branches !== undefined ? saved.branches : (target.defaultBranches || [])
-    const segsData = saved.segments !== undefined ? saved.segments : (target.defaultSegments || [])
-    const calcLen = coords.length >= 2 ? calculateCoordsLengthKm(coords) : (target.defaultCoords.length >= 2 ? target.lengthKm : 0)
-
-    setCurrentCoords(coords)
-    setCurrentKmPoints(kmPoints)
-    setBranches(branchesData)
-    setSelectedTargetType('MAINLINE')
-    setImportedLengthKm(calcLen)
-    importState.setManualCoordsText(coords.length > 0 ? coords.map((c) => `${c[0]}, ${c[1]}`).join('\n') : '')
-
-    const validated = checkAndEnrichSegmentsContinuity(segsData)
-    segmentsState.setSegments(validated)
-    segmentsState.setSlabs(generateMockSlabs(validated.length))
-    segmentsState.setSelectedSegmentId(validated[0]?.id || null)
-    segmentsState.setNewSegForm({
-      code: '',
-      startKm: target.stationOriginKm,
-      endKm: target.stationOriginKm + (calcLen > 0 ? Math.min(5.0, calcLen) : 5.0),
-      roadWidthM: 8.0,
-      laneCount: 4,
-      surfaceMaterial: 'Mặt BTN C12.5',
-      color: SEGMENT_COLORS[0]
-    })
-
-    const state = alignmentService.getAlignmentState(prjId)
-    setAlignmentStatus(state.status)
-
-    showToast(`Đã chuyển sang dự án [${target.code}] ${target.name}`)
-    if (mapState.mapRef.current) {
-      if (coords.length > 0) {
-        const bounds = new maplibregl.LngLatBounds()
-        coords.forEach((c) => bounds.extend(c))
-        mapState.mapRef.current.fitBounds(bounds, { padding: 60, speed: 1.1 })
-      } else {
-        mapState.handleFitBounds([])
-      }
-    }
   }
 
   useEffect(() => {
@@ -366,20 +522,20 @@ export function useAlignmentState() {
 
   // Danh sách phân đoạn đang kích hoạt (Tuyến chính hoặc Tuyến nhánh được chọn)
   const activeSegments = useMemo(() => {
-    if (isMainline) return segmentsState.segments
-    return currentBranch?.segments || []
-  }, [isMainline, segmentsState.segments, currentBranch])
+    if (isMainline) return [...segmentsState.segments].sort((a, b) => segmentsState.splitSortOrder === 'desc' ? b.startKm - a.startKm : a.startKm - b.startKm)
+    return [...(currentBranch?.segments || [])].sort((a, b) => currentBranch?.splitSortOrder === 'desc' ? b.startKm - a.startKm : a.startKm - b.startKm)
+  }, [isMainline, segmentsState.segments, segmentsState.splitSortOrder, currentBranch])
 
   // Chiều dài đang kích hoạt
   const activeLengthKm = useMemo(() => {
     if (isMainline) return importedLengthKm
-    return currentBranch?.lengthKm || 1.85
+    return currentBranch?.lengthKm ?? Number.NaN
   }, [isMainline, importedLengthKm, currentBranch])
 
   // Cự ly chia đoạn đang kích hoạt
   const activeSplitDistance = useMemo(() => {
     if (isMainline) return segmentsState.splitDistance
-    return currentBranch?.splitDistance || 0.5
+    return currentBranch?.splitDistance ?? Number.NaN
   }, [isMainline, segmentsState.splitDistance, currentBranch])
 
   // Cập nhật cự ly chia đoạn
@@ -387,58 +543,40 @@ export function useAlignmentState() {
     if (isMainline) {
       segmentsState.setSplitDistance(dist)
     } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) => (b.id === currentBranch.id ? { ...b, splitDistance: dist } : b))
-      )
+      branchDistances.current.set(currentBranch.id, dist)
+      commitBranches(branchEditor.current.branches.map(branch => branch.id === currentBranch.id ? { ...branch, splitDistance: dist } : branch))
     }
   }
 
   // Áp dụng chia đoạn tự động cho Tuyến chính hoặc Tuyến nhánh
   const handleApplyAutoSplit = () => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion || branchEditor.current.selectedTargetType !== selectedTargetType) return
     if (isMainline) {
       segmentsState.handleApplyAutoSplit()
     } else if (currentBranch) {
-      const dist = currentBranch.splitDistance || 0.5
-      const totalLen = (currentBranch.coords && currentBranch.coords.length >= 2 ? calculateCoordsLengthKm(currentBranch.coords) : 0) || currentBranch.lengthKm || 1.0
-      const count = Math.max(1, Math.ceil(totalLen / dist))
-      const newSegs: any[] = []
-      let cur = 0.0
-      for (let i = 1; i <= count; i++) {
-        const next = i === count ? totalLen : parseFloat((cur + dist).toFixed(3))
-        newSegs.push({
-          id: `br-seg-${currentBranch.id}-${i}`,
-          code: `${currentBranch.code} - Đoạn #${String(i).padStart(2, '0')}`,
-          startKm: parseFloat(cur.toFixed(3)),
-          endKm: parseFloat(next.toFixed(3)),
-          lengthKm: parseFloat((next - cur).toFixed(3)),
-          roadWidthM: currentBranch.roadWidthM || 8.0,
-          status: 'VALID',
-          statusText: 'HỢP LỆ',
-          laneCount: currentBranch.laneCount || 2,
-          surfaceMaterial: currentBranch.surfaceMaterial || 'Mặt BTN C12.5',
-          color: i % 2 === 0 ? '#F59E0B' : '#D97706'
-        })
-        cur = next
-      }
-      const updatedBranches = branches.map((b) => (b.id === currentBranch.id ? { ...b, segments: newSegs } : b))
-      setBranches(updatedBranches)
-      if (newSegs.length > 0) {
-        segmentsState.setSelectedSegmentId(newSegs[0].id)
-      }
-      mapState.syncMap(segmentsState.segments, newSegs[0]?.id || currentBranch.id, currentCoords, currentKmPoints, updatedBranches)
-      showToast(`Đã chia tự động tuyến nhánh [${currentBranch.code}] thành ${newSegs.length} phân đoạn!`)
+      if (currentScope.current !== scopeKey || branchEditor.current.selectedTargetType !== selectedTargetType) return
+      const branch = branchEditor.current.branches.find(item => item.id === selectedTargetType)
+      if (!branch) return
+      const dist = branchDistances.current.get(branch.id) ?? branch.splitDistance
+      const source = branch.segments.length ? branch.segments : [{ id: branch.id + '-whole', code: branch.code, startKm: 0, endKm: branch.lengthKm, lengthKm: branch.lengthKm, roadWidthM: branch.roadWidthM, laneCount: branch.laneCount, surfaceMaterial: branch.surfaceMaterial, color: branch.color, status: 'VALID' as const, statusText: 'BẢN CHỈNH CHƯA LƯU' }]
+      const divided = computeAutoSplitSegments(branch.lengthKm, 0, dist, branch.roadWidthM, 'asc', source).map((segment, index) => ({ ...segment, id: branch.id + '-segment-' + index, code: branch.code + ' - Đoạn ' + (index + 1) }))
+      if (!divided.length) { showToast('Cự ly hoặc phạm vi nhánh chưa hợp lệ/liên tục; giữ nguyên bản chỉnh.'); return }
+      commitBranches(branchEditor.current.branches.map(item => item.id === branch.id ? { ...item, segments: divided } : item), divided[0].id)
+      segmentsState.setSelectedSegmentId(divided[0].id); mapState.handleFitBounds(branch.coords)
+      showToast('Đã chia lại nhánh đang chọn; giữ thông số và phần dư, chưa lưu máy chủ.')
     }
   }
 
   // Tách 1 phân đoạn (Cho cả Tuyến chính lẫn Tuyến nhánh)
   const handleSplitSegmentSubmit = (e: React.FormEvent) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion || branchEditor.current.selectedTargetType !== selectedTargetType) return
     if (isMainline) {
       segmentsState.handleSplitSegmentSubmit(e)
     } else if (currentBranch && segmentsState.splitModalSegment) {
       e.preventDefault()
       const segToSplit = segmentsState.splitModalSegment
-      const splitKm = parseFloat(Number(segmentsState.customSplitKm).toFixed(3))
-      if (splitKm <= segToSplit.startKm || splitKm >= segToSplit.endKm) {
+      const splitKm = Number(segmentsState.customSplitKm)
+      if (!Number.isFinite(splitKm) || splitKm <= segToSplit.startKm || splitKm >= segToSplit.endKm) {
         showToast(`Điểm tách phải nằm giữa Km ${segToSplit.startKm.toFixed(3)} và Km ${segToSplit.endKm.toFixed(3)}!`)
         return
       }
@@ -446,7 +584,9 @@ export function useAlignmentState() {
       const segIndex = segs.findIndex((s: any) => s.id === segToSplit.id)
       if (segIndex === -1) return
 
-      const { segA, segB } = computeSplitSegmentPair(segToSplit, splitKm, segIndex)
+      const { segA, segB } = computeSplitSegmentPair(segToSplit, splitKm, segIndex, true)
+      segA.id = currentBranch.id + '-segment-' + crypto.randomUUID()
+      segB.id = currentBranch.id + '-segment-' + crypto.randomUUID()
       const updatedList = [
         ...segs.slice(0, segIndex),
         segA,
@@ -454,7 +594,7 @@ export function useAlignmentState() {
         ...segs.slice(segIndex + 1)
       ]
       const updatedBranches = branches.map((b) => (b.id === currentBranch.id ? { ...b, segments: updatedList } : b))
-      setBranches(updatedBranches)
+      commitBranches(updatedBranches, segA.id)
       segmentsState.setSelectedSegmentId(segA.id)
       segmentsState.setSplitModalSegment(null)
       mapState.syncMap(segmentsState.segments, segA.id, currentCoords, currentKmPoints, updatedBranches)
@@ -462,209 +602,94 @@ export function useAlignmentState() {
     }
   }
 
-  // Cập nhật bề rộng 1 phân đoạn
-  const handleUpdateSegmentWidth = (segId: string, w: number) => {
-    if (isMainline) {
-      segmentsState.handleUpdateSegmentWidth(segId, w)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? {
-                ...b,
-                segments: b.segments.map((s: any) =>
-                  s.id === segId ? { ...s, roadWidthM: w } : s
-                )
-              }
-            : b
-        )
-      )
-      showToast(`Đã cập nhật bề rộng phân đoạn nhánh thành ${w}m!`)
-    }
+  const changeBranchSegments = (update: (segments: SegmentItem[]) => SegmentItem[]) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion || branchEditor.current.selectedTargetType !== selectedTargetType) return
+    const branch = branchEditor.current.branches.find(item => item.id === selectedTargetType)
+    if (!branch) return
+    commitBranches(branchEditor.current.branches.map(item => item.id === branch.id ? { ...item, segments: checkMainlineSegmentsContinuity(update(branch.segments)) } : item))
   }
-
-  // Cập nhật bề rộng tất cả phân đoạn
-  const handleUpdateAllWidths = (w: number) => {
-    if (isMainline) {
-      const updated = segmentsState.segments.map((s) => ({ ...s, roadWidthM: w }))
-      segmentsState.setSegments(updated)
-      mapState.syncMap(updated, segmentsState.selectedSegmentId)
-      showToast(`Đã cập nhật tất cả phân đoạn trục chính bề rộng ${w}m!`)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? {
-                ...b,
-                segments: b.segments.map((s: any) => ({ ...s, roadWidthM: w }))
-              }
-            : b
-        )
-      )
-      showToast(`Đã cập nhật tất cả phân đoạn tuyến nhánh [${currentBranch.code}] bề rộng ${w}m!`)
-    }
+  const handleUpdateSegmentWidth = (segId: string, width: number) => {
+    if (selectedTargetType === 'MAINLINE') { segmentsState.handleUpdateSegmentWidth(segId, width); return }
+    if (!Number.isFinite(width) || width <= 0) { showToast('Bề rộng nhánh phải là số hữu hạn lớn hơn 0.'); return }
+    changeBranchSegments(segments => segments.map(segment => segment.id === segId ? { ...segment, roadWidthM: width } : segment))
   }
-
-  // Nối tiếp giáp liền kề
-  const handleSnapSegment = (segId: string) => {
-    if (isMainline) {
-      segmentsState.handleSnapSegment(segId)
-    } else if (currentBranch) {
-      const segs = [...currentBranch.segments]
-      const idx = segs.findIndex((s: any) => s.id === segId)
-      if (idx > 0) {
-        segs[idx] = {
-          ...segs[idx],
-          startKm: segs[idx - 1].endKm,
-          lengthKm: parseFloat((segs[idx].endKm - segs[idx - 1].endKm).toFixed(3)),
-          hasGap: false,
-          status: 'VALID',
-          statusText: 'HỢP LỆ'
-        }
-        setBranches((prev) =>
-          prev.map((b) => (b.id === currentBranch.id ? { ...b, segments: segs } : b))
-        )
-        showToast('Đã nối tiếp giáp liền kề phân đoạn nhánh!')
-      }
+  const handleUpdateAllWidths = (width: number) => {
+    if (selectedTargetType === 'MAINLINE') {
+      const updated = segmentsState.segments.map(segment => ({ ...segment, roadWidthM: width }))
+      segmentsState.setSegments(updated); mapState.syncMap(updated, segmentsState.selectedSegmentId)
+      showToast(`Đã cập nhật tất cả phân đoạn trục chính bề rộng ${width}m!`); return
     }
+    if (!Number.isFinite(width) || width <= 0) { showToast('Bề rộng nhánh phải là số hữu hạn lớn hơn 0.'); return }
+    if (branchEditor.current.selectedTargetType !== selectedTargetType) return
+    commitBranches(branchEditor.current.branches.map(branch => branch.id === selectedTargetType ? { ...branch, roadWidthM: width, segments: branch.segments.map((segment: SegmentItem) => ({ ...segment, roadWidthM: width })) } : branch))
   }
-
-  // Sửa thông số phân đoạn
-  const handleSaveEditedSegment = (edited: any) => {
-    if (isMainline) {
-      segmentsState.handleSaveEditedSegment(edited)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? {
-                ...b,
-                segments: b.segments.map((s: any) => (s.id === edited.id ? edited : s))
-              }
-            : b
-        )
-      )
-      segmentsState.setEditingSegment(null)
-      showToast(`Đã lưu phân đoạn tuyến nhánh [${edited.code}]`)
-    }
-  }
-
-  // Xóa phân đoạn
-  const handleDeleteSegment = (segId: string) => {
-    if (isMainline) {
-      segmentsState.handleDeleteSegment(segId)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? { ...b, segments: b.segments.filter((s: any) => s.id !== segId) }
-            : b
-        )
-      )
-      showToast('Đã xóa phân đoạn khỏi tuyến nhánh!')
-    }
-  }
-
-  // Xóa toàn bộ tuyến nhánh nếu nhập sai muốn nhập lại
-  const handleDeleteBranch = (branchId: string) => {
-    const updatedBranches = branches.filter((b) => b.id !== branchId)
-    setBranches(updatedBranches)
-    if (selectedTargetType === branchId) {
-      setSelectedTargetType('MAINLINE')
-    }
-
-    const bLen = updatedBranches.reduce((sum, b) => {
-      const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
-      return sum + len
-    }, 0)
-    const newTotalKm = parseFloat((importedLengthKm + bLen).toFixed(3))
-
-    alignmentService.saveAlignmentData(selectedProjectId, {
-      coords: currentCoords,
-      kmPoints: currentKmPoints,
-      segments: segmentsState.segments,
-      branches: updatedBranches
+  const handleSnapSegment = (id: string) => {
+    if (selectedTargetType === 'MAINLINE') { segmentsState.handleSnapSegment(id); return }
+    changeBranchSegments(segments => {
+      const ordered = [...segments].sort((a, b) => a.startKm - b.startKm), index = ordered.findIndex(segment => segment.id === id)
+      if (index <= 0 || ordered[index].endKm <= ordered[index - 1].endKm) return segments
+      return segments.map(segment => segment.id === id ? { ...segment, startKm: ordered[index - 1].endKm, lengthKm: segment.endKm - ordered[index - 1].endKm } : segment)
     })
-    projectService.updateProjectAlignment(selectedProjectId, {
-      length_km: newTotalKm,
-      kml_status: currentCoords.length > 0 ? 'CONFIRMED' : 'NOT_CONFIGURED'
-    })
-
-    showToast('Đã xóa tuyến nhánh thành công! Bạn có thể tạo lại tuyến nhánh mới.')
+  }
+  const handleSaveEditedSegment = (event: React.FormEvent) => {
+    if (selectedTargetType === 'MAINLINE') { markWidthDraft(); segmentsState.handleSaveEditedSegment(event); return }
+    event.preventDefault()
+    const edited = segmentsState.editingSegment
+    if (!edited || !currentBranch?.segments.some((segment: SegmentItem) => segment.id === edited.id)) { showToast('Đoạn sửa không thuộc nhánh đang chọn.'); return }
+    if (![edited.startKm, edited.endKm, edited.roadWidthM].every(Number.isFinite) || edited.startKm < 0 || edited.endKm > currentBranch.lengthKm || edited.startKm >= edited.endKm || edited.roadWidthM <= 0 || !Number.isInteger(edited.laneCount) || edited.laneCount <= 0 || !edited.surfaceMaterial.trim()) { showToast('Lý trình hoặc thông số đoạn nhánh chưa hợp lệ.'); return }
+    changeBranchSegments(segments => segments.map(segment => segment.id === edited.id ? { ...edited, lengthKm: edited.endKm - edited.startKm } : segment))
+    segmentsState.setEditingSegment(null)
+  }
+  const handleDeleteSegment = (id: string) => {
+    if (selectedTargetType === 'MAINLINE') segmentsState.handleDeleteSegment(id)
+    else changeBranchSegments(segments => segments.filter(segment => segment.id !== id))
+  }
+  const handleDeleteBranch = (id: string) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion) return
+    commitBranches(branchEditor.current.branches.filter(branch => branch.id !== id), selectedTargetType === id ? null : segmentsState.selectedSegmentId)
+    branchDistances.current.delete(id)
+    if (selectedTargetType === id) { setSelectedTargetType('MAINLINE'); segmentsState.setSelectedSegmentId(null); segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null) }
+    showToast('Đã xóa nhánh khỏi bản chỉnh cục bộ, chưa ghi máy chủ.')
   }
 
-  const handleSubmitAlignment = () => {
-    if (segmentsState.segments.length === 0) {
-      showToast('Cảnh báo v2.2 (WF-02): Tuyến đường chưa có phân đoạn nào! Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động" (hoặc nạp tệp tọa độ) trước khi trình duyệt.')
-      return
-    }
-    const hasAnyGap = segmentsState.segments.some((s) => s.hasGap)
-    if (hasAnyGap) {
-      showToast('Cảnh báo v2.2 (WF-02.F04): Tuyến đường còn phân đoạn bị hở hoặc chồng lấn (GAP_WARNING)! Vui lòng bấm "Nối tiếp giáp" trước khi trình duyệt.')
-      return
-    }
-    alignmentService.saveAlignmentData(selectedProjectId, {
-      coords: currentCoords,
-      kmPoints: currentKmPoints,
-      segments: segmentsState.segments,
-      branches
-    })
-    alignmentService.submitAlignment(selectedProjectId, totalProjectLengthKm)
-    setAlignmentStatus('PENDING_APPROVAL')
-    showToast('Đã gửi hồ sơ thiết lập tim tuyến (WF-02) sang Supervisor để thẩm duyệt & ký số!')
+
+
+  const selectAlignmentTarget = (id: string) => {
+    const branch = branchEditor.current.branches.find(item => item.id === id)
+    if (id !== 'MAINLINE' && !branch) { showToast('Nhánh được chọn không còn trong bản chỉnh.'); return }
+    setSelectedTargetType(id); segmentsState.setSelectedSegmentId(branch?.segments[0]?.id || null)
+    segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null); segmentsState.setIsAddSegmentModalOpen(false)
+    segmentsState.setCustomSplitKm(Number.NaN)
+    segmentsState.setNewSegForm(old => ({ ...old, code: '', startKm: Number.NaN, endKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '' }))
+    mapState.handleFitBounds(branch?.coords || currentCoords)
+  }
+  const handleCreateBranchSegment = (event: React.FormEvent) => {
+    if (isMainline) { segmentsState.handleCreateNewSegment(event); return }
+    event.preventDefault()
+    const form = segmentsState.newSegForm
+    if (!currentBranch || ![form.startKm, form.endKm, form.roadWidthM].every(Number.isFinite) || form.startKm < 0 || form.endKm > currentBranch.lengthKm || form.endKm <= form.startKm || form.roadWidthM <= 0 || !Number.isInteger(form.laneCount) || form.laneCount <= 0 || !form.surfaceMaterial.trim()) { showToast('Thiếu hoặc sai thông số đoạn nhánh mới.'); return }
+    const segment: SegmentItem = { ...form, id: currentBranch.id + '-segment-' + crypto.randomUUID(), lengthKm: form.endKm - form.startKm, status: 'VALID', statusText: 'BẢN CHỈNH CHƯA LƯU' }
+    changeBranchSegments(segments => [...segments, segment]); segmentsState.setIsAddSegmentModalOpen(false)
+  }
+  const setPavementConfig = (setter: (value: any) => void, value: any) => {
+    pendingConfirmedPavement.current = null
+    if (!isMainline) { showToast('Chưa biên tập pavement tuyến nhánh; cấu hình tuyến chính được giữ nguyên.'); return }
+    setPavementEditRevision(n => n + 1); setter(value)
   }
 
-  const handleLockAlignment = () => {
-    alignmentService.saveAlignmentData(selectedProjectId, {
-      coords: currentCoords,
-      kmPoints: currentKmPoints,
-      segments: segmentsState.segments,
-      branches
-    })
-    alignmentService.confirmAlignment(selectedProjectId, user?.full_name || 'Supervisor', totalProjectLengthKm)
-    setAlignmentStatus('CONFIRMED')
-    showToast('Dự án đã chính thức KHÓA TIM TUYẾN (CONFIRMED)! Chữ ký số SHA-256 đã được gắn bất biến.')
-  }
-
-  // Xóa toàn bộ tim tuyến chính và các phân đoạn để PM nhập hoặc vẽ lại từ đầu
-  const handleClearMainline = () => {
-    setCurrentCoords([])
-    setCurrentKmPoints([])
-    setImportedLengthKm(0)
-    setBranches([])
-    setSelectedTargetType('MAINLINE')
-    importState.setManualCoordsText('')
-
-    segmentsState.setSegments([])
-    segmentsState.setSlabs([])
-    segmentsState.setSelectedSegmentId(null)
-
-    alignmentService.saveAlignmentData(selectedProjectId, {
-      coords: [],
-      kmPoints: [],
-      segments: [],
-      branches: []
-    })
-    projectService.updateProjectAlignment(selectedProjectId, {
-      length_km: 0,
-      kml_status: 'NOT_CONFIGURED',
-      stationing_text: 'Chưa có lý trình'
-    })
-
-    // Đồng bộ ngay với bản đồ MapLibre
-    mapState.syncMap([], null, [], [], [])
-    if (mapState.markersRef.current) {
-      mapState.markersRef.current.forEach((m) => m.remove())
-      mapState.markersRef.current = []
-    }
-    mapState.handleFitBounds([])
-
-    showToast('Đã xóa toàn bộ tim tuyến chính và các mốc lý trình! Bạn có thể bấm "Nhập Tuyến / Tọa độ (WF-02)" để nạp lại.')
-  }
+  const handleSubmitAlignment = () => draftWorkflow.save()
+  const handleLockAlignment = draftWorkflow.confirm
 
   const basePath = isSupervisor ? '/sup' : '/pm'
+  const handleClearMainline = () => showToast('Chưa có lệnh xóa tuyến chính thức từ màn hình này. Dữ liệu máy chủ được giữ nguyên.')
 
   return {
+    geometryRead,
+    pavementWorkflow,
+    fileDraft,
+    draftContentSaved,
+    localDraftDirty, markLocalDraft, markWidthDraft,
+    draftWorkflow,
     isSupervisor,
     basePath,
     urlProjectId,
@@ -681,31 +706,33 @@ export function useAlignmentState() {
     showToast,
     rightTab,
     setRightTab,
+    stripWidthMeters,
     slabLengthM,
-    setSlabLengthM,
+    setStripWidthMeters: (value: number | string) => setPavementConfig(setStripWidthMeters, value),
+    setSlabLengthM: (value: number | string) => setPavementConfig(setSlabLengthM, value),
     slabThicknessCm,
-    setSlabThicknessCm,
+    setSlabThicknessCm: (value: number | string) => setPavementConfig(setSlabThicknessCm, value),
     contractionSpacingM,
-    setContractionSpacingM,
+    setContractionSpacingM: (value: number | string) => setPavementConfig(setContractionSpacingM, value),
     expansionSpacingM,
-    setExpansionSpacingM,
+    setExpansionSpacingM: (value: number | string) => setPavementConfig(setExpansionSpacingM, value),
     expansionGapMm,
-    setExpansionGapMm,
+    setExpansionGapMm: (value: number | string) => setPavementConfig(setExpansionGapMm, value),
     syncJointWithSlab,
-    setSyncJointWithSlab,
+    setSyncJointWithSlab: (value: boolean) => setPavementConfig(setSyncJointWithSlab, value),
     // Branch Alignment
     branches,
     branchesTotalLengthKm,
     totalProjectLengthKm,
     branchesCount: branches.length,
     selectedTargetType,
-    setSelectedTargetType,
+    setSelectedTargetType: selectAlignmentTarget,
     isAddBranchModalOpen,
     setIsAddBranchModalOpen,
     handleAddBranch,
     isMainline,
     currentBranch,
-    activeSegments,
+    activeSegments: rightTab === 'SLABS' && pavementWorkflow.previewBase ? pavementWorkflow.previewBase.segments : activeSegments,
     activeLengthKm,
     activeSplitDistance,
     handleSetSplitDistance,
@@ -723,7 +750,11 @@ export function useAlignmentState() {
     setCurrentKmPoints,
     importedLengthKm,
     setImportedLengthKm,
-    segmentsState,
+    segmentsState: { ...segmentsState, selectedSegmentId: rightTab === 'SLABS' && pavementWorkflow.previewBase && !pavementWorkflow.previewBase.segments.some(segment => segment.id === segmentsState.selectedSegmentId) ? 'ALL' : segmentsState.selectedSegmentId, slabs: isMainline ? pavementWorkflow.display?.slabs || (pavementWorkflow.previewBase ? planMainlinePavement(pavementWorkflow.previewBase.segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).slabs : segmentsState.slabs) : [],
+      splitSortOrder: isMainline ? segmentsState.splitSortOrder : currentBranch?.splitSortOrder || 'asc',
+      setSplitSortOrder: (order: 'asc' | 'desc') => isMainline ? segmentsState.setSplitSortOrder(order) : commitBranches(branchEditor.current.branches.map(branch => branch.id === selectedTargetType ? { ...branch, splitSortOrder: order } : branch)),
+      handleCreateNewSegment: handleCreateBranchSegment,
+      handleClearAllSegments: () => isMainline ? segmentsState.handleClearAllSegments() : changeBranchSegments(() => []) },
     mapState,
     importState
   }

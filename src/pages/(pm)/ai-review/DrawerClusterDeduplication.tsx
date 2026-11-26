@@ -85,7 +85,7 @@ export const DrawerClusterDeduplication: React.FC<DrawerClusterDeduplicationProp
             className="text-xs font-bold text-[#8F7212] hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
             <Icon name="call_merge" size={14} />
-            <span>Tự động gộp dữ liệu ảnh &amp; mô tả vào Case gốc này</span>
+            <span>Tự động gộp dữ liệu ảnh &amp; mô tả vào hồ sơ gốc này</span>
           </button>
           <span className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
             Đã chọn: {selectedCase.cluster_duplicates.filter((d) => d.selected).length}/{selectedCase.cluster_duplicates.length}

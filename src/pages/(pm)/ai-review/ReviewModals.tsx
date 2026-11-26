@@ -1,10 +1,10 @@
 import React from 'react'
 import type { TriageCase } from './types'
 import { SpatialMergeModal } from './SpatialMergeModal'
-import { GisMapModal } from './GisMapModal'
 import { PhotoZoomModal } from './PhotoZoomModal'
 import { LinkReportsModal } from './LinkReportsModal'
 import { TriageProjectModal } from './TriageProjectModal'
+import type { useCaseIntake } from './useCaseIntake'
 import { NoDefectModal } from './NoDefectModal'
 import { PublishModal } from './PublishModal'
 import { RequestSurveyModal } from './RequestSurveyModal'
@@ -14,19 +14,13 @@ export interface ReviewModalsProps {
   targetTriageCase: TriageCase | null
   cases: TriageCase[]
   selectedReportIds: string[]
-  mockProjects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
+  triagePending?: ReturnType<typeof useCaseIntake>
 
   // Modal 1: Merge
   isMergeModalOpen: boolean
   setIsMergeModalOpen: (open: boolean) => void
   onExecuteMerge: () => void
-
-  // Modal 2: GIS
-  isGISModalOpen: boolean
-  setIsGISModalOpen: (open: boolean) => void
-  modalMapType: 'SATELLITE' | 'STREET'
-  setModalMapType: (type: 'SATELLITE' | 'STREET') => void
-  modalMapContainerRef: React.RefObject<HTMLDivElement | null>
 
   // Modal 3: Photo Zoom
   isPhotoZoomModalOpen: boolean
@@ -46,21 +40,25 @@ export interface ReviewModalsProps {
   setIsTriageProjectModalOpen: (open: boolean) => void
   selectedProjectId: string
   setSelectedProjectId: (id: string) => void
-  onConfirmTriageProject: () => void
+  onConfirmTriageProject: (
+    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE',
+    reason: string
+  ) => void
 
   // Modal 6: No Defect
   isNoDefectModalOpen: boolean
   setIsNoDefectModalOpen: (open: boolean) => void
   noDefectReason: string
   setNoDefectReason: (r: string) => void
-  onConfirmNoDefect: () => void
+  onReviewNoDefect?: () => Promise<void>
+  onConfirmNoDefect: (evidenceId?: string) => Promise<void> | void
 
   // Modal 7: Publish Result
   isPublishModalOpen: boolean
   setIsPublishModalOpen: (open: boolean) => void
   publishPublicNote: string
   setPublishPublicNote: (note: string) => void
-  onConfirmPublishResult: () => void
+  onConfirmPublishResult: (selection: { reportIds: string[]; defectIds: string[]; evidenceIds: string[] }) => void | Promise<void>
 
   // Modal 8: Request Survey
   isRequestSurveyModalOpen: boolean
@@ -81,15 +79,11 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
   targetTriageCase,
   cases,
   selectedReportIds,
-  mockProjects,
+  projects,
+  triagePending,
   isMergeModalOpen,
   setIsMergeModalOpen,
   onExecuteMerge,
-  isGISModalOpen,
-  setIsGISModalOpen,
-  modalMapType,
-  setModalMapType,
-  modalMapContainerRef,
   isPhotoZoomModalOpen,
   setIsPhotoZoomModalOpen,
   isLinkReportsModalOpen,
@@ -109,6 +103,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
   noDefectReason,
   setNoDefectReason,
   onConfirmNoDefect,
+  onReviewNoDefect,
   isPublishModalOpen,
   setIsPublishModalOpen,
   publishPublicNote,
@@ -136,16 +131,6 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         onExecuteMerge={onExecuteMerge}
       />
 
-      {/* MODAL 2: BẢN ĐỒ GIS PREVIEW */}
-      <GisMapModal
-        isOpen={isGISModalOpen}
-        onClose={() => setIsGISModalOpen(false)}
-        selectedCase={selectedCase}
-        modalMapType={modalMapType}
-        setModalMapType={setModalMapType}
-        modalMapContainerRef={modalMapContainerRef}
-      />
-
       {/* MODAL 3: PHÓNG TO ẢNH HIỆN TRƯỜNG */}
       <PhotoZoomModal
         isOpen={isPhotoZoomModalOpen}
@@ -170,11 +155,24 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
       <TriageProjectModal
         isOpen={isTriageProjectModalOpen}
         onClose={() => setIsTriageProjectModalOpen(false)}
-        targetTriageCase={targetTriageCase}
-        mockProjects={mockProjects}
+        assignedCase={!!triagePending?.isProjectManager}
+        targetTriageCase={triagePending?.selected || targetTriageCase}
+        projects={triagePending?.eligibleProjects || []}
+        projectsLoading={triagePending?.targetLoading}
+        projectsError={triagePending?.targetError}
+        onRetryProjects={triagePending?.retryTargets}
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
-        onConfirmTriageProject={onConfirmTriageProject}
+        onConfirmTriageProject={(method, reason, geometryPins) => { if (triagePending) void triagePending.execute(method, reason, false, geometryPins); else if (!geometryPins) onConfirmTriageProject(method, reason) }}
+        busy={triagePending?.busy}
+        error={triagePending?.commandError}
+        held={!!triagePending?.held}
+        initialInput={triagePending?.held?.body}
+        onRetry={triagePending?.held && !triagePending.held.rejected ? () => triagePending.execute(undefined, undefined, true) : undefined}
+        retryLabel={triagePending?.held?.received ? 'Đọc lại kết quả điều phối' : 'Thử lại yêu cầu đang chờ'}
+        onReview={triagePending?.held?.rejected ? triagePending.review : undefined}
+        onAcceptReviewed={triagePending?.reviewed ? triagePending.acceptReviewed : undefined}
+        comparison={triagePending?.comparison}
       />
 
       {/* MODAL 6: KẾT LUẬN KHÔNG CÓ KHIẾM KHUYẾT (NO_DEFECT - PA05, BR-39) */}
@@ -185,6 +183,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         noDefectReason={noDefectReason}
         setNoDefectReason={setNoDefectReason}
         onConfirmNoDefect={onConfirmNoDefect}
+        onReviewNoDefect={onReviewNoDefect}
       />
 
       {/* MODAL 7: CÔNG BỐ TIẾN ĐỘ CHO NGƯỜI DÂN (PA07) */}

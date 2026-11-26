@@ -125,7 +125,7 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                 {item.status === 'PENDING' && (
                   <span className="bg-amber-100 text-[#8F7212] text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-amber-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                    <span>Chờ xác minh</span>
+                    <span>Chưa có quyết định</span>
                   </span>
                 )}
                 {item.status === 'VERIFIED' && (

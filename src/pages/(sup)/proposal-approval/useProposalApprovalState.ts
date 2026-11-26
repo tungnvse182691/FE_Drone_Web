@@ -1,70 +1,114 @@
 import { useState, useMemo, useEffect } from 'react'
-import { repairService } from '../../../api/services'
-import { mockRepairBatches } from '../../../data/mockData'
+import { useSearchParams } from 'react-router-dom'
+import { projectService } from '../../../api/services/projectService'
+import { repairWorkflowService, type RepairItem } from '../../../api/services/repairWorkflowService'
+import { readProposalPackages, type ProposalRead } from '../../../api/services/proposalReadModel'
+import { exportError } from '../../../api/services/projectExportService'
+import { useAuthStore } from '../../../store/authStore'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 import { ItemApprovalStatus, RepairItemDetail } from './types'
 
+const NO_SOURCE = '—'
+const NO_API = 'Máy chủ chưa có API cho thao tác này trên màn phê duyệt; chưa gửi và chưa lưu gì.'
+
+// Trạng thái hạng mục theo RepairItemState (docs/specs/17_10/02_Business-Workflows/07_NORMAL-Repair-and-Acceptance.md)
+function toApprovalStatus(state: string): ItemApprovalStatus {
+  if (state === 'AwaitingApproval') return 'PENDING'
+  if (state === 'Cancelled') return 'REJECTED'
+  if (state === 'CorrectionRequired') return 'REQUEST_RECONSIDER'
+  return 'APPROVED'
+}
+
 export function useProposalApprovalState(id: string | undefined) {
-  const [currentPkg, setCurrentPkg] = useState(() => {
-    if (!id) return null
-    return repairService.getPackageById(id)
-  })
+  const [params] = useSearchParams()
+  const requestedProject = params.get('projectId')
+  const isSupervisorRole = useAuthStore((s) => s.user?.role === 'SUPERVISOR')
+  const [read, setRead] = useState<ProposalRead | null>(null)
+  const [defectTypes, setDefectTypes] = useState<Record<string, string>>({})
+  const [scopes, setScopes] = useState<Array<{ obligationId: string; from: number; to: number; offsetFrom: number; offsetTo: number }>>([])
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [revision, setRevision] = useState(0)
+  const approveGuard = useSubmitGuard()
 
-  const targetPackage = currentPkg || (id ? repairService.getPackageById(id) : null)
-
-  const matchedBatch = useMemo(() => {
-    if (!id) return null
-    if (targetPackage) {
-      return {
-        id: targetPackage.id,
-        code: targetPackage.code,
-        name: targetPackage.title,
-        status: targetPackage.status
-      }
-    }
-    return mockRepairBatches.find(
-      (b) => b.id.toLowerCase() === id.toLowerCase() || b.code.toLowerCase() === id.toLowerCase()
-    )
-  }, [id, targetPackage])
-
-  // Package Data State
-  const packageCode = targetPackage?.code || matchedBatch?.code || (id?.toUpperCase().startsWith('PKG-') ? id.toUpperCase() : `PKG-2026-${id?.toUpperCase() || '05'}`)
-  const packageName = targetPackage?.title || matchedBatch?.name || 'Gói đề xuất sửa chữa mặt đường BTXM'
-  const routeDisplay = targetPackage?.route_name || 'QL1A - Giai đoạn 2'
-  const chainageDisplay = targetPackage?.chainage_display || 'Km 1024 - Km 1045'
-  const createdByName = targetPackage?.created_by_name || 'Đỗ Quốc Hoàng (PM)'
-  const createdAt = targetPackage?.created_at || 'Hôm nay'
-  const packageStatus = targetPackage?.status || 'SUBMITTED'
-  const activeKey = id || packageCode
-
-  const [items, setItems] = useState<RepairItemDetail[]>(() => {
-    return repairService.getItems(activeKey)
-  })
-
-  // Cập nhật khi id hoặc packageCode thay đổi
+  // Đọc gói + hạng mục thật từ BE (GET repair-packages, items, road-coverage, defects)
   useEffect(() => {
-    if (activeKey) {
-      const pkg = repairService.getPackageById(activeKey)
-      if (pkg) setCurrentPkg(pkg)
-      setItems(repairService.getItems(activeKey))
-    }
-  }, [id, packageCode, activeKey])
-
-  // Lắng nghe sự kiện từ mock API
-  useEffect(() => {
-    const handleStateChange = () => {
-      setItems(repairService.getItems(activeKey))
-      if (activeKey) {
-        const pkg = repairService.getPackageById(activeKey)
-        if (pkg) setCurrentPkg(pkg)
+    const c = new AbortController()
+    setRead(null)
+    setLoadError('')
+    if (!id) return
+    setLoading(true)
+    ;(async () => {
+      const projects = await projectService.fetchProjects()
+      const candidates = requestedProject ? projects.filter((p) => p.id === requestedProject) : projects
+      if (requestedProject && !candidates.length) throw new Error('Dự án liên kết không thuộc danh mục được phép đọc.')
+      const wanted = id.trim().toLowerCase()
+      for (const project of candidates) {
+        const rows = await readProposalPackages([project], c.signal)
+        const hit = rows.find((r) => r.raw.id.toLowerCase() === wanted || r.view.code.toLowerCase() === wanted)
+        if (!hit) continue
+        // Supervisor không có quyền đọc /defects (HTTP 403 đã kiểm thật): chỉ PM đọc loại khiếm khuyết, Supervisor hiện '—'
+        const [defects, coverage] = await Promise.all([
+          useAuthStore.getState().user?.role === 'PROJECT_MANAGER' ? repairWorkflowService.defects(project.id, c.signal) : Promise.resolve([]),
+          repairWorkflowService.coverage(project.id, c.signal)
+        ])
+        if (c.signal.aborted) return
+        setDefectTypes(Object.fromEntries(defects.map((d) => [d.id, d.defectTypeCode || ''])))
+        setScopes(coverage.scopes)
+        setRead(hit)
+        return
       }
-    }
-    window.addEventListener('roadguard_repair_api_change', handleStateChange)
-    window.addEventListener('roadguard_state_change', handleStateChange)
-    return () => {
-      window.removeEventListener('roadguard_repair_api_change', handleStateChange)
-      window.removeEventListener('roadguard_state_change', handleStateChange)
-    }
-  }, [activeKey])
+      throw new Error('Không tìm thấy gói sửa chữa này trong các dự án được phép đọc.')
+    })()
+      .catch((e) => {
+        if (!c.signal.aborted) setLoadError(exportError(e))
+      })
+      .finally(() => {
+        if (!c.signal.aborted) setLoading(false)
+      })
+    return () => c.abort()
+  }, [id, requestedProject, revision])
+
+  const rawItems: RepairItem[] = read?.items ?? []
+  const items = useMemo<RepairItemDetail[]>(
+    () =>
+      rawItems.map((it) => {
+        const sc = scopes.find((s) => s.obligationId === it.obligationId)
+        return {
+          id: it.id,
+          item_code: `ITEM-${it.id.slice(0, 8).toUpperCase()}`,
+          defect_code: `DEF-${it.defectId.slice(0, 8).toUpperCase()}`,
+          chainage: sc ? `${sc.from}–${sc.to} m` : NO_SOURCE,
+          lane_info: sc ? `Lệch ${sc.offsetFrom}–${sc.offsetTo} m` : NO_SOURCE,
+          defect_title: defectTypes[it.defectId] || NO_SOURCE,
+          defect_measurements: NO_SOURCE,
+          solution_title: `Luồng ${it.mode}`,
+          solution_standard: NO_SOURCE,
+          volume_display: NO_SOURCE,
+          volume_sub: NO_SOURCE,
+          area_m2: 0,
+          status: toApprovalStatus(it.state),
+          status_label: `${it.mode}: ${it.state}`,
+          assigned_crew: '',
+          image_url: '',
+          ortho_code: NO_SOURCE,
+          gps_coords: NO_SOURCE,
+          resolution: NO_SOURCE
+        }
+      }),
+    [rawItems, scopes, defectTypes]
+  )
+
+  // Package Data State (chỉ dữ liệu BE; thiếu nguồn thì hiện "—")
+  const packageCode = read?.view.code || (id ? id.toUpperCase() : NO_SOURCE)
+  const packageName = read?.view.title || NO_SOURCE
+  const routeDisplay = read?.view.route_name || NO_SOURCE
+  const chainageDisplay = read?.view.chainage_display || NO_SOURCE
+  const createdByName = NO_SOURCE
+  const createdAt = NO_SOURCE
+  const packageStatus = read?.view.status || ''
+  const activeProjectId = read?.view.route_id || ''
+  const activePackageId = read?.raw.id || ''
 
   // Filter State
   const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REQUEST_EVIDENCE' | 'REJECTED'>(
@@ -74,26 +118,8 @@ export function useProposalApprovalState(id: string | undefined) {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 5
 
-  // Modal States
-  const [activeModalItem, setActiveModalItem] = useState<RepairItemDetail | null>(null)
-  const [modalFeedbackType, setModalFeedbackType] = useState<'EVIDENCE' | 'RECONSIDER' | 'REJECT'>('EVIDENCE')
-  const [modalNotes, setModalNotes] = useState('')
-  const [modalDirectives, setModalDirectives] = useState<{ [key: string]: boolean }>({
-    laser: true,
-    height: false,
-    close_photo: false,
-    core_sample: false
-  })
-
   // Lightbox Modal for Defect Photo
   const [viewingPhotoItem, setViewingPhotoItem] = useState<RepairItemDetail | null>(null)
-
-  // Dispatch Modal
-  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false)
-  const [dispatchDeadline, setDispatchDeadline] = useState('28/08/2026')
-  const [dispatchNotice, setDispatchNotice] = useState(
-    'Yêu cầu rào chắn cọc tiêu phản quang 50m trước vị trí thi công, bố trí 2 người điều tiết giao thông theo TCVN.'
-  )
 
   // Batch Approve Modal
   const [isBatchApproveConfirmOpen, setIsBatchApproveConfirmOpen] = useState(false)
@@ -165,130 +191,55 @@ export function useProposalApprovalState(id: string | undefined) {
     return filteredItems.slice(start, start + pageSize)
   }, [filteredItems, currentPage, pageSize])
 
-  // Supervisor Decision Handlers
-  const handleQuickApproveItem = (itemId: string) => {
-    const autoCrew = 'Tổ thi công Asphalt 01'
-    repairService.updateItemDecision(activeKey, itemId, {
-      status: 'APPROVED',
-      status_label: 'APPROVED',
-      assigned_crew: autoCrew,
-      supervisor_notes: 'Đã phê duyệt thông qua phương án kỹ thuật và khối lượng bóc tách.'
-    })
-    setItems(repairService.getItems(activeKey))
-    showToast(`Hạng mục ${itemId.toUpperCase()} đã được Giám sát phê duyệt (Đã duyệt)!`)
+  // Phê duyệt hạng mục Normal: POST .../items/{id}/approve qua repairWorkflowService.decide (Idempotency-Key + If-Match), rồi GET đối chiếu
+  const approveOne = async (itemId: string, reasonInput: string) => {
+    if (!activeProjectId || !activePackageId) throw new Error('Chưa đọc được gói sửa chữa từ máy chủ.')
+    const held = repairWorkflowService.pending(activeProjectId, activePackageId, itemId, 'approve')
+    return repairWorkflowService.decide(activeProjectId, activePackageId, itemId, 'approve', held?.body.reason || reasonInput)
   }
 
-  const handleOpenDecisionModal = (item: RepairItemDetail, initialType: 'EVIDENCE' | 'RECONSIDER' | 'REJECT') => {
-    setActiveModalItem(item)
-    setModalFeedbackType(initialType)
-    if (initialType === 'EVIDENCE') {
-      setModalNotes(
-        item.supervisor_notes ||
-          'Hình ảnh hiện trường từ Drone chưa làm rõ được độ sụt lún của lớp móng CPĐD. Đề nghị Tổ đo đạc bổ sung ảnh chụp thước đo cốt cao độ đáy ổ gà và kết quả đo độ nẩy bánh xe trước khi duyệt định mức bóc tách.'
-      )
-    } else if (initialType === 'RECONSIDER') {
-      setModalNotes(
-        item.supervisor_notes ||
-          'Đề nghị PM xem xét lại giải pháp kỹ thuật: cần tăng chiều sâu cào bóc từ 5cm lên 7cm hoặc thay đổi mác bê tông nhựa để đảm bảo tuổi thọ khai thác.'
-      )
-    } else {
-      setModalNotes(
-        item.supervisor_notes ||
-          'Phương án kỹ thuật đề xuất không phù hợp với quy chuẩn TCVN hoặc trùng lặp với kế hoạch đại tu. Từ chối duyệt phương án này.'
-      )
+  const handleQuickApproveItem = async (itemId: string) => {
+    if (!isSupervisorRole) return showToast('Chỉ Giám sát được phê duyệt hạng mục.')
+    try {
+      const held = repairWorkflowService.pending(activeProjectId, activePackageId, itemId, 'approve')
+      const reason = held?.body.reason || window.prompt('Nhập lý do phê duyệt hạng mục:') || ''
+      if (!reason.trim()) return showToast('Cần nhập lý do để phê duyệt.')
+      if (!approveGuard.acquire()) return
+      try {
+        const row = await approveOne(itemId, reason)
+        showToast(`Đã GET đối chiếu hạng mục ${row.id.slice(0, 8).toUpperCase()}: ${row.state}.`)
+        setRevision((n) => n + 1)
+      } finally { approveGuard.release() }
+    } catch (e) {
+      showToast(exportError(e))
     }
   }
 
-  const handleSubmitDecisionModal = () => {
-    if (!activeModalItem) return
-    if (!modalNotes.trim()) {
-      alert('Vui lòng nhập nội dung giải trình kỹ thuật của Supervisor trước khi gửi!')
-      return
-    }
-
-    const selectedDirectivesList: string[] = []
-    if (modalDirectives.laser)
-      selectedDirectivesList.push('Yêu cầu đo đạc lại hiện trường bằng máy laser thủy bình hoặc thước 3m')
-    if (modalDirectives.height)
-      selectedDirectivesList.push('Yêu cầu đo đạc lại cao độ trắc dọc và bề dày lớp móng cấp phối đá dăm')
-    if (modalDirectives.close_photo)
-      selectedDirectivesList.push('Chụp lại ảnh cận cảnh có đặt thước tỷ lệ 50cm')
-    if (modalDirectives.core_sample)
-      selectedDirectivesList.push('Khoan mẫu kiểm tra độ chặt lớp móng K98')
-
-    let nextStatus: ItemApprovalStatus = 'REQUEST_EVIDENCE'
-    if (modalFeedbackType === 'RECONSIDER') nextStatus = 'REQUEST_RECONSIDER'
-    if (modalFeedbackType === 'REJECT') nextStatus = 'REJECTED'
-
-    repairService.updateItemDecision(activeKey, activeModalItem.id, {
-      status: nextStatus,
-      status_label: nextStatus,
-      assigned_crew: nextStatus === 'REJECTED' ? '' : activeModalItem.assigned_crew,
-      supervisor_notes: modalNotes,
-      evidence_directives: selectedDirectivesList,
-      feedback_type: modalFeedbackType
-    })
-    setItems(repairService.getItems(activeKey))
-
-    const labelMap = {
-      EVIDENCE: 'yêu cầu bổ sung bằng chứng (REQUEST_EVIDENCE)',
-      RECONSIDER: 'yêu cầu xem lại phương án (REQUEST_RECONSIDER)',
-      REJECT: 'từ chối giải pháp kỹ thuật'
-    }
-
-    showToast(`Đã gửi phản hồi ${labelMap[modalFeedbackType]} cho hạng mục ${activeModalItem.item_code}!`)
-    setActiveModalItem(null)
-  }
-
-  // Batch Approve All
-  const handleBatchApproveAll = () => {
-    repairService.signPackageApproval(activeKey)
-    setItems(repairService.getItems(activeKey))
-    const pkg = repairService.getPackageById(activeKey)
-    if (pkg) setCurrentPkg(pkg)
+  // Chưa có endpoint BE cho yêu cầu bổ sung/xem lại/từ chối từ màn này: không giả vờ lưu
+  const handleBatchApproveAll = async () => {
     setIsBatchApproveConfirmOpen(false)
-    showToast('Đã phê duyệt nhanh toàn bộ các hạng mục hợp lệ trong gói đề xuất!')
-  }
-
-  // PM Assign Crew handler
-  const handleCrewChange = (itemId: string, newCrew: string) => {
-    repairService.updateItemDecision(activeKey, itemId, { assigned_crew: newCrew })
-    setItems(repairService.getItems(activeKey))
-    showToast(`Đã cập nhật phân công đội thi công: [${newCrew}] cho hạng mục!`)
-  }
-
-  // Dispatch Work Order submit
-  const handleConfirmDispatch = (crewName?: string) => {
-    let updatedItems = items
-    if (crewName) {
-      // PM chọn ghi đè nhanh cho 1 đội duy nhất
-      updatedItems = items.map((it) =>
-        it.status === 'APPROVED' ? { ...it, assigned_crew: crewName } : it
-      )
-      repairService.setPackageItems(activeKey, updatedItems)
-      setItems(updatedItems)
-    }
-
-    const approvedItems = updatedItems.filter((it) => it.status === 'APPROVED')
-    const distinctCrews = Array.from(
-      new Set(approvedItems.map((it) => it.assigned_crew).filter(Boolean))
-    )
-    const crewSummary =
-      distinctCrews.length > 0
-        ? distinctCrews.join(', ')
-        : crewName || 'Tổ thi công Asphalt 01'
-
-    const updatedPkg = repairService.dispatchPackage(id || packageCode, crewSummary, dispatchDeadline)
-    if (updatedPkg) {
-      setCurrentPkg(updatedPkg)
-    }
-    setIsDispatchModalOpen(false)
-    showToast(
-      `Đã phát Lệnh công tác thi công thành công (${stats.approved} hạng mục)! Đội tiếp nhận: [${crewSummary}]. Hạn hoàn thành: ${dispatchDeadline}`
-    )
+    if (!isSupervisorRole) return showToast('Chỉ Giám sát được phê duyệt hạng mục.')
+    const targets = rawItems.filter((it) => it.mode === 'Normal' && it.state === 'AwaitingApproval')
+    if (!targets.length) return showToast('Không có hạng mục Normal nào đang chờ duyệt.')
+    const reason = window.prompt(`Nhập lý do phê duyệt ${targets.length} hạng mục:`) || ''
+    if (!reason.trim()) return showToast('Cần nhập lý do để phê duyệt.')
+    let done = 0
+    if (!approveGuard.acquire()) return
+    try {
+      for (const it of targets) {
+        await approveOne(it.id, reason)
+        done++
+      }
+      showToast(`Đã duyệt và GET đối chiếu ${done}/${targets.length} hạng mục.`)
+    } catch (e) {
+      showToast(`Đã duyệt ${done}/${targets.length}; dừng do lỗi: ${exportError(e)}`)
+    } finally { approveGuard.release() }
+    setRevision((n) => n + 1)
   }
 
   return {
+    loading,
+    loadError,
     packageCode,
     packageName,
     routeDisplay,
@@ -307,32 +258,16 @@ export function useProposalApprovalState(id: string | undefined) {
     totalPages,
     filteredItems,
     displayedItems,
-    activeModalItem,
-    setActiveModalItem,
-    modalFeedbackType,
-    setModalFeedbackType,
-    modalNotes,
-    setModalNotes,
-    modalDirectives,
-    setModalDirectives,
     viewingPhotoItem,
     setViewingPhotoItem,
-    isDispatchModalOpen,
-    setIsDispatchModalOpen,
-    dispatchDeadline,
-    setDispatchDeadline,
-    dispatchNotice,
-    setDispatchNotice,
     isBatchApproveConfirmOpen,
     setIsBatchApproveConfirmOpen,
     toastMessage,
     setToastMessage,
     showToast,
     handleQuickApproveItem,
-    handleOpenDecisionModal,
-    handleSubmitDecisionModal,
     handleBatchApproveAll,
-    handleCrewChange,
-    handleConfirmDispatch
+    activeProjectId,
+    activePackageId
   }
 }

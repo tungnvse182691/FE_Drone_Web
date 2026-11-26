@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import {projectListMetrics,nearWarrantyEnd,pendingRouteReview} from '../../utils/projectListMetrics'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { projectService } from '../../api/services'
+import { projectService, personnelService } from '../../api/services'
 import { Icon } from '../../components/ui/Icon'
 import {
   HubProject,
@@ -15,14 +16,15 @@ import { ProjectListKpis } from './projects/ProjectListKpis'
 import { ProjectListFilters } from './projects/ProjectListFilters'
 import { ProjectGridView } from './projects/ProjectGridView'
 import { ProjectTableView } from './projects/ProjectTableView'
-import { CreateProjectModal } from './projects/CreateProjectModal'
+import { CreateProjectModal, PmOption } from './projects/CreateProjectModal'
 import { CloseProjectModal } from './projects/CloseProjectModal'
+import { EditProjectModal } from './projects/EditProjectModal'
 
 export type { HubProject }
 
 export const ProjectList: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
 
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
@@ -30,21 +32,34 @@ export const ProjectList: React.FC = () => {
   // Projects state & Async Mock API fetch
   const [projects, setProjects] = useState<HubProject[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const listRequest = useRef(0)
   const loadProjects = useCallback(async () => {
+    const request = ++listRequest.current
+    const current = () => request === listRequest.current && useAuthStore.getState().authEpoch === authEpoch
     try {
       setIsLoading(true)
+      setLoadError(null)
       const data = await projectService.fetchProjects()
-      setProjects(data)
+      if (current()) setProjects(data)
     } catch (err: any) {
+      if (!current()) return
       console.error('[ProjectList] Lỗi tải danh sách dự án:', err)
+      const msg = err?.message || 'Không thể tải danh sách dự án từ máy chủ Backend.'
+      setLoadError(msg)
+
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
-  }, [])
+  }, [authEpoch])
 
   useEffect(() => {
-    loadProjects()
+    setProjects([])
+    void loadProjects()
+    return () => { listRequest.current++ }
   }, [loadProjects])
 
   // Đồng bộ reactive qua Event Bus
@@ -69,44 +84,138 @@ export const ProjectList: React.FC = () => {
     }, 4000)
   }
 
+  // Danh mục PM thật lấy trực tiếp từ CSDL Backend Candidate3
+  const [dbPms, setDbPms] = useState<PmOption[]>([])
+
+  const [pmLoading, setPmLoading] = useState(false)
+  const [pmError, setPmError] = useState<string | null>(null)
+  const pmRequest = useRef(0)
+  const loadPms = useCallback(async () => {
+    const request = ++pmRequest.current
+    const current = () => request === pmRequest.current && useAuthStore.getState().authEpoch === authEpoch
+    if (!isSupervisor) { setDbPms([]); return }
+    setPmLoading(true)
+    setPmError(null)
+    try {
+      const users = await personnelService.fetchStaffDirectory({ role: 'PM', status: 'ACTIVE' })
+      if (current()) setDbPms(users.filter(u => (u.role === 'PM' || u.role === 'PROJECT_MANAGER') && u.status === 'ACTIVE').map(u => ({
+        id: u.userId, name: u.displayName || 'Chưa cập nhật tên', email: u.email || '', status: u.status!
+      })))
+    } catch {
+      if (current()) { setDbPms([]); setPmError('Không tải được danh sách PM đủ điều kiện. Vui lòng thử lại.') }
+    } finally { if (current()) setPmLoading(false) }
+  }, [authEpoch, isSupervisor])
+  useEffect(() => {
+    setDbPms([])
+    void loadPms()
+    return () => { pmRequest.current++ }
+  }, [loadPms])
+  const availablePms = dbPms
+
   // Modal Khởi tạo dự án mới (Bước SUP-01: DA01, BR-01, FR-04)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [newProjectName, setNewProjectName] = useState('Quốc lộ 14 - Đoạn Chơn Thành')
-  const [newProjectCode, setNewProjectCode] = useState('PRJ-QL14-01')
-  const [newProjectRegion, setNewProjectRegion] = useState('Bình Phước - Bình Dương')
-  const [newProjectPM, setNewProjectPM] = useState('Đỗ Quốc Hoàng (pmhoang@gmail.com)')
-  const [newStartDate, setNewStartDate] = useState('2026-10-01')
-  const [newEndDate, setNewEndDate] = useState('2029-10-01')
-  const [handoverFiles, setHandoverFiles] = useState<string[]>(['FILE-BB-BG-01'])
+  const [newProjectName, setNewProjectName] = useState('')
+  const [newProjectCode, setNewProjectCode] = useState('')
+  const [newProjectRegion, setNewProjectRegion] = useState('')
+  const [newProjectPM, setNewProjectPM] = useState('')
+  const [newStartDate, setNewStartDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [newEndDate, setNewEndDate] = useState(() => {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() + 3)
+    return d.toISOString().split('T')[0]
+  })
+  const [handoverFile, setHandoverFile] = useState<File | null>(null)
+  const [stepLabel, setStepLabel] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(null)
 
-  // Submit tạo dự án mới bất đồng bộ qua Mock API (Chỉ Supervisor mới có quyền - BR-01, FR-04)
+  const [newEngineeringCrs, setNewEngineeringCrs] = useState('')
+  const [pendingCreate, setPendingCreate] = useState(false)
+  const [receivedCreate, setReceivedCreate] = useState(false)
+
+  // Reset form sạch khi mở modal tạo mới (dứt khoát không để mock data)
+  const handleOpenCreateModal = () => {
+    let pending: ReturnType<typeof projectService.pendingProjectCreate>
+    try { pending = projectService.pendingProjectCreate() }
+    catch (error: any) { showToast(error.message || 'Chưa đối chiếu được yêu cầu tạo dự án trước.'); return }
+    setPendingCreate(!!pending)
+    setReceivedCreate(!!pending?.hasReceipt)
+    if (pending) {
+      setNewEngineeringCrs(pending.body.engineeringUtmSrid == null ? '' : String(pending.body.engineeringUtmSrid))
+      setNewProjectName(pending.body.name)
+      setNewProjectCode(pending.body.code)
+      setNewProjectPM(pending.body.primaryPmId)
+      setNewStartDate(pending.body.handoverDate)
+      setNewEndDate(pending.body.warrantyEndDate)
+      setNewProjectRegion(pending.body.description || '')
+      setHandoverFile(null)
+      setCreateErrorMessage(null)
+      setIsModalOpen(true)
+      return
+    }
+    setNewEngineeringCrs('')
+    setNewProjectName('')
+    setNewProjectCode('')
+    setNewProjectRegion('')
+    setNewProjectPM('')
+    setNewStartDate(new Date().toISOString().split('T')[0])
+    const d = new Date()
+    d.setFullYear(d.getFullYear() + 3)
+    setNewEndDate(d.toISOString().split('T')[0])
+    setHandoverFile(null)
+    setCreateErrorMessage(null)
+    setIsModalOpen(true)
+  }
+
+  // Submit tạo dự án mới (Chỉ Supervisor mới có quyền - BR-01, FR-04)
   const handleCreateProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return
+    const epoch = authEpoch
+    const current = () => mounted.current && useAuthStore.getState().authEpoch === epoch
     setIsSubmitting(true)
+    setCreateErrorMessage(null)
     try {
+      if (!pendingCreate && !availablePms.some(pm => pm.id === newProjectPM && pm.status === 'ACTIVE')) {
+        throw new Error('Hãy chọn PM đang hoạt động từ danh sách nhân sự đã tải.')
+      }
       const created = await projectService.createProject({
+        engineeringUtmSrid: newEngineeringCrs ? Number(newEngineeringCrs) : null,
         code: newProjectCode,
         name: newProjectName,
         primaryPmId: newProjectPM,
         handoverDate: newStartDate,
         warrantyEndDate: newEndDate,
-        handoverFileIds: handoverFiles,
+        handoverFile,
+        onStep: current() ? setStepLabel : undefined,
         region: newProjectRegion
-      })
-      const refreshed = await projectService.fetchProjects()
-      setProjects(refreshed)
+      }, pendingCreate)
+      if (!current()) return
+      setPendingCreate(false)
+      setReceivedCreate(false)
+      setProjects(previous => [...previous.filter(p => p.id !== created.id), created])
       setIsModalOpen(false)
-      showToast(`Khởi tạo thành công dự án [${created.code}] và phân bổ PM [${created.pm_name}] (BR-01, FR-04)!`)
+      showToast(`Đã tạo dự án [${created.code}]. Phân công PM được đọc từ máy chủ.`)
+      await loadProjects()
+      if(current())navigate(`${basePath}/projects/${created.id}`)
     } catch (err: any) {
-      showToast(err.message || 'Lỗi khởi tạo dự án')
+      if (!current()) return
+      const pending = projectService.pendingProjectCreate()
+      setPendingCreate(!!pending)
+      setReceivedCreate(!!pending?.hasReceipt)
+      // BE đã ghi dự án (có receipt 201) dù bước đọc lại lỗi: đọc lại danh sách thật để dự án hiện ra, không tạo lại.
+      if (pending?.hasReceipt) void loadProjects()
+      const msg = err.message || 'Lỗi khởi tạo dự án'
+      setCreateErrorMessage(msg)
+      showToast(msg)
     } finally {
-      setIsSubmitting(false)
+      if (current()) setIsSubmitting(false)
     }
   }
 
-  // Modal Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10)
+  // Modal Đóng dự án khi hết hạn bảo hành
   const [closingProject, setClosingProject] = useState<HubProject | null>(null)
+  const [editingProjectId,setEditingProjectId]=useState('')
 
   const handleCloseProjectSubmit = async (reason: string) => {
     if (!closingProject) return
@@ -114,7 +223,7 @@ export const ProjectList: React.FC = () => {
       const closed = await projectService.closeProject(closingProject.id, { reason })
       const refreshed = await projectService.fetchProjects()
       setProjects(refreshed)
-      showToast(`Đã đóng thành công dự án [${closed.code}] và lưu trữ hồ sơ 5 năm (DA12, QT13)!`)
+      showToast(`Đã đóng thành công dự án [${(closed as any)?.code || closingProject.code}] và chuyển sang lưu trữ hồ sơ 5 năm!`)
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi đóng dự án')
       throw err
@@ -122,28 +231,16 @@ export const ProjectList: React.FC = () => {
   }
 
   // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope - BR-02)
-  const scopedProjects = useMemo(() => {
-    if (isSupervisor) return projects
-    return projects.filter((prj) => {
-      const isAssigned =
-        prj.pm_email === user?.email ||
-        prj.pm_name === user?.full_name ||
-        prj.pm_name === 'Đỗ Quốc Hoàng' ||
-        prj.id === 'prj-ql1a-02' ||
-        prj.id === 'prj-lstl-05' ||
-        prj.id === 'prj-ql1a-p1'
-
-      return isAssigned && !prj.is_restricted_for_pm
-    })
-  }, [projects, isSupervisor, user])
+  // GET /projects is scoped by server effective membership, not primary PM/name.
+  const scopedProjects = projects
 
   // Filter projects logic
   const filteredProjects = useMemo(() => {
     return scopedProjects.filter((prj) => {
       // Filter tab
       if (filterTab === 'ACTIVE' && prj.status !== 'ACTIVE') return false
-      if (filterTab === 'NEAR_EXPIRY' && prj.status !== 'NEAR_EXPIRY') return false
-      if (filterTab === 'PENDING_ALIGNMENT' && prj.status !== 'PENDING_ALIGNMENT') return false
+      if (filterTab === 'NEAR_EXPIRY' && nearWarrantyEnd(prj)!==true) return false
+      if (filterTab === 'PENDING_ALIGNMENT' && pendingRouteReview(prj)!==true) return false
       if (filterTab === 'CLOSED' && prj.status !== 'CLOSED') return false
 
       // Search query
@@ -161,19 +258,8 @@ export const ProjectList: React.FC = () => {
   }, [scopedProjects, filterTab, searchQuery])
 
   // KPI Metrics Calculation
-  const totalLength = useMemo(() => scopedProjects.reduce((acc, p) => acc + p.length_km, 0).toFixed(1), [scopedProjects])
-  const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
-  const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
-  const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])
-  const closedCount = useMemo(() => scopedProjects.filter((p) => p.status === 'CLOSED').length, [scopedProjects])
-
-  const kpiStats: ProjectKpiStats = {
-    totalLength,
-    activeCount,
-    nearExpiryCount,
-    pendingAlignmentCount,
-    closedCount
-  }
+  const kpiStats=useMemo(()=>projectListMetrics(scopedProjects),[scopedProjects])
+  const {activeCount,nearExpiryCount,pendingAlignmentCount,closedCount}=kpiStats
 
   const handleNavigateHome = () => {
     navigate(`${basePath}/dashboard`)
@@ -192,7 +278,7 @@ export const ProjectList: React.FC = () => {
       <ProjectListHeader
         isSupervisor={isSupervisor}
         onNavigateHome={handleNavigateHome}
-        onOpenCreateModal={() => setIsModalOpen(true)}
+        onOpenCreateModal={handleOpenCreateModal}
       />
 
       <ProjectListKpis kpiStats={kpiStats} />
@@ -211,6 +297,39 @@ export const ProjectList: React.FC = () => {
         onChangeViewMode={setViewMode}
       />
 
+      {loadError && (
+        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between gap-3 shadow-sm animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-red-100 text-red-600 mt-0.5">
+              <Icon name="error" size={20} />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-red-900">Lỗi kết nối máy chủ API Backend</h4>
+              <p className="text-xs text-red-700 mt-0.5 font-mono">{loadError}</p>
+              <p className="text-[11px] text-red-500 mt-1">
+                RoadGuard áp dụng kỷ luật chống bịa: Khi máy chủ báo lỗi, hệ thống hiển thị trực tiếp lỗi và dứt khoát không trả về dữ liệu giả (mock data).
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => loadProjects()}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg shrink-0 flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Icon name="sync" size={14} />
+            <span>Thử lại</span>
+          </button>
+        </div>
+      )}
+
+      {projects.some(p => p.stats_error) && <div role="alert" className="rg-alert rg-alert-warn">
+        <Icon name="warning" size={16} className="shrink-0 mt-px" />
+        <p className="flex-1 min-w-0">Một phần thông tin nhân sự hoặc thống kê chưa tải được. Dữ liệu dự án đã tải vẫn được giữ.</p>
+        <button type="button" className="shrink-0 font-semibold underline cursor-pointer" onClick={() => { void loadProjects() }}>Thử lại</button>
+      </div>}
+      {!isLoading && !loadError && filteredProjects.length === 0 && <div role="status" className="rg-empty">
+        <Icon name="inbox" size={18} className="text-slate-400" />
+        <p>{projects.length === 0 ? 'Không có dự án trong phạm vi được cấp từ CSDL.' : 'Không có dự án phù hợp bộ lọc.'}</p>
+      </div>}
       {isLoading ? (
         <div className="p-12 text-center bg-white rounded-xl border border-slate-200 text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
           <Icon name="sync" size={24} className="animate-spin text-brand-gold" />
@@ -220,10 +339,11 @@ export const ProjectList: React.FC = () => {
         <ProjectGridView
           filteredProjects={filteredProjects}
           isSupervisor={isSupervisor}
-          onOpenCreateModal={() => setIsModalOpen(true)}
+          onOpenCreateModal={handleOpenCreateModal}
           onNavigateAlignment={handleNavigateAlignment}
           onNavigateDetail={handleNavigateDetail}
           onOpenCloseModal={(prj) => setClosingProject(prj)}
+          onOpenEditModal={prj=>setEditingProjectId(prj.id)}
         />
       ) : (
         <ProjectTableView
@@ -232,28 +352,49 @@ export const ProjectList: React.FC = () => {
           isSupervisor={isSupervisor}
           onNavigateDetail={handleNavigateDetail}
           onOpenCloseModal={(prj) => setClosingProject(prj)}
+          onOpenEditModal={prj=>setEditingProjectId(prj.id)}
         />
       )}
 
       {/* MODAL KHỞI TẠO DỰ ÁN (BƯỚC SUP-01: DA01, BR-01, FR-04) */}
+      {isSupervisor&&editingProjectId&&<EditProjectModal key={`${authEpoch}:${editingProjectId}`} projectId={editingProjectId} onClose={()=>setEditingProjectId('')} onSaved={read=>{setProjects(rows=>rows.map(p=>p.id===read.projectId?{...p,name:read.name,region:read.description??'',location_detail:''}:p));setEditingProjectId('');showToast('Đã cập nhật dự án');void loadProjects()}} />}
       <CreateProjectModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          setCreateErrorMessage(null)
+        }}
         projectName={newProjectName}
-        onChangeProjectName={setNewProjectName}
+        onChangeProjectName={(val) => {
+          setNewProjectName(val)
+          if (createErrorMessage) setCreateErrorMessage(null)
+        }}
         projectCode={newProjectCode}
-        onChangeProjectCode={setNewProjectCode}
+        onChangeProjectCode={(val) => {
+          setNewProjectCode(val)
+          if (createErrorMessage) setCreateErrorMessage(null)
+        }}
+        engineeringCrs={newEngineeringCrs}
+        onChangeEngineeringCrs={setNewEngineeringCrs}
         projectRegion={newProjectRegion}
         onChangeProjectRegion={setNewProjectRegion}
         projectPM={newProjectPM}
         onChangeProjectPM={setNewProjectPM}
+        pmOptions={availablePms}
+        pmLoading={pmLoading}
+        pmError={pmError}
+        onRetryPms={() => { void loadPms() }}
+        pendingCreate={pendingCreate}
+        receivedCreate={receivedCreate}
         startDate={newStartDate}
         onChangeStartDate={setNewStartDate}
         endDate={newEndDate}
         onChangeEndDate={setNewEndDate}
-        handoverFiles={handoverFiles}
-        onChangeHandoverFiles={setHandoverFiles}
+        handoverFile={handoverFile}
+        onChangeHandoverFile={setHandoverFile}
+        stepLabel={stepLabel}
         isSubmitting={isSubmitting}
+        errorMessage={createErrorMessage}
         onSubmit={handleCreateProjectSubmit}
       />
 

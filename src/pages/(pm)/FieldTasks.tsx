@@ -1,89 +1,49 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { fieldTaskService } from '../../api/services/fieldTaskService'
-import { conflictService } from '../../api/services/conflictService'
-import { SyncConflictItem, ResolutionStatus, FieldTask } from '../../types/domain'
+import { projectService } from '../../api/services/projectService'
+import { FieldTask, HubProject } from '../../types/domain'
 import { Icon } from '../../components/ui/Icon'
 import { FieldTasksHeader } from './field-tasks/FieldTasksHeader'
-import { ConflictsTab } from './field-tasks/ConflictsTab'
 import { MeasurementsTab } from './field-tasks/MeasurementsTab'
-import { ConflictResolveModal } from './field-tasks/ConflictResolveModal'
+import { reportKeepNewCommands } from '../../api/services/reportKeepNewCommands'
 
 export const FieldTasks: React.FC = () => {
-  const [searchParams] = useSearchParams()
+  const [searchParams,setSearchParams] = useSearchParams()
+  const requestedProject=searchParams.get('projectId') || 'ALL',linkedDefect=searchParams.get('defectId') || ''
   const tabParam = searchParams.get('tab')
   const highlightCode = searchParams.get('highlightCode')
 
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
+  const actorScope = `${authEpoch}:${user?.id}:${user?.role}`
+  const currentActor = useRef(actorScope)
+  currentActor.current = actorScope
+  const taskRequest = useRef(0)
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
-  // Tab chuyển đổi: Nhật ký đo đạc hiện trường (Ưu tiên mặc định cho PM-12) vs Xử lý xung đột
-  const [activeTab, setActiveTab] = useState<'CONFLICTS' | 'MEASUREMENTS'>(
-    tabParam === 'CONFLICTS' ? 'CONFLICTS' : 'MEASUREMENTS'
-  )
+  const navigate = useNavigate()
 
+  // ?tab=CONFLICTS (liên kết cũ): BE không có API xung đột → chuyển sang màn Điều phối ngoại tuyến
   useEffect(() => {
-    if (tabParam === 'MEASUREMENTS') {
-      setActiveTab('MEASUREMENTS')
-    } else if (tabParam === 'CONFLICTS') {
-      setActiveTab('CONFLICTS')
+    if (tabParam === 'CONFLICTS') {
+      navigate(isSupervisor ? '/sup/offline' : '/pm/offline', { replace: true })
     }
-  }, [tabParam])
+  }, [tabParam, isSupervisor, navigate])
 
-  // Dữ liệu danh sách nhiệm vụ đo đạc hiện trường qua Mock API Service
+  // Danh mục tuyến đường / dự án lấy thật 100% từ CSDL Backend
+  const [availableProjects, setAvailableProjects] = useState<HubProject[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(requestedProject)
+  const [projectsLoaded,setProjectsLoaded]=useState(false),[linkedSourceError,setLinkedSourceError]=useState('')
+  useEffect(()=>{setSelectedProjectId(requestedProject)},[requestedProject,actorScope])
+  useEffect(()=>{const c=new AbortController();setLinkedSourceError('');const report=searchParams.get('reportId'),decision=searchParams.get('decisionId');if(isPM && requestedProject!=='ALL' && linkedDefect && report && decision)reportKeepNewCommands.read(requestedProject,report,decision,c.signal).then(r=>{if(!c.signal.aborted && r?.defect.id!==linkedDefect)setLinkedSourceError('Khiếm khuyết trong liên kết không khớp quyết định nguồn. Chưa lập FIELD.')}).catch(e=>{if(!c.signal.aborted)setLinkedSourceError(e.message)});return()=>c.abort()},[actorScope,requestedProject,linkedDefect,searchParams.get('reportId'),searchParams.get('decisionId')])
+
+  // Dữ liệu danh sách nhiệm vụ đo đạc hiện trường từ CSDL Backend
   const [fieldTasks, setFieldTasks] = useState<FieldTask[]>([])
   const [isLoadingTasks, setIsLoadingTasks] = useState<boolean>(true)
-
-  const loadTasks = async () => {
-    setIsLoadingTasks(true)
-    try {
-      const data = await fieldTaskService.getTasks()
-      setFieldTasks(data)
-    } finally {
-      setIsLoadingTasks(false)
-    }
-  }
-
-  // Dữ liệu xung đột ngoại tuyến qua Mock API Service (conflictService)
-  const [conflicts, setConflicts] = useState<SyncConflictItem[]>([])
-  const [isLoadingConflicts, setIsLoadingConflicts] = useState<boolean>(true)
-  const [selectedConflictId, setSelectedConflictId] = useState<string>('conf-01')
-
-  const loadConflicts = async () => {
-    setIsLoadingConflicts(true)
-    try {
-      const data = await conflictService.getConflicts()
-      setConflicts(data)
-      if (data.length > 0 && !data.some((c) => c.id === selectedConflictId)) {
-        setSelectedConflictId(data[0].id)
-      }
-    } finally {
-      setIsLoadingConflicts(false)
-    }
-  }
-
-  useEffect(() => {
-    loadTasks()
-    loadConflicts()
-  }, [])
-
-  const [filterType, setFilterType] = useState<string>('ALL')
-  const [searchTerm, setSearchTerm] = useState<string>('')
-  const [isResolveModalOpen, setIsResolveModalOpen] = useState<boolean>(false)
-  const [pendingDecision, setPendingDecision] = useState<
-    | 'ACCEPT_INCOMING'
-    | 'KEEP_SERVER_STATE'
-    | 'FORK_NEW_ATTEMPT'
-    | 'SUBMIT_RESCUE_TO_SUP'
-    | 'AUTHORIZE_RESCUE'
-    | 'SUPERVISOR_REJECT_RESCUE'
-    | 'REQUEST_ADDITIONAL_EVIDENCE'
-    | null
-  >(null)
-  const [resolutionReason, setResolutionReason] = useState<string>('')
+  const [apiError, setApiError] = useState<string | null>(null)
 
   // Toast Notification State
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'info' | 'error' } | null>(null)
@@ -92,184 +52,127 @@ export const FieldTasks: React.FC = () => {
     setToast({ message, type })
     setTimeout(() => {
       setToast(null)
-    }, 3500)
+    }, 4000)
   }
 
-  // Tìm item đang được chọn để soi chi tiết Side-by-side
-  const selectedConflict = useMemo(() => {
-    return conflicts.find((c) => c.id === selectedConflictId) || conflicts[0]
-  }, [conflicts, selectedConflictId])
-
-  // Thống kê đếm các chỉ số
-  const stats = useMemo(() => {
-    const total = conflicts.length
-    const pending = conflicts.filter((c) => c.status === 'CONFLICT_INTAKE').length
-    const reassign = conflicts.filter((c) => c.conflict_type === 'ASSIGNMENT_REASSIGNED').length
-    const policyMismatch = conflicts.filter((c) => c.conflict_type === 'POLICY_VERSION_MISMATCH').length
-    const rescuePending = conflicts.filter(
-      (c) => c.conflict_type === 'DEVICE_RESCUE_PENDING' && c.status === 'CONFLICT_INTAKE'
-    ).length
-    return { total, pending, reassign, policyMismatch, rescuePending }
-  }, [conflicts])
-
-  // Lọc danh sách xung đột
-  const filteredConflicts = useMemo(() => {
-    return conflicts.filter((item) => {
-      const matchSearch =
-        item.conflict_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.defect_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.chainage.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.offline_actor.name.toLowerCase().includes(searchTerm.toLowerCase())
-
-      if (!matchSearch) return false
-
-      if (filterType === 'ALL') return true
-      if (filterType === 'PENDING') return item.status === 'CONFLICT_INTAKE'
-      if (filterType === 'RESCUE') return item.conflict_type === 'DEVICE_RESCUE_PENDING'
-      if (filterType === 'RESOLVED') return item.status !== 'CONFLICT_INTAKE'
-      return true
-    })
-  }, [conflicts, searchTerm, filterType])
-
-  // Reset dữ liệu về ban đầu phục vụ người dùng test qua API
-  const handleResetData = async () => {
-    setIsLoadingTasks(true)
-    setIsLoadingConflicts(true)
+  const loadProjects = useCallback(async () => {
+    setAvailableProjects([]);setProjectsLoaded(false)
     try {
-      const [resetTasks, resetConflicts] = await Promise.all([
-        fieldTaskService.resetTasks(),
-        conflictService.resetConflicts()
-      ])
-      setFieldTasks(resetTasks)
-      setConflicts(resetConflicts)
-      if (resetConflicts.length > 0) {
-        setSelectedConflictId(resetConflicts[0].id)
-      }
-      showToast('Đã khôi phục toàn bộ dữ liệu mẫu API ban đầu cho cả 2 tab!', 'info')
-    } finally {
-      setIsLoadingTasks(false)
-      setIsLoadingConflicts(false)
-    }
-  }
-
-  // Mở modal xác nhận hành động
-  const handleOpenResolve = (
-    decision:
-      | 'ACCEPT_INCOMING'
-      | 'KEEP_SERVER_STATE'
-      | 'FORK_NEW_ATTEMPT'
-      | 'SUBMIT_RESCUE_TO_SUP'
-      | 'AUTHORIZE_RESCUE'
-      | 'SUPERVISOR_REJECT_RESCUE'
-      | 'REQUEST_ADDITIONAL_EVIDENCE'
-  ) => {
-    setPendingDecision(decision)
-    setResolutionReason('')
-    setIsResolveModalOpen(true)
-  }
-
-  // Thực thi phân giải qua Mock API Service (conflictService.resolveConflict)
-  const handleExecuteResolution = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!pendingDecision || !selectedConflict) return
-
-    try {
-      const updatedItem = await conflictService.resolveConflict(selectedConflict.id, {
-        decision: pendingDecision,
-        reason: resolutionReason,
-        decidedBy: user?.full_name || 'Đỗ Quốc Hoàng (PM)',
-        decidedByRole: isSupervisor ? 'SUPERVISOR' : 'PROJECT_MANAGER'
-      })
-
-      setConflicts((prev) => prev.map((c) => (c.id === updatedItem.id ? updatedItem : c)))
-      setIsResolveModalOpen(false)
-      showToast(
-        `Xác nhận thành công: ${updatedItem.resolution?.decision} cho hồ sơ ${updatedItem.conflict_code}!`,
-        'success'
-      )
+      const hubProjects = await projectService.fetchProjects()
+      if (currentActor.current !== actorScope) return
+      setAvailableProjects(hubProjects)
+      setProjectsLoaded(true)
     } catch (err: any) {
-      showToast(`Lỗi phân giải: ${err?.message || 'Không thể xử lý'}`, 'error')
+      if (currentActor.current !== actorScope) return
+      console.error('Lỗi tải danh mục dự án từ CSDL:', err)
+      setApiError(err?.message || 'Không thể tải danh sách dự án từ CSDL')
+    }
+  }, [actorScope])
+
+  const loadTasks = useCallback(async (projId: string = selectedProjectId) => {
+    const request = ++taskRequest.current
+    const current = () => request === taskRequest.current && currentActor.current === actorScope
+    setFieldTasks([])
+    if(!projectsLoaded){setIsLoadingTasks(false);return}
+    if(projId!=='ALL' && !availableProjects.some(p=>p.id===projId)){setIsLoadingTasks(false);setApiError('Dự án trong liên kết không thuộc danh mục được phép đọc; không tự chuyển dự án khác.');return}
+    setIsLoadingTasks(true)
+    setApiError(null)
+    try {
+      const data = await fieldTaskService.getTasks({
+        projectId: projId
+      })
+      if (!current()) return
+      setFieldTasks(data)
+    } catch (err: any) {
+      if (!current()) return
+      const errMsg = err?.response?.data?.message || err?.message || 'Lỗi khi tải danh sách nhiệm vụ từ CSDL Backend'
+      setApiError(errMsg)
+      showToast(`❌ Lỗi CSDL: ${errMsg}`, 'error')
+    } finally {
+      if (current()) setIsLoadingTasks(false)
+    }
+  }, [selectedProjectId, actorScope,projectsLoaded,availableProjects])
+
+  const handleSelectProject = (projId: string) => {
+    setSelectedProjectId(projId)
+    const next=new URLSearchParams(searchParams);next.set('projectId',projId);next.delete('defectId');next.delete('reportId');next.delete('decisionId');setSearchParams(next,{replace:true})
+    const p = availableProjects.find((x) => x.id === projId)
+    if (p) {
+      showToast(`Đã lọc tuyến đường: ${p.code} - ${p.name}`, 'info')
+    } else {
+      showToast('Đang hiển thị toàn bộ các tuyến đường phụ trách', 'info')
     }
   }
+
+  useEffect(() => {void loadProjects()},[loadProjects])
+  useEffect(() => {void loadTasks()},[loadTasks])
 
   return (
-    <div className="space-y-6 pb-16 text-[#1E293B]">
-      {/* Toast Notification (Minimalist & Non-blocking) */}
+    <div className="space-y-4">
+      {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#1A1D20] text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed top-4 right-4 z-[10000] max-w-[calc(100vw-2rem)] p-4 rounded-xl shadow-lg border text-sm font-semibold flex items-center gap-2 animate-bounce ${
+            toast.type === 'error'
+              ? 'bg-rose-50 text-rose-800 border-rose-300'
+              : toast.type === 'info'
+              ? 'bg-amber-50 text-amber-900 border-amber-300'
+              : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+          }`}
+        >
           <Icon
             name={toast.type === 'error' ? 'error' : toast.type === 'info' ? 'info' : 'check_circle'}
             size={18}
-            className={
-              toast.type === 'error'
-                ? 'text-rose-400'
-                : toast.type === 'info'
-                ? 'text-blue-400'
-                : 'text-[#C9A227]'
-            }
           />
-          <span className="text-xs font-medium">{toast.message}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Thông báo lỗi nếu có */}
+      {linkedSourceError && <p role="alert" className="text-xs text-rose-700">{linkedSourceError}</p>}
+      {apiError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Icon name="error" size={16} className="text-rose-600 shrink-0" />
+            <span>{apiError}</span>
+          </div>
           <button
             type="button"
-            onClick={() => setToast(null)}
-            className="text-slate-400 hover:text-white ml-2 text-xs cursor-pointer"
+            onClick={() => setApiError(null)}
+            className="text-rose-500 hover:text-rose-800 cursor-pointer"
           >
-            ✕
+            <Icon name="close" size={16} />
           </button>
         </div>
       )}
 
-      {/* Header, Tab Switchers & KPI Cards */}
+      {/* Header & 4 Thẻ KPI Đo Đạc Hiện Trường */}
       <FieldTasksHeader
         isSupervisor={isSupervisor}
         isPM={isPM}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        conflicts={conflicts}
         fieldTasks={fieldTasks}
-        stats={stats}
-        handleResetData={handleResetData}
+        projects={availableProjects}
+        selectedProjectId={selectedProjectId}
+        onSelectProject={handleSelectProject}
       />
 
-      {/* View A: Xử Lý Xung Đột Ngoại Tuyến */}
-      {activeTab === 'CONFLICTS' && (
-        <ConflictsTab
-          conflicts={conflicts}
-          filteredConflicts={filteredConflicts}
-          selectedConflict={selectedConflict}
-          setSelectedConflictId={setSelectedConflictId}
-          filterType={filterType}
-          setFilterType={setFilterType}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          stats={stats}
-          isPM={isPM}
-          isSupervisor={isSupervisor}
-          handleOpenResolve={handleOpenResolve}
-        />
-      )}
-
-      {/* View B: Nhật Ký Nhiệm Vụ Đo Đạc Hiện Trường */}
-      {activeTab === 'MEASUREMENTS' && (
-        <MeasurementsTab
-          fieldTasks={fieldTasks}
-          onRefreshTasks={loadTasks}
-          highlightCode={highlightCode}
-          isLoading={isLoadingTasks}
-          showToast={showToast}
-        />
-      )}
-
-      {/* Modal Xác Nhận Phân Giải & Audit Trail */}
-      <ConflictResolveModal
-        isResolveModalOpen={isResolveModalOpen}
-        setIsResolveModalOpen={setIsResolveModalOpen}
-        selectedConflict={selectedConflict}
-        pendingDecision={pendingDecision}
-        resolutionReason={resolutionReason}
-        setResolutionReason={setResolutionReason}
-        handleExecuteResolution={handleExecuteResolution}
+      {/* Bảng Nhật Ký Nhiệm Vụ Đo Đạc Hiện Trường */}
+      <MeasurementsTab
+        key={`${actorScope}:${selectedProjectId}`}
+        fieldTasks={fieldTasks}
+        onRefreshTasks={() => loadTasks(selectedProjectId)}
+        highlightCode={highlightCode}
+        isLoading={isLoadingTasks}
+        showToast={showToast}
+        isSupervisor={isSupervisor}
+        selectedProjectId={selectedProjectId}
+        projects={availableProjects}
+        linkedDefectId={linkedSourceError?'':linkedDefect}
+        onOpenFastTrack={defectId=>navigate(`${isSupervisor?'/sup':'/pm'}/fast-track?${new URLSearchParams({projectId:selectedProjectId,...(defectId?{defectId,open:'prepare'}:{})})}`)}
       />
     </div>
   )
 }
+export default FieldTasks

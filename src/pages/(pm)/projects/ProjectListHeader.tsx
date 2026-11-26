@@ -40,7 +40,7 @@ export const ProjectListHeader: React.FC<ProjectListHeaderProps> = ({
               Quản lý danh mục dự án bảo hành đường bộ
             </h1>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed font-body">
-              Theo dõi tiến độ bảo hành, rủi ro suy thoái và phân bổ nhân sự PM theo quy tắc BR-01 &amp; FR-04.
+              Theo dõi tiến độ bảo hành, rủi ro suy thoái và phân bổ nhân sự PM quản lý dự án.
             </p>
           </div>
         </div>

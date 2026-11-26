@@ -1,4 +1,5 @@
 import { SegmentItem, SlabItem } from './types'
+import { planMainlinePavement } from './alignmentPavementHelpers'
 
 // Hàm nội suy tọa độ [lng, lat] theo Km lý trình
 export function interpolateCoordAtKm(
@@ -114,25 +115,26 @@ export function checkAndEnrichSegmentsContinuity(segs: SegmentItem[]): SegmentIt
   })
 }
 
-// Tạo danh sách tấm Slab mẫu
-export function generateMockSlabs(segmentCount: number): SlabItem[] {
-  if (segmentCount <= 0) return []
-  const slabs: SlabItem[] = []
-  const statuses: ('GOOD' | 'CRACKED' | 'SETTLEMENT')[] = ['GOOD', 'GOOD', 'GOOD', 'GOOD', 'CRACKED', 'GOOD', 'SETTLEMENT']
-  for (let i = 1; i <= 24; i++) {
-    const segIdx = ((i - 1) % segmentCount) + 1
-    const kmOffset = 1020 + (i * 0.2)
-    slabs.push({
-      id: `SLAB-${String(i).padStart(3, '0')}`,
-      segmentCode: `Phân đoạn #${String(segIdx).padStart(2, '0')}`,
-      stationing: `Km ${kmOffset.toFixed(3)}`,
-      lengthM: 5.0,
-      widthM: 3.75,
-      thicknessCm: 26,
-      status: statuses[i % statuses.length]
-    })
+// Tính toán danh sách tấm Slab hình học dựa trên phân đoạn và bề rộng thực tế của tuyến
+export function calculatePavementSlabs(
+  segments: SegmentItem[],
+  slabLengthM?: number,
+  slabThicknessCm?: number,
+  stripWidthMeters?: number
+): SlabItem[] {
+  return planMainlinePavement(segments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, stripWidthMeters }).slabs
+}
+
+// Hàm tương thích ngược: nhận array SegmentItem hoặc trả về rỗng nếu không có dữ liệu thật
+export function generateMockSlabs(
+  segmentsOrCount: any,
+  slabLengthM?: number,
+  slabThicknessCm?: number
+): SlabItem[] {
+  if (Array.isArray(segmentsOrCount)) {
+    return calculatePavementSlabs(segmentsOrCount, slabLengthM, slabThicknessCm)
   }
-  return slabs
+  return []
 }
 
 // Tính tổng chiều dài thực tế (km) của chuỗi tọa độ WGS84 bằng công thức Haversine

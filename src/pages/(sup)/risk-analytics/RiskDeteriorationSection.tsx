@@ -1,10 +1,14 @@
 import React from 'react'
-import { Rpt06RiskSegment } from './types'
+import type { Rpt06RiskSegment } from './types'
 
 export interface RiskDeteriorationSectionProps {
+  loading?: boolean
+  error?: string
+  warnings?: string[]
+  hasMapGeometry?: boolean
   segments: Rpt06RiskSegment[]
   activeSegmentId: string
-  activeSegment: Rpt06RiskSegment | undefined
+  activeSegment?: Rpt06RiskSegment
   mapContainerRef: React.RefObject<HTMLDivElement | null>
   mapLayer: 'satellite' | 'vector'
   setMapLayer: (l: 'satellite' | 'vector') => void
@@ -16,9 +20,12 @@ export interface RiskDeteriorationSectionProps {
 }
 
 export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> = ({
+  loading,
+  error,
+  warnings = [],
+  hasMapGeometry,
   segments,
   activeSegmentId,
-  activeSegment,
   mapContainerRef,
   mapLayer,
   setMapLayer,
@@ -28,317 +35,234 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
   onFitBounds,
   projectName
 }) => {
-  const [isHudMinimized, setIsHudMinimized] = React.useState(false)
-  const criticalCount = segments.filter((s) => s.risk_level === 'CRITICAL').length
-  const watchCount = segments.filter((s) => s.risk_level === 'WATCH').length
-  const moderateCount = segments.filter((s) => s.risk_level === 'MODERATE').length
-
   return (
-    <div className="space-y-4">
-      {/* SECTION HEADER & CONTROL BAR */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-amber-50 text-brand-gold flex items-center justify-center shrink-0 border border-amber-200/60">
-            <span className="material-symbols-outlined text-[20px]">warning</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                Bản đồ & Phân tích nguy cơ suy thoái mặt đường theo lý trình (RPT-06)
+    <section className="space-y-4">
+      {/* Header card */}
+      <div className="relative bg-white rounded-[20px] border border-[#E2E5E9] shadow-2xs overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1E40AF] via-[#C9A227] to-slate-200" />
+        <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#C9A227] ring-4 ring-[#C9A227]/20" />
+              <h2 className="font-sansation text-lg font-bold text-slate-900">
+                Bình đồ tuyến và phân đoạn kỹ thuật
               </h2>
-              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                {projectName}
-              </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              So sánh đa kỳ (Temporal Epoch) giữa đợt bay gốc Baseline và hiện tại • Đánh giá các đoạn nguy cơ suy thoái kỹ thuật
+            <p className="text-xs text-slate-500">
+              Dự án: <span className="font-semibold text-slate-700">{projectName || 'Chưa chọn dự án'}</span> · Hệ tọa độ WGS84 / UTM Zone 48N
             </p>
-            <div className="flex items-center gap-3 text-[11px] text-slate-500 pt-1">
-              <div className="flex items-center gap-1">
-                <div className="w-3.5 h-1 bg-slate-400 rounded-full"></div>
-                <span>Tim tuyến dự án</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3.5 h-1.5 bg-rose-500 rounded-full shadow-xs"></div>
-                <span>Đoạn nguy cơ rất cao</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3.5 h-1.5 bg-amber-500 rounded-full"></div>
-                <span>Đoạn cần theo dõi</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RISK BADGES & LAYER SWITCH */}
-        <div className="flex items-center flex-wrap gap-2">
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-              Rất cao ({criticalCount})
-            </span>
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-              Theo dõi ({watchCount})
-            </span>
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Trung bình ({moderateCount})
-            </span>
           </div>
 
-          <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block"></div>
-
-          {/* Map Layer Switcher */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          {/* Map Layer switcher */}
+          <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 self-start md:self-auto">
             <button
               type="button"
               onClick={() => setMapLayer('satellite')}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition cursor-pointer flex items-center gap-1 ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 mapLayer === 'satellite'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="material-symbols-outlined text-[14px]">satellite_alt</span>
-              <span>Ảnh vệ tinh</span>
+              <span className="material-symbols-outlined text-[15px] text-[#C9A227]">satellite_alt</span>
+              <span>Vệ tinh</span>
             </button>
             <button
               type="button"
               onClick={() => setMapLayer('vector')}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition cursor-pointer flex items-center gap-1 ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 mapLayer === 'vector'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="material-symbols-outlined text-[14px]">map</span>
+              <span className="material-symbols-outlined text-[15px] text-[#1E40AF]">map</span>
               <span>Bản đồ số</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* GIS MAP CONTAINER WITH FLOATING HUD */}
-      <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-xs">
-        <div className="relative w-full h-[360px] bg-slate-950 overflow-hidden select-none">
-          <div ref={mapContainerRef} className="w-full h-full" />
-
-          {/* Floating Map HUD Card */}
-          {activeSegment && (
-            <div className="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur-md p-3.5 rounded-xl border border-slate-700 text-white text-xs max-w-sm shadow-xl transition-all duration-200">
-              <div className={`flex items-center justify-between gap-3 ${isHudMinimized ? '' : 'border-b border-slate-800 pb-2'}`}>
-                <div className="min-w-0">
-                  <span className="font-bold text-amber-400 text-sm block truncate">
-                    {activeSegment.chainage_display}
-                  </span>
-                  <span className="text-slate-300 text-[11px] block truncate">{activeSegment.section_name}</span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      activeSegment.risk_level === 'CRITICAL'
-                        ? 'bg-rose-600 text-white'
-                        : activeSegment.risk_level === 'WATCH'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-blue-600 text-white'
-                    }`}
-                  >
-                    {activeSegment.risk_level_label}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsHudMinimized(!isHudMinimized)}
-                    className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-                    title={isHudMinimized ? "Mở rộng bảng chi tiết" : "Thu nhỏ bảng chi tiết"}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {isHudMinimized ? 'unfold_more' : 'unfold_less'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {!isHudMinimized && (
-                <div className="space-y-2 pt-2">
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <div className="bg-slate-800/60 p-2 rounded-lg">
-                      <span className="text-slate-400 block text-[10px]">Diện tích hư hỏng</span>
-                      <span className="font-bold font-mono text-rose-300">{activeSegment.damaged_area_m2} m²</span>
-                    </div>
-                    <div className="bg-slate-800/60 p-2 rounded-lg">
-                      <span className="text-slate-400 block text-[10px]">Tốc độ suy thoái</span>
-                      <span className="font-bold font-mono text-amber-300">+{activeSegment.deterioration_rate_pct}% / kỳ</span>
-                    </div>
-                  </div>
-
-                  <div className="text-[11px] text-slate-300 space-y-1">
-                    <div className="flex items-center justify-between text-slate-400">
-                      <span>Mức độ khẩn cấp:</span>
-                      <span className="font-semibold text-rose-400">
-                        {activeSegment.risk_level === 'CRITICAL' ? 'Cấp bách' : activeSegment.risk_level === 'WATCH' ? 'Cần theo dõi' : 'Bình thường'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-400">
-                      <span>Hạn cam kết xử lý (SLA):</span>
-                      <span className="font-semibold text-rose-400">{activeSegment.sla_remaining}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-800">
-                    <span className="text-[11px] text-slate-400 block truncate">{activeSegment.defect_summary}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Map Controls */}
-          <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-1.5 shadow-md">
-            <button
-              onClick={onZoomIn}
-              type="button"
-              className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg flex items-center justify-center text-sm font-bold transition shadow-xs cursor-pointer border border-slate-200"
-              title="Phóng to"
-            >
-              +
-            </button>
-            <button
-              onClick={onZoomOut}
-              type="button"
-              className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg flex items-center justify-center text-sm font-bold transition shadow-xs cursor-pointer border border-slate-200"
-              title="Thu nhỏ"
-            >
-              -
-            </button>
-            <button
-              onClick={onFitBounds}
-              type="button"
-              className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg flex items-center justify-center text-xs font-semibold transition shadow-xs cursor-pointer border border-slate-200"
-              title="Căn giữa toàn tuyến"
-            >
-              <span className="material-symbols-outlined text-[16px]">crop_free</span>
-            </button>
+      {/* Error alert */}
+      {error && (
+        <div role="alert" className="flex items-start gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs">
+          <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0 mt-0.5">error</span>
+          <div>
+            <p className="font-bold">Không tải được tuyến và phân đoạn.</p>
+            <p className="mt-0.5 text-rose-700">{error}</p>
           </div>
+        </div>
+      )}
+
+      {/* Map Container */}
+      <div className="relative h-[420px] rounded-[20px] overflow-hidden border border-[#E2E5E9] shadow-2xs bg-slate-900">
+        <div ref={mapContainerRef} className={`w-full h-full ${hasMapGeometry ? '' : 'invisible'}`} />
+
+        {!hasMapGeometry && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-slate-400 bg-slate-900/90 backdrop-blur-xs">
+            <span className="material-symbols-outlined text-[40px] text-slate-500 mb-2">
+              {loading ? 'hourglass_top' : error ? 'map_off' : 'explore_off'}
+            </span>
+            <p className="text-sm font-semibold text-slate-200">
+              {loading
+                ? 'Đang tải bản đồ tuyến…'
+                : error
+                ? 'Chưa thể hiển thị bản đồ tuyến.'
+                : 'Chưa có hình học phù hợp để hiển thị bản đồ tuyến.'}
+            </p>
+            <p className="text-xs text-slate-500 mt-1 max-w-md">
+              {loading
+                ? 'Đang đọc tọa độ tim tuyến WGS84 và các phân đoạn từ máy chủ...'
+                : 'Bản đồ yêu cầu tuyến đường có gói hình học hoặc phiên bản tuyến đã công bố.'}
+            </p>
+          </div>
+        )}
+
+        {/* Map Control Buttons */}
+        <div className="absolute bottom-5 right-5 flex flex-col gap-2 z-10">
+          <button
+            type="button"
+            disabled={!hasMapGeometry}
+            onClick={onZoomIn}
+            aria-label="Phóng to"
+            title="Phóng to bản đồ"
+            className="w-10 h-10 rounded-xl bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md text-slate-700 hover:text-slate-900 hover:bg-white flex items-center justify-center transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+          </button>
+          <button
+            type="button"
+            disabled={!hasMapGeometry}
+            onClick={onZoomOut}
+            aria-label="Thu nhỏ"
+            title="Thu nhỏ bản đồ"
+            className="w-10 h-10 rounded-xl bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md text-slate-700 hover:text-slate-900 hover:bg-white flex items-center justify-center transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[18px]">remove</span>
+          </button>
+          <button
+            type="button"
+            disabled={!hasMapGeometry}
+            onClick={onFitBounds}
+            aria-label="Xem toàn tuyến"
+            title="Xem toàn bộ tim tuyến"
+            className="w-10 h-10 rounded-xl bg-white/95 backdrop-blur-xs border border-slate-200 shadow-md text-slate-700 hover:text-[#C9A227] hover:bg-white flex items-center justify-center transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[18px]">filter_center_focus</span>
+          </button>
         </div>
       </div>
 
-      {/* RPT-06 DETERIORATION DATA TABLE */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Warnings / Coordinate Info */}
+      {!!warnings.length && (
+        <details className="text-xs text-slate-600 bg-amber-50/60 border border-amber-200/80 rounded-xl p-3">
+          <summary className="font-bold text-amber-900 cursor-pointer flex items-center gap-1.5 select-none">
+            <span className="material-symbols-outlined text-[16px] text-[#C9A227]">info</span>
+            <span>Thông tin hiển thị bản đồ ({warnings.length} lưu ý)</span>
+          </summary>
+          <div className="mt-2 space-y-1 pl-5 border-l-2 border-amber-300">
+            {warnings.map((w, i) => (
+              <p key={i} className="text-slate-700">{w}</p>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* Segments Table */}
+      <div className="bg-white border border-[#E2E5E9] rounded-[20px] shadow-2xs overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-[#EDEFF2] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-slate-700">analytics</span>
-            <h3 className="text-sm font-bold text-slate-900">
-              Danh sách phân đoạn rủi ro suy thoái kỹ thuật theo lý trình Km ({segments.length} đoạn)
+            <span className="material-symbols-outlined text-[18px] text-[#1E40AF]">segment</span>
+            <h3 className="font-sansation font-bold text-slate-900 text-sm">
+              Danh sách phân đoạn kỹ thuật {loading ? '' : `(${segments.length})`}
             </h3>
           </div>
+          <span className="text-xs text-slate-500">
+            Số liệu lý trình chuẩn công trình từ gói hình học công bố
+          </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                <th className="py-3 px-4">Lý trình &amp; Phân đoạn</th>
-                <th className="py-3 px-4">Mức độ rủi ro</th>
-                <th className="py-3 px-4">Khối lượng hư hỏng</th>
-                <th className="py-3 px-4">Diễn biến đa kỳ (MET-13)</th>
-                <th className="py-3 px-4">Hạn cam kết xử lý (SLA)</th>
-                <th className="py-3 px-4 text-right">Định vị</th>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#F8F9FA] text-slate-700 font-bold uppercase tracking-wider text-[11px] border-b border-[#EDEFF2]">
+              <tr>
+                <th className="py-3 px-4">Tên đoạn</th>
+                <th className="py-3 px-4">Lý trình</th>
+                <th className="py-3 px-4">Chiều dài</th>
+                <th className="py-3 px-4 text-center">Định vị</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {segments.length === 0 ? (
+            <tbody className="divide-y divide-[#EDEFF2]">
+              {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    Không có phân đoạn nguy cơ nào được ghi nhận cho dự án này.
+                  <td colSpan={4} className="p-8 text-center text-slate-500" role="status">
+                    <div className="inline-flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] animate-spin text-[#8C6D1F]">progress_activity</span>
+                      <span>Đang tải phân đoạn…</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-rose-700">
+                    <div className="inline-flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-rose-500">error</span>
+                      <span>Không tải được phân đoạn.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : !segments.length ? (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-slate-500">
+                    <div className="inline-flex flex-col items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[24px] text-slate-400">inbox</span>
+                      <span>Chưa có phân đoạn đã công bố trong phạm vi này.</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                segments.map((seg) => {
-                  const isSelected = seg.id === activeSegmentId
+                segments.map((s) => {
+                  const isSelected = s.id === activeSegmentId
                   return (
                     <tr
-                      key={seg.id}
-                      onClick={() => onFocusSegment(seg)}
-                      className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                        isSelected ? 'bg-amber-50/40 border-l-4 border-l-brand-gold' : ''
+                      key={s.id}
+                      className={`transition-colors hover:bg-slate-50/80 ${
+                        isSelected ? 'bg-amber-50/70 font-semibold' : ''
                       }`}
                     >
-                      {/* Cột 1: Lý trình & Phân đoạn */}
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900 font-mono text-xs flex items-center gap-1.5">
-                          <span>{seg.chainage_display}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">{seg.section_name}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{seg.defect_summary}</div>
-                      </td>
-
-                      {/* Cột 2: Mức độ rủi ro */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${
-                              seg.risk_level === 'CRITICAL'
-                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                : seg.risk_level === 'WATCH'
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                : 'bg-blue-100 text-blue-800 border border-blue-200'
-                            }`}
-                          >
-                            {seg.risk_level === 'CRITICAL' ? 'RẤT CAO' : seg.risk_level === 'WATCH' ? 'THEO DÕI' : 'TRUNG BÌNH'}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-1 leading-snug">
-                          {seg.risk_level_label}
+                      <td className="py-3 px-4 text-slate-900 font-medium">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-[#C9A227] ring-2 ring-[#C9A227]/30' : 'bg-[#1E40AF]'}`} />
+                          <span>{s.section_name}</span>
                         </div>
                       </td>
-
-                      {/* Cột 3: Khối lượng hư hỏng kỹ thuật */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-900 font-mono text-xs">
-                          {seg.damaged_area_m2} m²
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          Nứt: <span className="font-mono">{seg.crack_length_m} m</span> • Sâu: <span className="font-mono">{seg.avg_depth_cm} cm</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          {seg.open_defects_count} vị trí hư hỏng mở
-                        </div>
+                      <td className="py-3 px-4 font-mono text-slate-700">
+                        {s.chainage_display}
                       </td>
-
-                      {/* Cột 4: Diễn biến đa kỳ (MET-13: So sánh Baseline) */}
-                      <td className="py-3 px-4 max-w-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 font-mono">
-                            +{seg.deterioration_rate_pct}% / kỳ
-                          </span>
-                          <span className="text-[11px] text-slate-500 font-medium">
-                            (Tăng {seg.temporal_comparison.growth_pct.toFixed(0)}% so với gốc)
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-600 mt-1 font-mono">
-                          {seg.temporal_comparison.baseline_epoch}
-                        </div>
+                      <td className="py-3 px-4 text-slate-700">
+                        {((s.end_km_num - s.start_km_num) * 1000).toLocaleString('vi-VN', {
+                          maximumFractionDigits: 2
+                        })}{' '}
+                        m
                       </td>
-
-                      {/* Cột 5: Hạn cam kết xử lý (SLA) */}
-                      <td className="py-3 px-4 max-w-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-[15px] text-rose-600">alarm</span>
-                          <span className="font-semibold text-rose-600 text-xs font-mono">{seg.sla_remaining}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-1">
-                          {seg.risk_level === 'CRITICAL' ? 'Ưu tiên khẩn cấp (< 24h)' : seg.risk_level === 'WATCH' ? 'Ưu tiên cảnh báo (< 7 ngày)' : 'Theo dõi định kỳ'}
-                        </div>
-                      </td>
-
-                      {/* Cột 6: Thao tác định vị */}
-                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-3 px-4 text-center">
                         <button
                           type="button"
-                          onClick={() => onFocusSegment(seg)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-                          title="Phóng to vị trí trên bản đồ vệ tinh"
+                          disabled={s.coordinates.length < 2}
+                          onClick={() => onFocusSegment(s)}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer border ${
+                            isSelected
+                              ? 'bg-[#C9A227] text-white border-[#C9A227] shadow-2xs hover:bg-[#8C6D1F]'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                          title={
+                            s.coordinates.length < 2
+                              ? 'Chưa hỗ trợ hệ tọa độ của đoạn'
+                              : 'Phóng to toàn bộ đoạn trên bản đồ'
+                          }
                         >
-                          <span className="material-symbols-outlined text-[18px]">my_location</span>
+                          <span className="material-symbols-outlined text-[14px]">my_location</span>
+                          <span>Xem đoạn</span>
                         </button>
                       </td>
                     </tr>
@@ -349,6 +273,6 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
           </table>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

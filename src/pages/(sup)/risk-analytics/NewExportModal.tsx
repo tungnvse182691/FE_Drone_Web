@@ -1,12 +1,14 @@
 import React from 'react'
 
 export interface NewExportModalProps {
+  busy?:boolean;pending?:boolean;received?:boolean;journalKey?:string;error?:string;detailError?:string
   isOpen: boolean
   onClose: () => void
   exportForm: {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean
@@ -16,6 +18,7 @@ export interface NewExportModalProps {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean
@@ -25,6 +28,7 @@ export interface NewExportModalProps {
 }
 
 export const NewExportModal: React.FC<NewExportModalProps> = ({
+  busy,pending,received,journalKey,error,detailError,
   isOpen,
   onClose,
   exportForm,
@@ -53,6 +57,9 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3.5 text-xs">
+          {error&&<p role="alert" className="text-rose-800">{error}</p>}
+          {pending&&<p role="status" className="break-all">Giữ yêu cầu {journalKey}; không thay body/key.</p>}
+          <fieldset disabled={busy||pending} className="space-y-3.5 border-0 p-0 m-0">
           {/* Loại báo cáo / hồ sơ */}
           <div className="space-y-1">
             <label className="font-medium text-slate-700">Loại hồ sơ kỹ thuật cần xuất</label>
@@ -61,32 +68,24 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
               onChange={(e) => setExportForm({ ...exportForm, reportType: e.target.value })}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none font-medium cursor-pointer"
             >
-              <option value="DOSSIER_COMPLETE">Hồ sơ hoàn công & Bằng chứng số tổng hợp (PDF + ZIP)</option>
-              <option value="BEFORE_AFTER_ZIP">Gói ảnh đối chứng Trước/Sau sửa chữa độ phân giải gốc (ZIP)</option>
-              <option value="GIS_GEOJSON">Báo cáo kiểm định trắc dọc & Bình đồ GIS (GeoJSON / CSV)</option>
-              <option value="AUDIT_TRAIL">Nhật ký thi công & Báo cáo pháp lý TCVN (PDF)</option>
+              <option value="DOSSIER">Hồ sơ kỹ thuật tổng hợp</option>
             </select>
           </div>
 
           {/* Phạm vi dự án */}
           <div className="space-y-1">
             <label className="font-medium text-slate-700">Dự án & Phân đoạn bảo hành</label>
-            <select
-              value={exportForm.scope}
-              onChange={(e) => setExportForm({ ...exportForm, scope: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none font-medium cursor-pointer"
-            >
-              <option value="PRJ-QL1A-02">QL1A - Giai đoạn 2 (Km 1024 - Km 1045, Đèo Hải Vân)</option>
-              <option value="PRJ-CTBN-01">Cao tốc Bắc Nam (Diễn Châu - Bãi Vọt, Km 430 - 479)</option>
-              <option value="PRJ-LSTL-05">Cao tốc La Sơn - Túy Loan (Km 35+000 - Km 42+500)</option>
-              <option value="PRJ-PTDG-03">Tuyến tránh TP. Huế (QL1A-BP, Km 18+600 - Km 22+400)</option>
-            </select>
+            <input aria-label="Dự án xuất hồ sơ" readOnly value={exportForm.scope} className="rg-field w-full" />
+            <p className="text-slate-500">Xuất toàn bộ phạm vi được phép đọc của dự án đã chọn.</p>
           </div>
 
-          {/* Mốc thời gian chốt số liệu */}
+          <div className="space-y-1"><label className="font-medium text-slate-700">Lọc dữ liệu từ thời điểm (tùy chọn)</label><input aria-label="Thời điểm bắt đầu lọc export" type="datetime-local" value={exportForm.fromDate} onChange={e=>setExportForm({...exportForm,fromDate:e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono" /></div>
+          <p className="text-slate-500">Nhập cả hai mốc Từ và Đến, hoặc bỏ trống cả hai để lấy toàn bộ thời gian. Giờ theo múi giờ trình duyệt ({Intl.DateTimeFormat().resolvedOptions().timeZone}); gửi UTC đến máy chủ. Khoảng lọc gồm Từ và không gồm Đến.</p>
+          {/* Lọc dữ liệu đến thời điểm (tùy chọn) */}
           <div className="space-y-1">
-            <label className="font-medium text-slate-700">Mốc thời gian chốt số liệu</label>
+            <label className="font-medium text-slate-700">Lọc dữ liệu đến thời điểm (tùy chọn)</label>
             <input
+              aria-label="Thời điểm kết thúc lọc export"
               type="datetime-local"
               value={exportForm.asOfDate}
               onChange={(e) => setExportForm({ ...exportForm, asOfDate: e.target.value })}
@@ -104,17 +103,18 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={exportForm.includeSha256Checksum}
-                onChange={(e) => setExportForm({ ...exportForm, includeSha256Checksum: e.target.checked })}
+                checked disabled
+
                 className="rounded text-[#C9A227] focus:ring-[#C9A227] w-4 h-4 cursor-pointer"
               />
-              <span className="text-slate-700">Tạo mã băm SHA-256 Checksum cho từng ảnh gốc đối chứng</span>
+              <span className="text-slate-700">Manifest luôn có mã băm snapshot; nội dung tải được đối chiếu riêng</span>
             </label>
 
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={exportForm.includeOriginalFiles}
+                disabled={exportForm.format==='PDF'}
                 onChange={(e) => setExportForm({ ...exportForm, includeOriginalFiles: e.target.checked })}
                 className="rounded text-[#C9A227] focus:ring-[#C9A227] w-4 h-4 cursor-pointer"
               />
@@ -122,6 +122,8 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
             </label>
           </div>
 
+          <label className="grid gap-1">Định dạng<select aria-label="Định dạng xuất hồ sơ" value={exportForm.format} onChange={e=>setExportForm({...exportForm,format:e.target.value,includeOriginalFiles:e.target.value==='PDF'?false:exportForm.includeOriginalFiles})} className="rg-field"><option value="">Chọn PDF hoặc ZIP</option><option value="PDF">PDF</option><option value="ZIP">ZIP</option></select></label>
+          </fieldset>
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
             <button
@@ -133,9 +135,10 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
             </button>
             <button
               type="submit"
+              disabled={busy||!pending&&!exportForm.format}
               className="px-4 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-medium cursor-pointer transition shadow-xs"
             >
-              Bắt đầu xuất hồ sơ
+              {received?'Đọc lại yêu cầu đã nhận':pending?'Đối chiếu đúng yêu cầu đang chờ':'Bắt đầu xuất hồ sơ'}
             </button>
           </div>
         </form>

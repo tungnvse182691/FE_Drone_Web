@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { TriageCase } from './types'
 import { CitizenTriageChildRow } from './CitizenTriageChildRow'
@@ -37,11 +38,24 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
 }) => {
   const isSelected = item.id === selectedCaseId
   const isUnassigned = !item.project_id || item.project_id === ''
+  const navigate = useNavigate()
+  const location = useLocation()
+  const basePath = isSupervisor ? '/sup' : '/pm'
+
+  const handleOpenDetail = () => {
+    if (item.source === 'DRONE_AI') {
+      navigate(`${basePath}/defects/${item.id}/verify-a`, {
+        state: { from: location.pathname }
+      })
+    } else {
+      onSelectCase(item)
+    }
+  }
 
   return (
     <>
       <tr
-        onClick={() => onSelectCase(item)}
+        onClick={handleOpenDetail}
         className={`cursor-pointer transition-colors ${
           isSelected
             ? 'bg-amber-50/70 border-l-4 border-l-brand-gold'
@@ -97,7 +111,11 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                 {item.source === 'DRONE_AI'
                   ? 'Drone AI quét tự động'
                   : item.source === 'CITIZEN'
-                  ? item.reporter_name || 'Người dân báo'
+                  ? item.reporter_name
+                    ? `Người dân: ${item.reporter_name}`
+                    : 'Người dân báo'
+                  : item.reporter_name
+                  ? `Tuần tra: ${item.reporter_name}`
                   : 'Đội tuần đường'}
               </span>
             </span>
@@ -125,20 +143,20 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
             {/* Tên dự án */}
             {isUnassigned ? (
               isSupervisor ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 w-fit">
-                  <Icon name="domain" size={12} className="text-slate-400" />
-                  <span>Chưa gán dự án</span>
-                </span>
-              ) : (
                 <button
                   type="button"
                   onClick={(e) => onOpenTriageProject(item, e)}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors w-fit cursor-pointer"
-                  title="Bấm để điều phối gán vào dự án"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors w-fit cursor-pointer shadow-2xs"
+                  title="Điều phối gán phản ánh vào dự án"
                 >
-                  <Icon name="domain" size={12} className="text-amber-700" />
-                  <span>Chưa gán - Điều phối</span>
+                  <Icon name="domain" size={13} className="text-amber-800" />
+                  <span>Điều phối dự án</span>
                 </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 w-fit select-none">
+                  <Icon name="hourglass_empty" size={12} className="text-slate-400" />
+                  <span>Chờ Giám sát điều phối</span>
+                </span>
               )
             ) : (
               <div className="flex items-center gap-1">
@@ -148,12 +166,12 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                 >
                   {item.project_name}
                 </span>
-                {!isSupervisor && (
+                {isSupervisor && (
                   <button
                     type="button"
                     onClick={(e) => onOpenTriageProject(item, e)}
                     className="text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer"
-                    title="Đổi dự án"
+                    title="Giám sát điều phối lại dự án"
                   >
                     <Icon name="edit" size={12} />
                   </button>
@@ -170,13 +188,10 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                     : 'bg-blue-50 text-blue-700 border-blue-200'
                 }`}
               >
-                {item.stationing?.includes('Nhánh') ? '[Nhánh Hải Vân]' : '[Trục chính]'}
+                {item.stationing?.includes('Nhánh') ? '[Tuyến nhánh]' : '[Trục chính]'}
               </span>
               <span className="font-mono text-xs font-semibold text-slate-800">
                 {item.stationing?.replace(/\[.*?\]\s*/, '')}
-              </span>
-              <span className="text-[11px] text-slate-500 whitespace-nowrap">
-                • {item.lane || 'Làn cơ giới'}
               </span>
             </div>
           </div>
@@ -239,6 +254,11 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
           <CitizenTriageStatusBadge
             status={item.status}
             conclusion={item.conclusion}
+            reopened={item.reopened_after_conclusion}
+            decisionRecorded={item.decision_recorded}
+            decisionKind={item.decision_kind}
+            defectStatus={item.defect_status}
+            decisionReadError={item.decision_read_error}
           />
         </td>
 
@@ -247,10 +267,10 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
           <div className="flex items-center justify-end gap-1.5">
             <button
               type="button"
-              onClick={() => onSelectCase(item)}
+              onClick={handleOpenDetail}
               className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1"
             >
-              <span>{isSupervisor ? 'Xem hồ sơ' : 'Thẩm định'}</span>
+              <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>
               <Icon name="arrow_forward" size={13} />
             </button>
             {!isSupervisor && item.cluster_duplicates &&

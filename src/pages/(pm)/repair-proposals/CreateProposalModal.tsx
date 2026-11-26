@@ -1,9 +1,11 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import type { RouteSegmentOption, UnassignedDefectItem } from './types'
+import type { RouteSegmentOption, UnassignedDefectItem, ProposalCreateApi } from './types'
 import { ProposalBOQCard } from './ProposalBOQCard'
+import { ProposalSourcePanel } from './ProposalSourcePanel'
 
 export interface CreateProposalModalProps {
+  createApi?:ProposalCreateApi
   isCreateModalOpen: boolean
   setIsCreateModalOpen: (open: boolean) => void
   formPackageName: string
@@ -27,6 +29,7 @@ export interface CreateProposalModalProps {
   handleUpdateDefectSolution?: (id: string, solution: string) => void
   modalCalculations: { count: number; description: string }
   handleSaveDraft: (andSubmit: boolean) => void
+  projectMembers?: any[]
 }
 
 export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
@@ -50,15 +53,16 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
   setFormTechnicalMethod,
   unassignedDefects,
   handleToggleDefect,
-  handleUpdateDefectSolution = () => {},
   modalCalculations,
   handleSaveDraft,
+  projectMembers = [], createApi,
 }) => {
   if (!isCreateModalOpen) return null
+  const picked = createApi ? unassignedDefects.find((d) => d.selected) : undefined
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="w-full max-w-3xl max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-brand-border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className={`w-full ${picked ? 'max-w-6xl' : 'max-w-3xl'} max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-brand-border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
         {/* Modal Header */}
         <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -68,7 +72,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             <div>
               <h3 className="text-base font-bold text-brand-dark">Khởi tạo gói đề xuất sửa chữa kỹ thuật mới</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Gom các khiếm khuyết độc lập thành gói thi công tập trung để tối ưu hóa máy móc và nhân lực.
+                Lập nghĩa vụ và phương án kỹ thuật từ khiếm khuyết trong đúng dự án; không tự cấp quyền thi công.
               </p>
             </div>
           </div>
@@ -81,15 +85,21 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs">
+        <div className={picked ? 'flex flex-1 min-h-0' : 'contents'}>
+        <div className={`p-6 overflow-y-auto space-y-5 text-xs ${picked ? 'flex-1 min-w-0' : ''}`}>
+          {createApi?.error&&<p role="alert" className="text-rose-700">{createApi.error}</p>}
+          {createApi?.onResumeOriginal&&<button type="button" onClick={createApi.onResumeOriginal} className="rg-btn text-[#8C6D1F]">Mở biểu mẫu Fast Track đang giữ lệnh để đối chiếu</button>}
+          <fieldset disabled={createApi?.busy||createApi?.locked} className="space-y-5">
           {/* Tên gói */}
           <div className="space-y-1.5">
             <label className="block font-bold text-slate-700 uppercase text-[11px]">
-              Tên gói đề xuất công việc <span className="text-rose-500">*</span>
+              {createApi?'Căn cứ đề xuất hạng mục':'Tên gói đề xuất công việc'} <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               value={formPackageName}
+              maxLength={2000}
+              aria-label="Căn cứ đề xuất gói"
               onChange={(e) => setFormPackageName(e.target.value)}
               placeholder="Ví dụ: Xử lý ổ gà và trám nứt mặt đường đoạn Km 1028 - Km 1033..."
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
@@ -100,34 +110,39 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                Tuyến đường phụ trách <span className="text-rose-500">*</span>
+                {createApi?'Dự án chịu trách nhiệm':'Tuyến đường phụ trách'} <span className="text-rose-500">*</span>
               </label>
               <select
-                value={formRouteId}
+                  value={formRouteId} aria-label="Dự án đề xuất gói"
                 onChange={(e) => handleRouteChange(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
               >
-                {availableRoutes.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
+                <option value="">Chọn dự án theo hồ sơ</option>
+                {availableRoutes.length === 0 ? (
+                  <option value="">Chưa có dữ liệu dự án</option>
+                ) : (
+                  availableRoutes.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                Phân đoạn lý trình <span className="text-rose-500">*</span>
+                {createApi?'Bộ phân đoạn tham chiếu':'Phân đoạn lý trình'} <span className="text-rose-500">*</span>
               </label>
               <select
-                value={formSegmentId}
+                value={formSegmentId} aria-label="Bộ phân đoạn đề xuất gói"
                 onChange={(e) => handleSegmentChange(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
               >
-                <option value="ALL">
-                  Toàn tuyến (Tất cả {currentRouteSegments.length} phân đoạn)
+                <option value={createApi?'':'ALL'}>
+                  {createApi?'Không ghim bộ phân đoạn — phạm vi theo lý trình':'Toàn tuyến'}
                 </option>
-                {currentRouteSegments.map((s) => (
+                {currentRouteSegments.filter(s => s.id !== 'ALL').map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.code} - {s.name}
                   </option>
@@ -136,22 +151,32 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             </div>
           </div>
 
-          {/* Tổ đội thi công & Thời gian dự kiến */}
+          {createApi ? <div className="space-y-3"><label className="block font-semibold">Luồng đề xuất<select aria-label="Luồng đề xuất sửa chữa" value={createApi.fields.mode} onChange={e=>createApi.onChange('mode',e.target.value)} className="block w-full p-2 border rounded-xl bg-slate-50"><option value="NORMAL">Normal — Giám sát duyệt phương án</option><option value="FAST_TRACK">Fast Track — PM giao việc có điều kiện</option></select></label><p className="text-slate-500">Mỗi package gắn một khiếm khuyết. Nhập phạm vi theo căn cứ thực tế, không suy số đo từ ảnh hoặc toàn tuyến. Giao Crew và deadline ở bước giao việc.</p><div className="grid grid-cols-2 gap-3">{(['fromMeters','toMeters','offsetFromMeters','offsetToMeters'] as const).map((key,i)=><label key={key}>{['Từ lý trình (m)','Đến lý trình (m)','Độ lệch từ (m)','Độ lệch đến (m)'][i]}<input type="number" step="any" aria-label={['Từ lý trình đề xuất','Đến lý trình đề xuất','Độ lệch từ đề xuất','Độ lệch đến đề xuất'][i]} value={createApi.fields[key]} onChange={e=>createApi.onChange(key,e.target.value)} className="block w-full p-2 border rounded-xl bg-slate-50"/></label>)}</div><label className="block">Phiên bản checklist phương án<input aria-label="Checklist phương án đề xuất" maxLength={200} value={createApi.fields.checklistVersion} onChange={e=>createApi.onChange('checklistVersion',e.target.value)} className="block w-full p-2 border rounded-xl bg-slate-50"/></label></div> : <>          {/* Tổ đội thi công & Thời gian dự kiến */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
                 Đơn vị thi công dự kiến <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={formContractor}
-                onChange={(e) => setFormContractor(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
-              >
-                <option value="Tổ vá dặm cơ giới 01">Tổ vá dặm cơ giới 01 (Hoàng Hải)</option>
-                <option value="Xí nghiệp Cầu Đường 4">Xí nghiệp Cầu Đường 4</option>
-                <option value="Tổ duy tu bảo dưỡng đường bộ 03">Tổ duy tu bảo dưỡng đường bộ 03</option>
-                <option value="Đội cơ động">Đội cơ động khắc phục sự cố khẩn cấp</option>
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  list="project-contractor-options"
+                  value={formContractor}
+                  onChange={(e) => setFormContractor(e.target.value)}
+                  placeholder={projectMembers.length > 0 ? "Chọn từ nhân sự dự án hoặc nhập tên đội thi công..." : "Nhập tên đội thi công (ví dụ: Đội duy tu bảo dưỡng 01...)"}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                />
+                {projectMembers.length > 0 && (
+                  <datalist id="project-contractor-options">
+                    {projectMembers.map((m: any) => (
+                      <option
+                        key={m.membershipId || m.userId}
+                        value={m.displayName ? `${m.displayName} (${m.role || 'Đội thi công'})` : m.role}
+                      />
+                    ))}
+                  </datalist>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -169,11 +194,12 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             </div>
           </div>
 
+</>}
+
           {/* Danh sách khiếm khuyết & Khối lượng kỹ thuật */}
           <ProposalBOQCard
             unassignedDefects={unassignedDefects}
             handleToggleDefect={handleToggleDefect}
-            handleUpdateDefectSolution={handleUpdateDefectSolution}
             modalCalculations={modalCalculations}
           />
 
@@ -182,81 +208,29 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="font-bold text-slate-800 uppercase text-[11px] flex items-center gap-1.5">
                 <Icon name="build" className="text-sm text-brand-gold" />
-                <span>Phương án kỹ thuật sửa chữa tổng quát <span className="text-rose-500">*</span></span>
+                <span>Phương án kỹ thuật sửa chữa <span className="text-rose-500">*</span></span>
               </label>
               <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
-                Chỉ huy trưởng (PM) soạn thảo • Trình Giám sát duyệt (WF-07)
+                {createApi?.fields.mode==='FAST_TRACK'?'PM đề xuất Fast Track — giao có điều kiện':'PM đề xuất Normal — Giám sát duyệt'}
               </span>
             </div>
 
-            {/* Các nút gợi ý phương án nhanh */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] text-slate-500 font-medium mr-1 flex items-center gap-1">
-                <Icon name="auto_awesome" className="text-xs text-brand-gold" /> Gợi ý nhanh:
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  setFormTechnicalMethod(
-                    'Cào bóc sâu 5cm theo hình chữ nhật vát cạnh, làm sạch bề mặt, tưới nhựa dính bám và thảm hoàn trả bằng bê tông nhựa nóng C12.5 lu lèn tiêu chuẩn.'
-                  )
-                }
-                className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
-              >
-                Cào bóc &amp; thảm BTN
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setFormTechnicalMethod(
-                    'Xẻ rãnh chữ U kích thước 1.5x1.5cm dọc theo tim nứt, làm khô sạch bụi bẩn và bơm chèn kín bằng keo mastic polymer đàn hồi chịu nhiệt.'
-                  )
-                }
-                className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
-              >
-                Xẻ rãnh rót Mastic
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setFormTechnicalMethod(
-                    'Đục tẩy vuông thành sắc cạnh, dọn sạch đáy ổ gà, rải đều vật liệu rải nguội Carboncor Asphalt lớp dày 3-4cm đầm nén chặt K95.'
-                  )
-                }
-                className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
-              >
-                Vá dặm Carboncor
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setFormTechnicalMethod(
-                    'Cào bóc san phẳng vệt hằn lún bánh xe, bù lún bằng lớp bê tông nhựa chặt kết hợp thảm phủ mặt đầm lèn đạt độ chặt K98.'
-                  )
-                }
-                className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
-              >
-                Bù lún vệt bánh xe
-              </button>
-              {formTechnicalMethod && (
-                <button
-                  type="button"
-                  onClick={() => setFormTechnicalMethod('')}
-                  className="px-2 py-1 text-slate-400 hover:text-rose-600 text-[11px] font-medium transition-colors ml-auto cursor-pointer"
-                >
-                  Xóa nội dung
-                </button>
-              )}
-            </div>
-
+            <p className="text-slate-500">PM nhập phương án theo hồ sơ kỹ thuật có căn cứ; không tự áp công thức vật tư hoặc phương án từ mức độ hư hỏng.</p>
             <textarea
               rows={3}
-              value={formTechnicalMethod}
+              value={formTechnicalMethod} aria-label="Phương án đề xuất gói" maxLength={2000}
               onChange={(e) => setFormTechnicalMethod(e.target.value)}
-              placeholder="Nhập phương án sửa chữa kỹ thuật tổng quát cho các khiếm khuyết được chọn..."
+              placeholder="Nhập phương án kỹ thuật sửa chữa cho khiếm khuyết được chọn..."
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold leading-relaxed"
             />
           </div>
+          </fieldset>
+        </div>
+        {picked && createApi && (
+          <div className="w-80 shrink-0 overflow-y-auto border-l border-slate-200 p-4">
+            <ProposalSourcePanel key={`${formRouteId}:${picked.id}`} projectId={formRouteId} defectId={picked.id} defectCode={picked.code} segmentSetLabel={(() => { const s = currentRouteSegments.find((x) => x.id === formSegmentId); return s ? `${s.code} - ${s.name}` : undefined })()} range={createApi.fields} />
+          </div>
+        )}
         </div>
 
         {/* Modal Footer */}
@@ -268,20 +242,21 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
           >
             Hủy bỏ
           </button>
-          <button
+          {!createApi && <button
             onClick={() => handleSaveDraft(false)}
             type="button"
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <span>Lưu bản nháp</span>
-          </button>
+          </button>}
           <button
+            disabled={createApi?.busy}
             onClick={() => handleSaveDraft(true)}
             type="button"
             className="px-5 py-2 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <Icon name="send" className="text-sm" />
-            <span>Khóa &amp; Trình duyệt ngay</span>
+            <span>{createApi?createApi.busy?'Đang đối chiếu…':createApi.locked?'Tiếp tục / Đối chiếu yêu cầu':'Đề xuất hạng mục và GET xác nhận':'Khóa & Trình duyệt ngay'}</span>
           </button>
         </div>
       </div>

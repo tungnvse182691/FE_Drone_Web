@@ -24,6 +24,8 @@ export interface ReworkModalProps {
   reworkNotes: string
   setReworkNotes: (s: string) => void
   onSubmitRework: () => void
+  busy?: boolean
+  error?: string
 }
 
 export const ReworkModal: React.FC<ReworkModalProps> = ({
@@ -36,9 +38,13 @@ export const ReworkModal: React.FC<ReworkModalProps> = ({
   setOtherDefectText,
   reworkNotes,
   setReworkNotes,
-  onSubmitRework
+  onSubmitRework,
+  busy = false,
+  error = ''
 }) => {
   if (!isOpen) return null
+  const noneSelected = !reworkChecklist.bond_coat && !reworkChecklist.flatness_3m && !reworkChecklist.temperature_slip && !reworkChecklist.compaction_k98 && !reworkChecklist.other_defect
+  const blocked = busy || (reworkChecklist.other_defect && !otherDefectText.trim()) || (noneSelected && !reworkNotes.trim())
 
   return (
     <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
@@ -51,7 +57,7 @@ export const ReworkModal: React.FC<ReworkModalProps> = ({
         <div className="p-4 bg-rose-50 border-b border-rose-200 text-rose-900 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px] text-rose-600">warning</span>
-            <h3 className="font-bold text-sm font-sansation">Lập lệnh yêu cầu sửa lại (Rework Order)</h3>
+            <h3 className="font-bold text-sm font-sansation">Yêu cầu bổ sung hồ sơ (PM review SUPPLEMENT)</h3>
           </div>
           <button
             onClick={onClose}
@@ -68,7 +74,7 @@ export const ReworkModal: React.FC<ReworkModalProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-800 block">Các chỉ tiêu chưa đạt kỹ thuật (TCVN 8819:2011):</label>
+            <label className="font-semibold text-slate-800 block">Nội dung cần Crew bổ sung (chọn nếu phù hợp, hoặc ghi ở ô bên dưới):</label>
             <div className="space-y-1.5">
               <label className="flex items-center gap-2 p-2 bg-slate-50 hover:bg-slate-100 rounded-md border border-slate-200 cursor-pointer">
                 <input
@@ -133,19 +139,24 @@ export const ReworkModal: React.FC<ReworkModalProps> = ({
           </div>
 
           <div className="space-y-1">
-            <label className="font-semibold text-slate-800 block">Chỉ đạo của Giám sát:</label>
+            <label className="font-semibold text-slate-800 block">Ghi chú yêu cầu bổ sung của PM:</label>
             <textarea
-              rows={2}
+              rows={3}
+              placeholder="Nhập nội dung PM yêu cầu Crew bổ sung…"
               value={reworkNotes}
               onChange={(e) => setReworkNotes(e.target.value)}
               className="w-full p-2 bg-white rounded-md border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-rose-500 resize-none"
             />
           </div>
 
+          {error && (
+            <div role="alert" className="p-2.5 text-[11px] text-rose-800 bg-rose-50 border border-rose-200 rounded-md break-words">{error}</div>
+          )}
+
           <div className="p-2.5 bg-amber-50 rounded-md border border-amber-200 text-amber-900 text-[11px] flex items-start gap-1.5 leading-relaxed">
             <span className="material-symbols-outlined text-[15px] text-amber-700 shrink-0 mt-0.5">info</span>
             <span>
-              Hồ sơ sẽ chuyển về trạng thái REWORK_REQUIRED và thông báo đến PM và Đội thi công.
+              PM gửi review SUPPLEMENT cho bản nộp hiện hành; Crew nhận trạng thái Cần bổ sung và nộp bản bổ sung. Đây không phải lệnh sửa chữa lại (hiệu chỉnh).
             </span>
           </div>
         </div>
@@ -160,28 +171,12 @@ export const ReworkModal: React.FC<ReworkModalProps> = ({
           </button>
           <button
             onClick={onSubmitRework}
-            disabled={
-              (reworkChecklist.other_defect && !otherDefectText.trim()) ||
-              (!reworkChecklist.bond_coat &&
-                !reworkChecklist.flatness_3m &&
-                !reworkChecklist.temperature_slip &&
-                !reworkChecklist.compaction_k98 &&
-                !reworkChecklist.other_defect)
-            }
+            disabled={blocked}
             type="button"
-            className={`px-4 h-8 transition rounded-md font-medium text-xs shadow-xs flex items-center gap-1.5 ${
-              (reworkChecklist.other_defect && !otherDefectText.trim()) ||
-              (!reworkChecklist.bond_coat &&
-                !reworkChecklist.flatness_3m &&
-                !reworkChecklist.temperature_slip &&
-                !reworkChecklist.compaction_k98 &&
-                !reworkChecklist.other_defect)
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
-            }`}
+            className={`px-4 h-8 transition rounded-md font-medium text-xs shadow-xs flex items-center gap-1.5 ${blocked ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'}`}
           >
             <span className="material-symbols-outlined text-[15px]">send</span>
-            <span>Phát lệnh sửa lại</span>
+            <span>{busy ? 'Đang gửi…' : 'Gửi yêu cầu bổ sung'}</span>
           </button>
         </div>
       </div>

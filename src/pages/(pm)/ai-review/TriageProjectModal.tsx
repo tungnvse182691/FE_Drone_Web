@@ -1,110 +1,287 @@
-import React from 'react'
+import type { TriageGeometryPins } from '../../../api/services/triageGeometryService'
+import { useAuthStore } from '../../../store/authStore'
+import { TriageGeometryScope } from './TriageGeometryScope'
+import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface TriageProjectModalProps {
+  assignedCase?: boolean
   isOpen: boolean
   onClose: () => void
   targetTriageCase: TriageCase | null
-  mockProjects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
+  projectsLoading?: boolean
+  projectsError?: string
+  onRetryProjects?: () => void
+  busy?: boolean
+  error?: string
+  held?: boolean
+  initialInput?: {verificationMethod?: string | null; reason?: string | null}
+  retryLabel?: string
+  onRetry?: ()=>void
+  onReview?: ()=>void
+  onAcceptReviewed?: ()=>void
+  comparison?: string
   selectedProjectId: string
   setSelectedProjectId: (id: string) => void
-  onConfirmTriageProject: () => void
+  onConfirmTriageProject: (
+    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE',
+    reason: string,
+    geometryPins?: TriageGeometryPins
+  ) => void
 }
 
 export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
+  assignedCase = false,
+  projectsLoading = false, projectsError = '', onRetryProjects,
+  busy = false, error = '', held = false, initialInput, retryLabel, onRetry, onReview, onAcceptReviewed, comparison = '',
   isOpen,
   onClose,
   targetTriageCase,
-  mockProjects,
+  projects,
   selectedProjectId,
   setSelectedProjectId,
   onConfirmTriageProject,
 }) => {
+  const [verificationMethod, setVerificationMethod] = useState<'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' | ''>('')
+  const [reason, setReason] = useState<string>('')
+  const geometryScope = `${useAuthStore(s => s.authEpoch)}:${targetTriageCase?.id}:${selectedProjectId}:${isOpen}`
+  const [geometrySelection, setGeometrySelection] = useState<{scope:string; required:boolean; pins?:TriageGeometryPins}>({scope:'',required:false})
+  const requiresDefectScope = assignedCase || geometrySelection.scope === geometryScope && geometrySelection.required
+  const geometryPins = geometrySelection.scope === geometryScope ? geometrySelection.pins : undefined
+  useEffect(() => { setGeometrySelection({scope:geometryScope,required:false}) }, [geometryScope])
+
+  useEffect(()=>{if(isOpen){setVerificationMethod(initialInput?.verificationMethod as any || '');setReason(initialInput?.reason || '')}},[isOpen,targetTriageCase?.id])
   if (!isOpen || !targetTriageCase) return null
+
+  const selectedProj = projects.find((p) => p.id === selectedProjectId)
+
+  const handleConfirm = () => {
+    if (requiresDefectScope && !geometryPins || projectsLoading || projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
+    onConfirmTriageProject(verificationMethod, reason, requiresDefectScope ? geometryPins : undefined)
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-50 text-brand-gold border border-amber-200">
+            <div className="p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
               <Icon name="domain" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Gán Phản Ánh Vào Dự Án Bảo Hành</h3>
-              <p className="text-xs text-slate-500">Chỉ định tuyến đường bảo hành chịu trách nhiệm sửa chữa</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900">{assignedCase ? 'Cập nhật phương thức và phạm vi Case' : 'Điều Phối Phản Ánh Vào Dự Án'}</h3>
+              </div>
+              <p className="text-xs text-slate-500">{assignedCase ? 'Giữ nguyên dự án; chọn phương thức xác minh và phạm vi cho hồ sơ đang phụ trách.' : 'Phân công tuyến đường bảo hành & định hướng xác minh cho Chỉ huy trưởng'}</p>
             </div>
           </div>
           <button
             type="button"
-            onClick={onClose}
+            disabled={busy}
+              onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
           >
             <Icon name="close" size={20} />
           </button>
         </div>
 
-        <div className="space-y-3.5 text-xs">
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-            <span className="font-bold text-brand-dark block">Hồ sơ phản ánh tiếp nhận:</span>
-            <div className="flex items-center justify-between text-slate-700">
-              <span className="font-mono font-bold text-[#8F7212]">{targetTriageCase.code}</span>
-              <span>
-                {targetTriageCase.stationing} ({targetTriageCase.lane})
+        {/* Form Body */}
+        <fieldset disabled={busy || held} className="space-y-3.5 text-xs border-0 p-0 m-0 min-w-0">
+          {/* Hồ sơ phản ánh tiếp nhận gốc */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-bold text-slate-800">Hồ sơ phản ánh tiếp nhận:</span>
+              <span className="font-mono font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                {targetTriageCase.code}
               </span>
             </div>
-            <p className="text-slate-500 text-[11px] truncate">{targetTriageCase.defect_title}</p>
-            <span className="text-[10px] text-slate-400 block">
-              Người báo: {targetTriageCase.reporter_name || targetTriageCase.source_label} (
-              {targetTriageCase.reporter_phone || 'Không có SĐT'})
-            </span>
+
+            <div className="flex gap-3">
+              {/* Thumbnail ảnh hiện trường người dân gửi (nếu có) */}
+              {targetTriageCase.image_url && (
+                <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-300 shrink-0 bg-slate-200 shadow-2xs">
+                  <img
+                    src={targetTriageCase.image_url}
+                    alt={targetTriageCase.defect_title}
+                    className="w-full h-full object-cover"
+
+                  />
+                </div>
+              )}
+
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="font-bold text-slate-900 truncate">{targetTriageCase.defect_title}</span>
+                  <span className="font-mono text-slate-600 text-[11px] shrink-0 ml-2">
+                    {targetTriageCase.stationing} ({targetTriageCase.lane || 'Chưa có dữ liệu làn'})
+                  </span>
+                </div>
+                {targetTriageCase.description && (
+                  <p className="text-slate-600 text-[11px] italic bg-white p-1.5 rounded border border-slate-200 line-clamp-2">
+                    "{targetTriageCase.description}"
+                  </p>
+                )}
+                <span className="text-[10px] text-slate-500 block pt-0.5">
+                  Người gửi: {targetTriageCase.reporter_name || 'Chưa đọc thông tin người gửi'} • {targetTriageCase.reporter_phone || 'Chưa có thông tin liên hệ'}
+                </span>
+              </div>
+            </div>
           </div>
 
+          {/* 1. Chọn Dự án bảo hành phụ trách (projectId - Spec 17_10) */}
           <div className="flex flex-col">
             <label className="font-bold text-slate-700 mb-1">
-              Chọn tuyến đường / Dự án bảo hành phụ trách: <span className="text-red-500">*</span>
+              1. Dự án / Tuyến đường bảo hành phụ trách: <span className="text-rose-500">*</span>
             </label>
             <select
               value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-semibold cursor-pointer"
+              disabled={assignedCase || projectsLoading || !!projectsError}
+              required
+              onChange={(e) => { if (!assignedCase) setSelectedProjectId(e.target.value) }}
+              className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer truncate"
             >
-              {mockProjects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.code} - {p.name} (Km {p.start_km} &rarr; Km {p.end_km})
-                </option>
-              ))}
+              <option value="">Chọn dự án</option>
+              {projects.map((p) => {
+                // Kiểm tra nếu p.name đã chứa chuỗi Km thì không nối thêm tránh lặp chuỗi
+                const hasKmInName = p.name.includes('Km')
+                const displayLabel = hasKmInName
+                  ? `${p.code} — ${p.name}`
+                  : `${p.code} — ${p.name}`
+                return (
+                  <option key={p.id} value={p.id}>
+                    {displayLabel}
+                  </option>
+                )
+              })}
             </select>
+            {projectsLoading && <span role="status" className="text-xs text-slate-500">Đang kiểm tra dự án đủ điều kiện...</span>}
+            {projectsError && <span role="alert" className="text-xs text-rose-700">Không tải được dữ liệu để kiểm tra dự án: {projectsError} <button type="button" onClick={onRetryProjects} className="underline">Thử lại</button></span>}
+            {!projectsLoading && !projectsError && projects.length === 0 && <span role="status" className="text-xs text-slate-500">Không có dự án đủ điều kiện điều phối.</span>}
+            {selectedProj && Number.isFinite(selectedProj.start_km) && Number.isFinite(selectedProj.end_km) && (
+              <span className="text-[10px] text-slate-500 mt-1 pl-1">
+                Phạm vi bảo hành: Km {selectedProj.start_km} đến Km {selectedProj.end_km}
+              </span>
+            )}
           </div>
 
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-[11px] text-blue-800 flex items-start gap-2">
-            <Icon name="check_circle" size={16} className="text-blue-600 shrink-0 mt-0.5" />
-            <span>
-              Sau khi điều phối, hồ sơ sẽ được gán vào phạm vi quản lý của dự án, sẵn sàng để PM thẩm định chi
-              tiết và lập gói sửa chữa hoặc giao nhiệm vụ khảo sát đo đạc hiện trường.
-            </span>
-          </div>
-        </div>
+          <TriageGeometryScope projectId={selectedProjectId} caseId={targetTriageCase.id} disabled={busy || held} onChange={(required,pins)=>setGeometrySelection(old=>old.scope===geometryScope && old.required===required && old.pins?.routeVersionId===pins?.routeVersionId && old.pins?.segmentSetId===pins?.segmentSetId && old.pins?.geometryVersion===pins?.geometryVersion ? old : {scope:geometryScope,required,pins})} />
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-          >
-            Hủy bỏ
-          </button>
-          <button
-            type="button"
-            onClick={onConfirmTriageProject}
-            className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-          >
-            <Icon name="domain" size={16} />
-            <span>Xác Nhận Gán Vào Dự Án</span>
-          </button>
+          {/* 2. Định hướng phương thức xác minh (Spec 17_10 CaseTriageDto.verificationMethod) */}
+          <div className="flex flex-col">
+            <label className="font-bold text-slate-700 mb-1.5">
+              2. Định hướng phương thức xác minh:
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setVerificationMethod('FIELD')}
+                className={`p-2 rounded-lg border text-left cursor-pointer transition-colors ${
+                  verificationMethod === 'FIELD'
+                    ? 'bg-amber-50 border-[#C9A227] text-slate-900 shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <div className="font-bold text-[11px] flex items-center gap-1">
+                  <Icon name="straighten" size={13} className={verificationMethod === 'FIELD' ? 'text-amber-800' : 'text-slate-400'} />
+                  <span>Đo đạc hiện trường</span>
+                </div>
+                <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
+                  Kiểm tra trực tiếp tại hiện trường
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVerificationMethod('DRONE')}
+                className={`p-2 rounded-lg border text-left cursor-pointer transition-colors ${
+                  verificationMethod === 'DRONE'
+                    ? 'bg-amber-50 border-[#C9A227] text-slate-900 shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <div className="font-bold text-[11px] flex items-center gap-1">
+                  <Icon name="flight_takeoff" size={13} className={verificationMethod === 'DRONE' ? 'text-amber-800' : 'text-slate-400'} />
+                  <span>Khảo sát Drone</span>
+                </div>
+                <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
+                  Xác minh bằng khảo sát Drone
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVerificationMethod('EXISTING_EVIDENCE')}
+                className={`p-2 rounded-lg border text-left cursor-pointer transition-colors ${
+                  verificationMethod === 'EXISTING_EVIDENCE'
+                    ? 'bg-amber-50 border-[#C9A227] text-slate-900 shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <div className="font-bold text-[11px] flex items-center gap-1">
+                  <Icon name="image" size={13} className={verificationMethod === 'EXISTING_EVIDENCE' ? 'text-amber-800' : 'text-slate-400'} />
+                  <span>Ảnh hiện có</span>
+                </div>
+                <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
+                  Xem xét bằng chứng đã có
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* 3. Chỉ đạo của Giám sát (Spec 17_10 CaseTriageDto.reason) */}
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-slate-700">
+                {assignedCase ? '3. Lý do cập nhật phương thức/phạm vi:' : '3. Chỉ đạo / Căn cứ điều phối của Giám sát:'}
+              </label>
+              <span className="text-[10px] text-slate-400">Tối đa 1000 ký tự</span>
+            </div>
+            <textarea
+              required maxLength={1000}
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={assignedCase ? 'Nhập lý do cập nhật phương thức/phạm vi...' : 'Nhập ghi chú chỉ đạo gửi Chỉ huy trưởng (PM) phụ trách dự án...'}
+              className="w-full bg-slate-50 text-slate-800 text-xs p-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] focus:bg-white transition-colors"
+            />
+          </div>
+
+          <p className="text-[11px] text-slate-500">{assignedCase ? 'Cập nhật phạm vi không kết luận phản ánh hoặc tạo khiếm khuyết. Máy chủ kiểm lại nguồn sau khi cập nhật.' : 'Điều phối xác định dự án phụ trách và phương thức xác minh; chưa phải kết luận phản ánh.'}</p>
+        </fieldset>
+
+        {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+        {comparison && <p role="status" className="text-xs text-slate-600">{comparison}</p>}
+        <div className="flex flex-wrap gap-2 text-xs">{onRetry && <button type="button" disabled={busy} onClick={onRetry} className="rg-btn">{retryLabel || 'Đối chiếu yêu cầu đang chờ'}</button>}{onReview && <button type="button" disabled={busy} onClick={onReview} className="rg-btn">Đọc lại hồ sơ để đối chiếu</button>}{onAcceptReviewed && <button type="button" disabled={busy} onClick={onAcceptReviewed} className="rg-btn">Tiếp tục với hồ sơ vừa đọc</button>}</div>
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+          <span className="text-[11px] text-slate-500 font-medium truncate">
+            Người thực hiện: {assignedCase ? 'Chỉ huy trưởng (PM)' : 'Giám sát / Chủ đầu tư'}
+          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onClose}
+              className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              type="button"
+              disabled={requiresDefectScope && !geometryPins || projectsLoading || !!projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
+              onClick={handleConfirm}
+              className="px-3.5 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
+            >
+              <Icon name="domain" size={15} />
+              <span>{busy ? 'Đang gửi/đọc lại…' : assignedCase ? 'Xác nhận cập nhật phạm vi' : 'Xác nhận điều phối'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
+

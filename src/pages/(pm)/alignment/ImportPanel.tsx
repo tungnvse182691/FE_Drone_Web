@@ -65,39 +65,9 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
       {/* TAB 1: FILE UPLOAD & PRESET */}
       {importTab === 'FILE' && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs text-slate-600">
-            Chọn mẫu tim tuyến chuẩn trắc địa WGS84 hoặc tải lên tệp GeoJSON / KML / GPX từ máy tính:
+          <p className="text-xs text-slate-600 leading-relaxed mb-1">
+            Tải lên tệp trắc địa tim tuyến thực tế (GeoJSON, KML, GPX) từ máy tính:
           </p>
-
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => onLoadPreset('QL1A Đoạn Thừa Thiên Huế - Đà Nẵng (Chuẩn 5km/đoạn)', 5)}
-              className="p-3 rounded-xl border border-slate-200 hover:border-brand-gold hover:bg-amber-50/40 text-left transition-all flex items-center justify-between cursor-pointer"
-            >
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-800">Tuyến QL1A Mở rộng (25.0 km • 5 Phân đoạn)</span>
-                <span className="text-[11px] text-slate-500">Đã kiểm chuẩn tiếp giáp &amp; bán kính cong TCVN</span>
-              </div>
-              <span className="text-[11px] font-bold text-[#8F7212] bg-brand-gold/15 px-2.5 py-1 rounded-lg">
-                Nạp mẫu
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onLoadPreset('Cao tốc Bắc - Nam (Đoạn hầm Hải Vân - Túy Loan)', 2.5)}
-              className="p-3 rounded-xl border border-slate-200 hover:border-brand-gold hover:bg-amber-50/40 text-left transition-all flex items-center justify-between cursor-pointer"
-            >
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-800">Cao tốc Đoạn Hải Vân - Túy Loan (2.5 km/đoạn)</span>
-                <span className="text-[11px] text-slate-500">Mẫu chia nhỏ mật độ dày phục vụ bay quét Flycam độ phân giải cao</span>
-              </div>
-              <span className="text-[11px] font-bold text-[#8F7212] bg-brand-gold/15 px-2.5 py-1 rounded-lg">
-                Nạp mẫu
-              </span>
-            </button>
-          </div>
 
           <div
             onClick={() => fileInputRef.current?.click()}
@@ -115,7 +85,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
             </div>
             <span className="text-xs font-bold text-slate-800">Kéo thả hoặc Bấm để tải tệp trắc địa lên</span>
             <span className="text-[11px] text-slate-400 mt-0.5">
-              Hỗ trợ GeoJSON (LineString / MultiLineString), KML, GPX
+              Kiểm tra một tim tuyến GeoJSON LineString; chưa lưu bản nháp.
             </span>
           </div>
         </div>
@@ -126,7 +96,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-700">
-              Nhập danh sách tọa độ đỉnh WGS84 [Kinh độ, Vĩ độ]:
+              Nhập tọa độ nguồn [X, Y]:
             </label>
             <button
               type="button"
@@ -134,7 +104,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
               className="text-[11px] text-[#8F7212] hover:underline flex items-center gap-1 cursor-pointer font-semibold"
             >
               <Sparkles className="w-3 h-3" />
-              <span>Khôi phục mẫu mặc định</span>
+              <span>Xóa bản nhập</span>
             </button>
           </div>
 
@@ -143,7 +113,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
             value={manualCoordsText}
             onChange={(e) => onSetManualCoordsText(e.target.value)}
             className="w-full font-mono text-xs p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-gold bg-slate-50 text-slate-800"
-            placeholder="108.0825, 16.2731&#10;108.1054, 16.2589&#10;..."
+            placeholder="Mỗi dòng: X, Y theo hệ tọa độ nguồn"
           />
 
           <div className="flex justify-end">
@@ -153,7 +123,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
               className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Phân tích &amp; Tạo tim tuyến</span>
+              <span>Giữ bản nhập tọa độ</span>
             </button>
           </div>
         </div>

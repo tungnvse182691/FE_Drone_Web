@@ -5,6 +5,7 @@ import { Icon } from '../../components/ui/Icon'
 import { dashboardService, PMDashboardData } from '../../api/services/dashboardService'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { OperationalClocksWidget } from './dashboard/OperationalClocksWidget'
 
 export const PMDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -83,7 +84,7 @@ export const PMDashboard: React.FC = () => {
     )
   }
 
-  const { stats, defects, citizenCases, repairBatches } = data
+  const { stats, defects, citizenCases, repairBatches, clocks = [], errors, clocksTruncated } = data
 
   return (
     <div className="space-y-6">
@@ -254,21 +255,21 @@ export const PMDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 3: Phản ánh dân cần phân loại */}
+        {/* KPI 3: Phản ánh dân cần kết luận (chuẩn PM-11, Triage do Supervisor thực hiện) */}
         <div
           onClick={() => navigate('/pm/ai-inbox?source=citizen')}
           className="pm-kpi-card pm-kpi-card-3 flex items-center justify-between"
         >
           <div className="space-y-1">
             <span className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-[0.04em] block">
-              Phản Ánh Dân Cần Phân Loại
+              Phản Ánh Cần Kết Luận
             </span>
             <div className="text-[36px] leading-[42px] font-extrabold text-[#1A1D20] pm-kpi-value transition-transform duration-250 origin-left">
               {stats.citizenCasesCount}
             </div>
             <div className="text-[11px] text-slate-500 flex items-center gap-1 pt-0.5">
-              <Icon name="sync" className="text-sky-600" size={13} />
-              <span>Sẵn sàng rà soát trùng lặp</span>
+              <Icon name="check_circle" className="text-sky-600" size={13} />
+              <span>Đã gán dự án • Chờ kết luận (PM-11)</span>
             </div>
           </div>
           <div className="w-[48px] h-[48px] rounded-[12px] bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center transition-transform duration-250 pm-kpi-icon shrink-0">
@@ -299,11 +300,14 @@ export const PMDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Widget Đồng hồ thời hạn nhiệm vụ (Clocks & SLA - API-062) */}
+      <OperationalClocksWidget clocks={clocks} error={errors.clocks} truncated={clocksTruncated} onChanged={() => refetch()} />
+
       {/* Main Content Grid: Hộp Thư Tiếp Nhận & Danh Sách Đợt Sửa Chữa (Bo góc 16px, viền #E2E5E9) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Panel 1: Hộp thư tiếp nhận & Thẩm định */}
         <div className="bg-white rounded-[16px] border border-[#E2E5E9] shadow-xs overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#E2E5E9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="px-6 py-4 border-b border-[#E2E5E9] flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
                 <Icon name="inbox" size={20} />
@@ -317,7 +321,7 @@ export const PMDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 self-end sm:self-center">
+            <div className="flex items-center gap-3 self-end 2xl:self-center">
               {/* Tabs: nền #F3F4F6, tab active nền trắng có shadow nhẹ */}
               <div className="flex items-center bg-[#F3F4F6] p-1 rounded-lg border border-slate-200/80">
                 <button
@@ -361,21 +365,31 @@ export const PMDashboard: React.FC = () => {
           <div className="p-6">
             {inboxTab === 'DRONE' ? (
               <div className="divide-y divide-slate-100">
+                {errors.defects && (
+                  <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được lỗi AI: {errors.defects}</div>
+                )}
+                {!errors.defects && defects.length === 0 && (
+                  <div className="p-4 text-center text-xs text-slate-500">Không có lỗi AI cần thẩm định trong CSDL.</div>
+                )}
                 {defects.slice(0, 5).map((defect) => (
                   <div key={defect.id} className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/50 px-1 rounded-lg transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
+                      {defect.image_url ? (
                       <img
                         src={defect.image_url}
                         alt={defect.code}
                         className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
                       />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 shrink-0" />
+                      )}
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-brand-dark flex items-center gap-2">
                           <span className="font-mono text-xs">{defect.code}</span>
                           {renderSeverityBadge(defect.severity)}
                         </div>
                         <div className="text-xs text-slate-500 mt-0.5 truncate">
-                          Lý trình: Km{defect.chainage_km} • Độ tin cậy AI: {(defect.confidence_score * 100).toFixed(0)}%
+                          Lý trình: {defect.stationing} • Độ tin cậy AI: {(defect.confidence_score * 100).toFixed(0)}%
                         </div>
                       </div>
                     </div>
@@ -393,6 +407,12 @@ export const PMDashboard: React.FC = () => {
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
+                {errors.citizenCases && (
+                  <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được ca người dân: {errors.citizenCases}</div>
+                )}
+                {!errors.citizenCases && citizenCases.length === 0 && (
+                  <div className="p-4 text-center text-xs text-slate-500">Không có ca người dân trong CSDL.</div>
+                )}
                 {citizenCases.slice(0, 5).map((item) => (
                   <div key={item.id} className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/50 px-1 rounded-lg transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
@@ -450,6 +470,12 @@ export const PMDashboard: React.FC = () => {
 
           <div className="p-6">
             <div className="space-y-3">
+              {errors.repairBatches && (
+                <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được đợt sửa chữa: {errors.repairBatches}</div>
+              )}
+              {!errors.repairBatches && repairBatches.length === 0 && (
+                <div className="p-4 text-center text-xs text-slate-500">Không có đợt sửa chữa trong CSDL.</div>
+              )}
               {repairBatches.slice(0, 3).map((batch) => (
                 <div key={batch.id} className="p-4 bg-slate-50/70 rounded-xl border border-slate-200/80 space-y-3 hover:border-slate-300 transition-colors">
                   <div className="flex items-center justify-between">
@@ -463,7 +489,7 @@ export const PMDashboard: React.FC = () => {
                   <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200 text-slate-500">
                     <span>Quy mô kỹ thuật:</span>
                     <span className="font-semibold text-slate-800 font-mono text-[11px]">
-                      {batch.defects?.length || 4} điểm nứt lún • {batch.items?.length || 2} hạng mục TCVN
+                      {batch.defect_count} điểm nứt lún • {batch.item_count} hạng mục TCVN
                     </span>
                   </div>
                   <button

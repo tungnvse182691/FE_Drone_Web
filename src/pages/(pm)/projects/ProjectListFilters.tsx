@@ -56,7 +56,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-[#1B5E20]"></span>
-          <span>Đang bảo hành</span>
+          <span>Đang hoạt động</span>
           <span className="text-[11px] font-mono text-slate-500">{activeCount}</span>
         </button>
 

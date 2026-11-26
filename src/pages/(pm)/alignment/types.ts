@@ -1,4 +1,5 @@
 export interface SegmentItem {
+  serverCoordinates?: [number, number][]
   id: string
   code: string
   startKm: number
@@ -41,12 +42,18 @@ export interface BranchItem {
   coords?: [number, number][] // Tọa độ tim tuyến nhánh [lng, lat][]
   segments: SegmentItem[] // Danh sách các phân đoạn của riêng tuyến nhánh này
   splitDistance?: number
+  splitSortOrder?: 'asc' | 'desc'
+  kmPoints?: number[]
+  junctionDistanceMeters?: number
+  previewOnly?: boolean
 }
 
 export interface AssignedProjectOption {
   id: string
   code: string
   name: string
+  region?: string
+  location_detail?: string
   stationOriginText: string
   stationOriginKm: number
   endKm: number

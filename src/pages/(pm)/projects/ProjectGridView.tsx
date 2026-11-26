@@ -1,3 +1,5 @@
+import { displayKm } from '../../../utils/projectDistanceDisplay'
+import { hasWarrantyData } from '../../../utils/projectWarranty'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from './types'
@@ -9,6 +11,7 @@ interface ProjectGridViewProps {
   onNavigateAlignment: (projectId: string) => void
   onNavigateDetail: (projectId: string) => void
   onOpenCloseModal?: (prj: HubProject) => void
+  onOpenEditModal?: (prj: HubProject) => void
 }
 
 export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
@@ -17,7 +20,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
   onOpenCreateModal,
   onNavigateAlignment,
   onNavigateDetail,
-  onOpenCloseModal
+  onOpenCloseModal,
+  onOpenEditModal
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 font-body">
@@ -45,7 +49,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                   </div>
                   <span className="text-sm text-white font-bold mt-1">Dự án ngoài phạm vi phụ trách</span>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
-                    Bạn hiện chỉ được cấp quyền quản lý các tuyến được Supervisor chỉ định (BR-02).
+                    Bạn hiện chỉ được cấp quyền quản lý các tuyến được Giám sát chỉ định.
                   </p>
                 </div>
               </div>
@@ -59,12 +63,9 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
               ></div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent"></div>
 
-              <div className="absolute top-3 left-3 flex items-center gap-1.5">
+              <div className="absolute top-3 left-3">
                 <span className="font-mono px-2 py-0.5 bg-white/95 rounded-md text-[11px] text-slate-900 font-bold shadow-2xs">
                   {prj.code}
-                </span>
-                <span className="text-[11px] px-2 py-0.5 rounded-md bg-black/40 text-white font-medium">
-                  {prj.region}
                 </span>
               </div>
 
@@ -75,6 +76,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                       ? 'bg-slate-200 text-slate-800'
                       : prj.status === 'NEAR_EXPIRY'
                       ? 'bg-[#FEE2E2] text-rose-700 font-bold'
+                      : prj.status_label === 'Chưa thiết lập tim tuyến' || prj.status_label === 'Chưa có tim tuyến'
+                      ? 'bg-slate-100 text-slate-600'
                       : prj.status === 'PENDING_ALIGNMENT'
                       ? 'bg-[#FEF3C7] text-[#D97706]'
                       : 'bg-[#EDF7ED] text-[#1B5E20]'
@@ -86,30 +89,42 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         ? 'bg-slate-600'
                         : prj.status === 'NEAR_EXPIRY'
                         ? 'bg-rose-600 animate-ping'
+                        : prj.status_label === 'Chưa thiết lập tim tuyến' || prj.status_label === 'Chưa có tim tuyến'
+                        ? 'bg-slate-400'
                         : prj.status === 'PENDING_ALIGNMENT'
                         ? 'bg-[#D97706]'
                         : 'bg-[#1B5E20]'
                     }`}
                   ></span>
-                  {prj.status_label}
+                  {prj.status_label === 'Chưa thiết lập tim tuyến' ? 'Chưa có tim tuyến' : prj.status_label}
                 </span>
               </div>
 
               <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/95">
-                <span className="font-mono text-xs flex items-center gap-1">
-                  <Icon name="alt_route" size={14} className="text-brand-gold" />
-                  <span>{prj.stationing_text}</span>
+                <span className="font-mono text-xs flex items-center gap-1.5 truncate">
+                  <Icon name="alt_route" size={14} className="text-brand-gold shrink-0" />
+                  <span className="truncate">{prj.server_data_loaded ? prj.kml_status === prj.stationing_text ? prj.stationing_text : `${prj.kml_status} • ${prj.stationing_text}` : prj.stationing_text}</span>
                 </span>
-                <span className="text-[11px] opacity-85">{prj.location_detail}</span>
               </div>
             </div>
 
             {/* Card Body */}
             <div className="p-4 flex flex-col flex-1 justify-between gap-3.5">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <h3 className="font-bold text-sm text-slate-900 group-hover:text-brand-gold transition-colors leading-snug font-headline">
                   {prj.name}
                 </h3>
+                {isSupervisor&&onOpenEditModal&&<button type="button" onClick={()=>onOpenEditModal(prj)} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-gold"><Icon name="edit" size={14} />Sửa dự án</button>}
+
+                <div className="flex items-center gap-1 text-xs text-slate-600">
+                  <Icon name="location_on" size={14} className="text-brand-gold shrink-0" />
+                  <span className="truncate">
+                    Địa bàn:{' '}
+                    <strong className={prj.region || prj.location_detail ? 'text-slate-800 font-semibold' : 'text-slate-400 font-normal italic'}>
+                      {prj.region || prj.location_detail || 'Chưa thiết lập địa bàn'}
+                    </strong>
+                  </span>
+                </div>
 
                 {/* PM Info Block (BR-01) */}
                 {prj.is_assigned ? (
@@ -140,8 +155,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <Icon name="warning" size={16} className="text-[#D97706] shrink-0" />
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs text-[#92400E] font-bold">Chưa phân công PM</span>
-                        <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến (BR-01)</span>
+                        <span className="text-xs text-[#92400E] font-bold">{prj.server_facts?.primaryError ? 'Không tải được PM chính' : 'Chưa phân công PM'}</span>
+                        <span className="text-[10px] text-[#B45309] truncate">{prj.server_facts?.primaryError ? 'Chưa xác minh được phân công hiện tại' : 'Cần PM trước khi kích hoạt tuyến'}</span>
                       </div>
                     </div>
                   </div>
@@ -164,12 +179,12 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.status === 'NEAR_EXPIRY' ? 'text-rose-600' : 'text-slate-800'
                       }`}
                     >
-                      {prj.warranty_passed_percent}%{' '}
-                      <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span>
+                      {!hasWarrantyData(prj) ? prj.warranty_read_error ? 'Không tải được' : prj.warranty_message || 'Chưa có dữ liệu'  : <>{prj.warranty_passed_percent}%{' '}
+                      <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span></>}
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div
+                    {hasWarrantyData(prj) && <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         prj.status === 'NEAR_EXPIRY'
                           ? 'bg-rose-500'
@@ -177,8 +192,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                           ? 'bg-slate-300'
                           : 'bg-brand-gold'
                       }`}
-                      style={{ width: `${prj.warranty_passed_percent}%` }}
-                    ></div>
+                      style={{ width: Number.isFinite(prj.warranty_passed_percent) ? `${Math.max(0, Math.min(100, prj.warranty_passed_percent))}%` : '0%' }}
+                    ></div>}
                   </div>
                 </div>
 
@@ -186,7 +201,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Chiều dài</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{prj.length_km} km</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{Number.isFinite(prj.length_km) ? displayKm(prj.length_km!) : prj.geometry_read_error ? 'Không tải được' : 'Chưa có dữ liệu'}</span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Lỗi mở</span>
@@ -195,12 +210,12 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.open_defects > 0 ? 'text-rose-600' : 'text-slate-600'
                       }`}
                     >
-                      {prj.open_defects} điểm
+                      {Number.isFinite(prj.open_defects) ? `${prj.open_defects} điểm` : 'Chưa có số liệu'}
                     </span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Gói sửa</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{prj.repair_packages} gói</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{Number.isFinite(prj.repair_packages) ? prj.repair_packages : 'Chưa tải được'} gói</span>
                   </div>
                 </div>
               </div>
@@ -214,7 +229,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
                   >
                     <Icon name="inventory_2" size={16} />
-                    <span>Tra cứu hồ sơ lưu trữ (BC10)</span>
+                    <span>Tra cứu hồ sơ lưu trữ</span>
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -241,7 +256,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     {isSupervisor && onOpenCloseModal && (
                       <button
                         type="button"
-                        title="Đóng dự án khi hết hạn bảo hành (DA12)"
+                        title="Đóng dự án khi hết hạn bảo hành"
                         onClick={(e) => {
                           e.stopPropagation()
                           onOpenCloseModal(prj)
@@ -271,7 +286,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
           <div className="flex flex-col gap-1 max-w-xs">
             <h4 className="text-sm font-bold text-slate-900 font-headline">Tạo hồ sơ dự án mới</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-body">
-              Khởi tạo hồ sơ quản lý bảo hành công trình &amp; chỉ định 1 PM chính (BR-01, FR-04).
+              Khởi tạo hồ sơ quản lý bảo hành công trình &amp; chỉ định 1 PM chính.
             </p>
           </div>
           <button

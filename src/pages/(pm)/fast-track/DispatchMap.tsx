@@ -1,29 +1,15 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import { RouteConfig } from './types'
 
-export interface DispatchMapProps {
-  currentRouteConfig: RouteConfig
-  mapLayer: 'SATELLITE' | 'VECTOR'
-  setMapLayer: (layer: 'SATELLITE' | 'VECTOR') => void
-  mapContainerRef: React.RefObject<HTMLDivElement | null>
-  selectedDefectIds: string[]
-}
-
-export const DispatchMap: React.FC<DispatchMapProps> = ({
-  currentRouteConfig,
-  mapLayer,
-  setMapLayer,
-  mapContainerRef,
-  selectedDefectIds
-}) => {
+export const DispatchMap: React.FC = () => {
+  const mapLayer = null
   return (
     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Icon name="location_on" size={16} className="text-brand-gold" />
           <span className="text-xs font-bold text-brand-dark">
-            Bản Đồ Hiện Trường GIS &amp; Lộ Trình Tuyến: {currentRouteConfig.name}
+            Bản đồ hiện trường &amp; Lộ trình tuyến
           </span>
         </div>
 
@@ -31,7 +17,7 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
           <div className="inline-flex rounded-lg bg-white p-0.5 border border-slate-200 text-[11px] shadow-2xs">
             <button
               type="button"
-              onClick={() => setMapLayer('SATELLITE')}
+              disabled
               className={`px-2 py-0.5 rounded font-medium cursor-pointer transition-colors ${
                 mapLayer === 'SATELLITE' ? 'bg-brand-gold text-white font-bold' : 'text-slate-600'
               }`}
@@ -40,7 +26,7 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setMapLayer('VECTOR')}
+              disabled
               className={`px-2 py-0.5 rounded font-medium cursor-pointer transition-colors ${
                 mapLayer === 'VECTOR' ? 'bg-brand-gold text-white font-bold' : 'text-slate-600'
               }`}
@@ -52,14 +38,14 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
       </div>
 
       <div className="relative w-full h-72 rounded-xl overflow-hidden shadow-inner border border-slate-300 bg-slate-950">
-        <div ref={mapContainerRef} className="w-full h-full" />
-        <div className="absolute top-2.5 left-2.5 bg-black/80 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] font-mono border border-white/10 pointer-events-none z-10 shadow-md">
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400"><Icon name="map" size={36} /><p className="text-sm">Chưa cập nhật</p></div>
+        <div className="absolute top-2.5 left-2.5 bg-black/80 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] border border-white/10 pointer-events-none z-10 shadow-md">
           <div className="flex items-center gap-1.5 text-brand-gold font-bold">
             <Icon name="groups" size={14} className="text-brand-gold" />
-            <span>{currentRouteConfig.code}: {currentRouteConfig.stationRange}</span>
+            <span>Lộ trình tuyến: Chưa cập nhật</span>
           </div>
           <div className="text-slate-300 mt-0.5">
-            {selectedDefectIds.length} điểm đã chọn • Xanh lá: Đạt chuẩn • Đỏ nhấp nháy: Vi phạm ngưỡng
+            Chưa có vị trí đã xác minh để hiển thị
           </div>
         </div>
       </div>
