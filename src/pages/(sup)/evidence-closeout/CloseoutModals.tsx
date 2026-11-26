@@ -41,8 +41,6 @@ export interface CloseoutModalsProps {
   setIsExportModalOpen: (open: boolean) => void
   exportFormat: 'PDF_A' | 'ZIP_PACKAGE'
   setExportFormat: (f: 'PDF_A' | 'ZIP_PACKAGE') => void
-  includeSha256Checksum: boolean
-  setIncludeSha256Checksum: (b: boolean) => void
   includeDroneRawTiff: boolean
   setIncludeDroneRawTiff: (b: boolean) => void
   isExporting: boolean
@@ -65,8 +63,6 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
   setIsExportModalOpen,
   exportFormat,
   setExportFormat,
-  includeSha256Checksum,
-  setIncludeSha256Checksum,
   includeDroneRawTiff,
   setIncludeDroneRawTiff,
   isExporting,
@@ -107,8 +103,6 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
             currentItem={currentItem}
             setExportFormat={setExportFormat}
             caseCode={currentPackage?.case_code}
-            includeSha256Checksum={includeSha256Checksum}
-            setIncludeSha256Checksum={setIncludeSha256Checksum}
             isExporting={isExporting}
             onExport={handleTriggerExport}
           />

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 import { CaseReportImage, evidenceGps, useCaseReportMedia } from './useCaseReportMedia'
@@ -16,6 +16,19 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
 }) => {
   const media = useCaseReportMedia()
   const gps = evidenceGps(media?.caseId === selectedCase.id ? media.selected?.evidence : null)
+  const [showInfo, setShowInfo] = useState(true)
+  const sel = media?.caseId === selectedCase.id ? media.selected : null
+  const report = sel ? media?.reports.find(r => r.reportId === sel.reportId) : undefined
+  const ev = sel?.evidence
+  const rows: Array<[string, string]> = sel && report && ev ? [
+    ['Người gửi', report.reporterDisplayName || 'Chưa có dữ liệu'],
+    ['SĐT người gửi', report.reporterPhoneNumber || 'Chưa có dữ liệu'],
+    ['Loại ảnh', ev.supplementId ? 'Ảnh bổ sung' : 'Ảnh gốc'],
+    ['Thời điểm chụp (thiết bị khai)', ev.capturedAt || 'Chưa có dữ liệu'],
+    ['Thời điểm máy chủ nhận', (ev.supplementId ? report.supplements.find(x => x.id === ev.supplementId)?.receivedAt : report.receivedAt) || 'Chưa có dữ liệu'],
+    ['Nguồn GPS', ev.locationSource || 'UNKNOWN'],
+    ['Sai số GPS', typeof ev.location?.accuracyMeters === 'number' ? `${ev.location.accuracyMeters} m` : 'Chưa có dữ liệu (UNKNOWN)']
+  ] : []
   return (
     <>
       <div className="flex items-center justify-between">
@@ -53,6 +66,11 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
             </>
           )}
         </div>
+
+        {rows.length > 0 && <div className="absolute top-11 left-2.5 max-w-[calc(100%-1.25rem)] text-white">
+          <button type="button" onClick={() => setShowInfo(v => !v)} className="bg-slate-950/80 border border-white/10 rounded-full px-2.5 py-0.5 text-[10px] font-semibold cursor-pointer">{showInfo ? 'Ẩn bảng thông tin ảnh' : 'Hiện bảng thông tin ảnh'}</button>
+          {showInfo && <table data-testid="evidence-info-table" className="mt-1 bg-slate-950/80 backdrop-blur-md border border-white/10 rounded-lg text-[10px] font-mono"><tbody>{rows.map(([k, v]) => <tr key={k}><th className="text-left font-semibold text-slate-300 px-2 py-0.5 whitespace-nowrap">{k}</th><td className="px-2 py-0.5 break-all">{v}</td></tr>)}</tbody></table>}
+        </div>}
 
         {/* Bottom-right quick view buttons */}
         <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5">

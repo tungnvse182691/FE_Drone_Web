@@ -90,7 +90,7 @@ export const AlignmentAddBranchModal: React.FC<AlignmentAddBranchModalProps> = (
             <div>
               <h2 className="text-base font-bold text-slate-900">Tạo Tuyến Nhánh Mới</h2>
               <p className="text-xs text-slate-500">
-                Thiết lập tim tuyến nhánh bằng danh sách tọa độ GPS chuẩn WGS84
+                Xem trước tim tuyến nhánh bằng tọa độ WGS84 — chỉ cục bộ, chưa lưu lên máy chủ
               </p>
             </div>
           </div>
@@ -238,7 +238,7 @@ export const AlignmentAddBranchModal: React.FC<AlignmentAddBranchModalProps> = (
               className="px-5 py-2 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer text-xs active:scale-98"
             >
               <Save className="w-4 h-4" />
-              <span>Lưu tuyến nhánh</span>
+              <span>Thêm nhánh xem trước (chưa lưu)</span>
             </button>
           </div>
         </form>

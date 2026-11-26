@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { repairSafetyService, type SafetyView, type TemporarySafetySources } from '../../../api/services/repairSafetyService'
+import { repairSafetyService, safetyResolutionService, type SafetyView, type TemporarySafetySources } from '../../../api/services/repairSafetyService'
+import { SafetyResolveForm } from './SafetyResolveForm'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 import { fieldTaskReadService } from '../../../api/services/fieldTaskReadService'
 import type { RepairItem } from '../../../api/services/repairWorkflowService'
@@ -28,6 +29,7 @@ export const RepairSafetyPanel: React.FC<{ projectId: string; packageId: string;
   const [reason, setReason] = useState('')
   const [measureId, setMeasureId] = useState('')
   const [view, setView] = useState<SafetyView | null>(null)
+  const [history, setHistory] = useState<Load<string[]>>({ status: 'idle' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -67,6 +69,15 @@ export const RepairSafetyPanel: React.FC<{ projectId: string; packageId: string;
 
   useEffect(() => { setItemId(''); setError(''); setMessage(''); setAddError(''); void load('') }, [projectId, packageId, load])
   useEffect(() => () => { seq.current++ }, [])
+  // Lịch sử biện pháp của hạng mục (GET …/safety-measures): chỉ để xem/kết thúc, không dùng để chọn nghĩa vụ.
+  useEffect(() => {
+    setHistory({ status: 'idle' })
+    if (!itemId) return
+    let live = true
+    setHistory({ status: 'loading' })
+    safetyResolutionService.measureIds(projectId, packageId, itemId).then((ids) => { if (live) setHistory({ status: 'ready', data: ids }) }).catch((e) => { if (live) setHistory({ status: 'error', error: exportError(e) }) })
+    return () => { live = false }
+  }, [projectId, packageId, itemId, view?.id])
 
   if (!normal.length) return null
   const item = normal.find((i) => i.id === itemId)
@@ -171,6 +182,16 @@ export const RepairSafetyPanel: React.FC<{ projectId: string; packageId: string;
         <div className="flex-1"><span className="rg-label">Mã biện pháp an toàn</span><input aria-label="Mã biện pháp an toàn" disabled={busy || !itemId} value={measureId} onChange={(e) => setMeasureId(e.target.value)} placeholder="Mã biện pháp an toàn (GUID)" className={`${cls} font-mono`} /></div>
         <PanelButton className="whitespace-nowrap" disabled={busy || !itemId || !measureId.trim()} onClick={() => { void run(() => repairSafetyService.read(projectId, packageId, itemId, measureId), 'Đã đọc biện pháp an toàn.') }}>Xem biện pháp</PanelButton>
       </div>
+      {itemId && history.status === 'error' && <div className="rg-alert rg-alert-error" data-testid="safety-history-error"><Icon name="error" size={16} className="mt-px" /><p role="alert" className="min-w-0 break-words">Không đọc được lịch sử biện pháp an toàn của hạng mục: {history.error}</p></div>}
+      {itemId && history.status === 'ready' && (
+        <div data-testid="safety-history"><span className="rg-label">Biện pháp an toàn của hạng mục (lịch sử, chỉ đọc)</span>
+          {history.data!.length === 0 ? <p className="rg-hint">Hạng mục chưa có biện pháp an toàn nào thuộc trách nhiệm của dự án này.</p> : (
+            <select aria-label="Lịch sử biện pháp an toàn" className={cls} disabled={busy} value={view?.id || ''} onChange={(e) => { if (e.target.value) void run(() => repairSafetyService.read(projectId, packageId, itemId, e.target.value), 'Đã đọc biện pháp an toàn.') }}>
+              <option value="">Chọn biện pháp để xem / kết thúc</option>
+              {history.data!.map((id) => <option key={id} value={id}>Biện pháp #{short(id)}</option>)}
+            </select>)}
+        </div>
+      )}
       {view && (
         <div data-testid="safety-view" className="rg-subcard">
           <KV items={[
@@ -184,6 +205,7 @@ export const RepairSafetyPanel: React.FC<{ projectId: string; packageId: string;
           ]} />
         </div>
       )}
+      {view && itemId && <SafetyResolveForm key={view.id} projectId={projectId} packageId={packageId} itemId={itemId} measureId={view.id} />}
       <Feedback error={error} message={message} />
     </PanelShell>
   )

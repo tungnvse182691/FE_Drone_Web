@@ -58,4 +58,6 @@ export interface AIDetectionItem {
   /** Không đọc được trạng thái thẩm định từ BE (khác với "chưa có quyết định"): khóa thao tác ghi, cho thử lại. */
   stateUnknown?: boolean
   stateError?: string
+  /** Giám sát đọc dữ kiện ứng viên nhưng quyết định của PM không thuộc phạm vi được đọc (403) — khác với 'chưa có dữ liệu'. */
+  decisionRestricted?: boolean
 }

@@ -154,11 +154,10 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
           </div>
         </div>
 
-        {/* THIẾT LẬP KHE CO GIÃN & KHE GIÃN NỞ */}
-        <div className="bg-white p-2.5 rounded-lg border border-amber-200/80 flex flex-col gap-2">
-          <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-            <span>⚡ Cự ly Khe co giãn & Khe giãn nở:</span>
-          </span>
+        {/* THIẾT LẬP KHE CO GIÃN & KHE GIÃN NỞ — nằm trong phần chú thích/thông số, mặc định thu gọn (không thuộc luồng chính) */}
+        <details className="bg-white p-2.5 rounded-lg border border-amber-200/80" data-testid="joint-params">
+          <summary className="text-[11px] font-bold text-slate-800 cursor-pointer">Chú thích &amp; thông số khe co giãn / khe giãn nở</summary>
+          <div className="flex flex-col gap-2 pt-2">
 
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -205,7 +204,8 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
               className="w-28 h-8 px-2.5 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
             />
           </div>
-        </div>
+          </div>
+        </details>
       </div>
 
       {/* Bảng danh sách mã tấm Slab */}

@@ -2,6 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
+import { severityLabel as sharedSeverityLabel } from '../../../utils/severity'
 
 export interface DrawerDecisionBannersProps {
   selectedCase: TriageCase
@@ -22,13 +23,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const severityLabel =
-    selectedCase.severity === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.severity === 'CRITICAL'
-      ? 'Khẩn cấp'
-      : selectedCase.severity === 'HIGH'
-        ? 'Nghiêm trọng'
-        : selectedCase.severity === 'MEDIUM'
-          ? 'Vừa'
-          : 'Nhẹ'
+    selectedCase.severity === 'UNKNOWN' ? 'Chưa xác định' : sharedSeverityLabel(selectedCase.severity)
 
   const urgencyLabel =
     selectedCase.urgency === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.urgency === 'EMERGENCY'

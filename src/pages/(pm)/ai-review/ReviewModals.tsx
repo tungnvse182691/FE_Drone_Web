@@ -163,7 +163,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         onRetryProjects={triagePending?.retryTargets}
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
-        onConfirmTriageProject={(method, reason, geometryPins) => { if (triagePending) void triagePending.execute(method, reason, false, geometryPins); else if (!geometryPins) onConfirmTriageProject(method, reason) }}
+        onConfirmTriageProject={(method, reason, geometryPins, grounds) => { if (triagePending) void triagePending.execute(method, reason, false, geometryPins, grounds); else if (!geometryPins) onConfirmTriageProject(method, reason) }}
         busy={triagePending?.busy}
         error={triagePending?.commandError}
         held={!!triagePending?.held}

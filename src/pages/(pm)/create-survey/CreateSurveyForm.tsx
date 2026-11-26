@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Icon } from '../../../components/ui/Icon'
 import { ProjectRouteConfig, AvailablePilot } from './types'
+import { useWarrantyWindow } from '../../../hooks/useWarrantyWindow'
+import { warrantyDueError, warrantyHint, warrantyMaxDateTime } from '../../../utils/warrantyDeadline'
 
 interface CreateSurveyFormProps {
   projects: ProjectRouteConfig[]
@@ -107,6 +109,8 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const warranty = useWarrantyWindow(currentProject?.parentProjectId)
+  const dueWarrantyErr = warrantyDueError(warranty, dueAt, 'Hạn hoàn thành nhiệm vụ')
   return (
     <form onSubmit={onSubmit} className="space-y-5 font-body">
       {/* THẺ 1: HÀNH LANG & TUYẾN ĐƯỜNG KHẢO SÁT (#1E40AF Blue) */}
@@ -329,7 +333,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               disabled={operatorLoading} onClick={onRetryOperators} className="ml-2 underline">Đọc lại Operator</button>}
             </span>
           </div>
-          <label className="block min-w-0 text-xs font-semibold text-slate-700 sm:col-span-3">Hạn hoàn thành nhiệm vụ (tùy chọn)<input type="datetime-local" aria-label="Hạn hoàn thành nhiệm vụ" value={dueAt} onChange={e=>setDueAt?.(e.target.value)} className="mt-1 w-full h-10 px-3 border border-[#E2E5E9] rounded-[10px]" /></label>
+          <label className="block min-w-0 text-xs font-semibold text-slate-700 sm:col-span-3">Hạn hoàn thành nhiệm vụ (tùy chọn)<input type="datetime-local" aria-label="Hạn hoàn thành nhiệm vụ" value={dueAt} max={warrantyMaxDateTime(warranty)} onChange={e=>setDueAt?.(e.target.value)} className="mt-1 w-full h-10 px-3 border border-[#E2E5E9] rounded-[10px]" /><span className="block mt-1 text-[11px] font-normal text-slate-500">{warrantyHint(warranty)}</span>{dueWarrantyErr&&<span role="alert" data-testid="survey-due-warranty-error" className="block mt-1 text-[11px] font-normal text-rose-700">{dueWarrantyErr}</span>}</label>
         </fieldset>
       </div>
 
@@ -346,7 +350,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
           <Button
             type={resultVerified ? 'button' : 'submit'}
             onClick={resultVerified ? onViewResult : undefined}
-            disabled={commandBusy || !!commandBlockedReason || !recoveryLabel && (!currentProject.hasAlignment || Boolean(conflictReason) || !!scopeError)}
+            disabled={commandBusy || !!commandBlockedReason || !recoveryLabel && (!!dueWarrantyErr || !currentProject.hasAlignment || Boolean(conflictReason) || !!scopeError)}
             title={
               commandBlockedReason || (!currentProject.hasAlignment
                 ? 'Dự án chưa có tim tuyến kỹ thuật để lập kế hoạch bay'

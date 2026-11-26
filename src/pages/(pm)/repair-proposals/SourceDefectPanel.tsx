@@ -3,6 +3,7 @@ import { apiClient } from '../../../api/client'
 import { exportError } from '../../../api/services/projectExportService'
 import { Empty, Feedback, KV, Loading, PanelButton, PanelShell, Pill, SectionTitle } from '../../../components/ui/PanelKit'
 import type { RepairItem } from '../../../api/services/repairWorkflowService'
+import { defectTypeLabel, useDefectTypeNames } from '../../../api/services/defectTypeNames'
 
 interface SourceDefect {
   defectId: string; defectTypeCode?: string | null; severity?: string | null; status?: string | null; geometryWkt?: string | null; srid?: number | null
@@ -13,6 +14,7 @@ const KIND: Record<string, string> = { CURRENT_SOURCE: 'Defect hiện hành (kh�
 
 /** Khiếm khuyết gốc của hạng mục: GET …/items/{itemId}/source-defect (PM/Sup). Ảnh bằng chứng mở theo contentPath do BE trả (kiểm quyền mỗi lần). */
 export const SourceDefectPanel: React.FC<{ projectId: string; packageId: string; items: RepairItem[] }> = ({ projectId, packageId, items }) => {
+  const { names: typeNames } = useDefectTypeNames()
   const [itemId, setItemId] = useState(items[0]?.id || '')
   useEffect(() => { if (!items.some((i) => i.id === itemId)) setItemId(items[0]?.id || '') }, [items, itemId])
   const [data, setData] = useState<SourceDefect | null>(null)
@@ -54,7 +56,7 @@ export const SourceDefectPanel: React.FC<{ projectId: string; packageId: string;
       {data && (
         <div className="space-y-3">
           <KV items={[
-            { k: 'Loại hư hỏng', v: data.defectTypeCode || 'Chưa có' },
+            { k: 'Loại hư hỏng', v: defectTypeLabel(data.defectTypeCode, typeNames) },
             { k: 'Mức độ', v: data.severity || 'Chưa có' },
             { k: 'Trạng thái', v: data.status || 'Chưa có' },
             { k: 'Nguồn dữ liệu', v: KIND[data.dataKind || ''] || data.dataKind || 'Chưa rõ' },

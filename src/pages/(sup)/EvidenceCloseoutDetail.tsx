@@ -9,6 +9,7 @@ import { ComparisonViewer } from './evidence-closeout/ComparisonViewer'
 import { TechnicalCriteriaCard } from './evidence-closeout/TechnicalCriteriaCard'
 import { CloseoutModals } from './evidence-closeout/CloseoutModals'
 import { DefectClosurePanel } from './evidence-closeout/DefectClosurePanel'
+import { SubmissionHistoryPanel } from './evidence-closeout/SubmissionHistoryPanel'
 import { acceptanceService, AcceptancePackage, AcceptanceStaleError, AcceptanceStepError } from '../../api/services/acceptanceService'
 import { ReviewModalVariant } from './evidence-closeout/DeclareConstructionModal'
 import { beErrorText, repairStateLabel } from './evidence-closeout/acceptanceLabels'
@@ -96,7 +97,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
 
   // Export Form State
   const [exportFormat, setExportFormat] = useState<'PDF_A' | 'ZIP_PACKAGE'>('PDF_A')
-  const [includeSha256Checksum, setIncludeSha256Checksum] = useState(true)
   const [includeDroneRawTiff, setIncludeDroneRawTiff] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
 
@@ -324,6 +324,10 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         isPMView={isPMView}
       />
 
+      {!loadError && currentPackage?.project_id && currentItem.package_id === currentPackage.id && (
+        <SubmissionHistoryPanel projectId={currentPackage.project_id} packageId={currentPackage.id} itemId={currentItem.id} reloadKey={[currentItem.status, currentItem.submission_id || '', currentItem.item_version || ''].join(':')} />
+      )}
+
       {/* Technical Criteria Checklist (TCVN 8819:2011) */}
       <TechnicalCriteriaCard
         currentItem={currentItem}
@@ -356,8 +360,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         setIsExportModalOpen={setIsExportModalOpen}
         exportFormat={exportFormat}
         setExportFormat={setExportFormat}
-        includeSha256Checksum={includeSha256Checksum}
-        setIncludeSha256Checksum={setIncludeSha256Checksum}
         includeDroneRawTiff={includeDroneRawTiff}
         setIncludeDroneRawTiff={setIncludeDroneRawTiff}
         isExporting={isExporting}

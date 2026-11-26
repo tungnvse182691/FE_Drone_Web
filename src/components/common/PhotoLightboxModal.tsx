@@ -351,17 +351,13 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
               {measuredValue !== undefined ? (
                 <div className="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700/80 space-y-1">
                   <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>Kết quả đo thực tế (mm):</span>
-                    <span className="text-[10px] font-mono text-emerald-400">Mobile EXIF Verified</span>
+                    <span>Kết quả đo thực tế ({unit}):</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-extrabold font-mono text-rose-500">
                       {measuredValue}
                     </span>
                     <span className="text-sm font-semibold text-slate-300">{unit}</span>
-                    <span className="text-[11px] text-rose-400 ml-auto font-medium">
-                      (Vượt ngưỡng kỹ thuật)
-                    </span>
                   </div>
                 </div>
               ) : (
@@ -378,18 +374,18 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
                     <span>Lý trình:</span>
                   </span>
                   <span className="font-semibold text-slate-200 text-right">
-                    Km {chainage} {lane ? `• ${lane}` : ''}
+                    {chainage !== undefined && chainage !== null && chainage !== '' ? `Km ${chainage}` : 'Chưa có dữ liệu'} {lane ? `• ${lane}` : ''}
                   </span>
                 </div>
 
-                {(gpsLat || gpsLng) && (
-                  <div className="flex items-start justify-between gap-2">
+                {(
+                  <div className="flex items-start justify-between gap-2" data-testid="lightbox-gps">
                     <span className="text-slate-400 flex items-center gap-1.5">
                       <Icon name="gps_fixed" size={14} className="text-emerald-400" />
                       <span>Tọa độ GPS:</span>
                     </span>
                     <span className="font-mono text-slate-200 text-right">
-                      {gpsLat?.toFixed(4)}° N, {gpsLng?.toFixed(4)}° E
+                      {Number.isFinite(gpsLat) && Number.isFinite(gpsLng) ? `${gpsLat!.toFixed(6)}, ${gpsLng!.toFixed(6)} (WGS84)` : 'Chưa có dữ liệu'}
                     </span>
                   </div>
                 )}

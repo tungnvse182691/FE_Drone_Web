@@ -6,6 +6,7 @@ import { saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { reportKeepNewCommands } from './reportKeepNewCommands'
+import { caseReportService } from './caseReportService'
 
 // DTO Interfaces theo OpenAPI Candidate3 (docs/contracts/openapi.json)
 export interface InternalCaseDto {
@@ -40,6 +41,11 @@ export interface CaseTriageInput {
   routeVersionId?: string | null
   segmentSetId?: string | null
   geometryVersion?: string | null
+  // Căn cứ định tuyến (REPORTER-ROUTING-MAP.md §C): Case-level grounds, chỉ gửi khi người dùng đã chọn đúng ảnh.
+  reportId?: string | null
+  evidenceId?: string | null
+  roadSectionId?: string | null
+  routingEvaluationVersion?: string | null
   version?: string
 }
 
@@ -244,6 +250,43 @@ export class CaseListReadError extends Error {
 export const isCaseReadCanceled = isCancel
 
 /**
+ * Thông tin người gửi/nội dung của danh sách Case lấy từ GET /cases/{id}/reports (tài khoản hiện tại của Reporter),
+ * không dùng InternalCaseDto (không có trường này). Lỗi đọc báo riêng từng Case; không điền dữ liệu giả.
+ */
+async function enrichReporterInfo(cases: TriageCase[], signal?: AbortSignal): Promise<TriageCase[]> {
+  const role = useAuthStore.getState().user?.role
+  if (role !== RoleCode.PROJECT_MANAGER && role !== RoleCode.SUPERVISOR) return cases
+  const out = new Array<TriageCase>(cases.length)
+  let next = 0
+  const uuid = (v: unknown) => typeof v === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(v) && !/^0{8}-0{4}-0{4}-0{4}-0{12}$/.test(v)
+  const worker = async () => {
+    while (next < cases.length) {
+      const i = next++, c = cases[i]
+      if (!c.report_ids?.length) { out[i] = c; continue }
+      try {
+        const reports = await caseReportService.read(c.id, signal)
+        if (!reports.length) { out[i] = c; continue }
+        const ordered = [...reports].sort((a, b) => String(a.receivedAt).localeCompare(String(b.receivedAt)))
+        const first = ordered[0], names = [...new Set(reports.map(r => r.reporterDisplayName).filter(Boolean))]
+        const citizen = reports.every(r => uuid(r.reportId) && uuid(r.reporterUserId))
+        out[i] = {
+          ...c,
+          ...(citizen ? { source: 'CITIZEN' as const, source_label: 'Phản ánh từ người dân', reporter_channel: 'Ứng dụng Người dân' } : {}),
+          reporter_name: names.length > 1 ? `${names[0]} (+${names.length - 1} người)` : names[0] || undefined,
+          reporter_phone: first.reporterPhoneNumber || undefined,
+          description: first.description || undefined
+        }
+      } catch (error: any) {
+        if (isCancel(error) || signal?.aborted) throw error
+        out[i] = { ...c, reporter_read_error: 'Không đọc được thông tin người gửi' + (error?.response?.status ? ` (HTTP ${error.response.status})` : '') }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(6, cases.length) }, worker))
+  return out
+}
+
+/**
  * Case OPEN không nói PM đã quyết định hay chưa. Quyết định Report→Defect (KEEP_NEW) được đọc lại từ BE
  * (GET candidate-decisions/{id} + GET defects/{id}) theo reference PM đã ghi nhận, rồi gắn nhãn RIÊNG:
  * 'Đã ghi nhận' (quyết định) và defect_status (trạng thái Defect do BE trả). Lỗi đọc được hiện nguyên văn, không nuốt.
@@ -397,7 +440,7 @@ export const triageService = {
       if (failures.length) {
         throw new CaseListReadError(mapped, failures)
       }
-      const enriched = await enrichDecisionState(mapped, signal)
+      const enriched = await enrichReporterInfo(await enrichDecisionState(mapped, signal), signal)
       assertCaseReadActive(session, signal)
       return enriched
     } catch (error) {
@@ -516,7 +559,10 @@ export const triageService = {
     if (!/^"[A-Za-z0-9+/]{11}="$/.test(version)) throw new Error('If-Match phải là version Case 8 byte đã đọc.')
     if (!!payload.routeVersionId !== !!payload.segmentSetId || !!payload.routeVersionId !== !!payload.geometryVersion?.trim()) throw new Error('Geometry cần đủ routeVersionId/segmentSetId/geometryVersion; không tự tạo pin.')
     if (payload.routeVersionId && (!/^[0-9a-f]{64}$/i.test(payload.geometryVersion || '') || !/^[0-9a-f-]{36}$/i.test(payload.routeVersionId) || !/^[0-9a-f-]{36}$/i.test(payload.segmentSetId || ''))) throw new Error('Pin hình học cần UUID tuyến/set và hash package 64 hex không ngoặc kép.')
-    const body = {projectId:payload.projectId,verificationMethod:payload.verificationMethod,reason:payload.reason.trim(),...(payload.routeVersionId ? {routeVersionId:payload.routeVersionId,segmentSetId:payload.segmentSetId,geometryVersion:payload.geometryVersion} : {})}
+    if (payload.reportId && !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(payload.reportId) || payload.evidenceId && (!payload.reportId || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(payload.evidenceId))) throw new Error('Căn cứ triage cần Report/ảnh UUID hợp lệ (evidence phải kèm Report).')
+    if (payload.roadSectionId && !payload.routeVersionId) throw new Error('roadSectionId chỉ gửi kèm đủ pin tuyến/bộ phân đoạn/geometryVersion từ geometry-package.')
+    if (payload.routingEvaluationVersion && !payload.reportId) throw new Error('routingEvaluationVersion cần kèm Report đã chọn.')
+    const body = {projectId:payload.projectId,verificationMethod:payload.verificationMethod,reason:payload.reason.trim(),...(payload.routeVersionId ? {routeVersionId:payload.routeVersionId,segmentSetId:payload.segmentSetId,geometryVersion:payload.geometryVersion} : {}),...(payload.reportId ? {reportId:payload.reportId,...(payload.evidenceId ? {evidenceId:payload.evidenceId} : {}),...(payload.roadSectionId ? {roadSectionId:payload.roadSectionId} : {}),...(payload.routingEvaluationVersion ? {routingEvaluationVersion:payload.routingEvaluationVersion} : {})} : {})}
     const fingerprint = JSON.stringify({body,version}), journalKey = triageJournal(caseId)
     const previous = this.pendingTriage(caseId)
     const command: PendingTriage = previous || {key:crypto.randomUUID(),body,version,fingerprint}

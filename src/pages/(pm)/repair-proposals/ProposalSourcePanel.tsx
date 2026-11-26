@@ -6,6 +6,7 @@ import { workflowCollection } from '../../../api/services/workflowCollection'
 import { fieldTaskReadService, type FieldMeasurement } from '../../../api/services/fieldTaskReadService'
 import { measurementEnumLabel, measurementTypeLabel } from '../../../api/services/fieldMeasurementTypes'
 import { Icon } from '../../../components/ui/Icon'
+import { defectTypeLabel, useDefectTypeNames } from '../../../api/services/defectTypeNames'
 
 const NONE = 'Chưa có dữ liệu'
 type Section<T> = { status: 'loading' | 'ready' | 'error'; data?: T; error?: string }
@@ -28,7 +29,8 @@ function chainageOf(scope?: string | null): string | null {
  *  GET /projects/{p}/work-package (tên tuyến), GET /projects/{p}/field-inspection-tasks (+ chi tiết, bản nộp, lịch sử/review).
  * Không suy luận phạm vi từ vị trí Defect; không ghi đè phạm vi PM nhập.
  */
-export const ProposalSourcePanel: React.FC<{ projectId: string; defectId: string; defectCode: string; segmentSetLabel?: string; range?: ProposalSourceRange }> = ({ projectId, defectId, defectCode, segmentSetLabel, range }) => {
+export const ProposalSourcePanel: React.FC<{ projectId: string; defectId: string; defectCode: string; segmentSetLabel?: string; range?: ProposalSourceRange; hidePmRange?: boolean }> = ({ projectId, defectId, defectCode, segmentSetLabel, range, hidePmRange }) => {
+  const { names: typeNames } = useDefectTypeNames()
   const [defect, setDefect] = useState<Section<DefectFacts>>({ status: 'loading' })
   const [route, setRoute] = useState<Section<string | null>>({ status: 'loading' })
   const [tasks, setTasks] = useState<Section<TaskFacts[]>>({ status: 'loading' })
@@ -87,7 +89,7 @@ export const ProposalSourcePanel: React.FC<{ projectId: string; defectId: string
         {err('Defect', defect)}
         {d && <>
           {row('Mã', defectCode)}
-          {row('Loại', d.defectTypeCode || NONE)}
+          {row('Loại', defectTypeLabel(d.defectTypeCode, typeNames))}
           {row('Trạng thái', d.status || NONE)}
           {row('Mức độ', d.severity || NONE)}
         </>}
@@ -103,12 +105,12 @@ export const ProposalSourcePanel: React.FC<{ projectId: string; defectId: string
           {row('Lý trình / độ lệch của Defect', NONE)}
         </>}
       </section>
-      <section className="space-y-1" data-testid="source-pm-range">
+      {!hidePmRange && <section className="space-y-1" data-testid="source-pm-range">
         <p className="font-semibold text-slate-600">Phạm vi PM đề xuất sửa chữa (nhập ở biểu mẫu, không suy từ Defect)</p>
         {row('Bộ phân đoạn tham chiếu', segmentSetLabel || NONE)}
         {row('Lý trình', pmRange && range ? `${range.fromMeters || '—'} → ${range.toMeters || '—'} m` : 'Chưa nhập')}
         {row('Độ lệch', pmRange && range ? `${range.offsetFromMeters || '—'} → ${range.offsetToMeters || '—'} m` : 'Chưa nhập')}
-      </section>
+      </section>}
       <section className="space-y-2" data-testid="source-field">
         <p className="font-semibold text-slate-600">Đo hiện trường (FIELD)</p>
         {tasks.status === 'loading' && <p role="status" className="text-slate-500">Đang đọc nhiệm vụ đo…</p>}

@@ -7,6 +7,8 @@ import {fastTrackService} from '../../../api/services/fastTrackService'
 import {measurementTypeLabel} from '../../../api/services/fieldMeasurementTypes'
 import {FieldTaskImpactPanel} from './FieldTaskImpactPanel'
 import {useSubmitGuard} from '../../../hooks/useSubmitGuard'
+import {resolveRepairTaskBinding,reviewRepairTaskSubmission,type RepairTaskBinding} from '../../../api/services/acceptanceService'
+import {beErrorText} from '../../(sup)/evidence-closeout/acceptanceLabels'
 export type FieldRead=Awaited<ReturnType<typeof fieldTaskReadService.read>>
 // Khối này giữ hồ sơ nhiệm vụ, lịch sử, review và giao lại. Số đo/ảnh của bản nộp mới nhất hiển thị ở khối hợp nhất bên dưới
 // (cùng dữ liệu GET, báo qua onLoaded) để không còn hai khối mâu thuẫn.
@@ -22,6 +24,9 @@ export function FieldTaskReadDetails({projectId,taskId,onReviewed,onLoaded}:{pro
  useEffect(()=>{if(role!=='PROJECT_MANAGER')return;let on=true;setCrewsLoaded(false);fastTrackService.getCrews(projectId).then(r=>{if(on){setCrews(r.map(c=>({id:c.id,name:c.name})));setCrewsLoaded(true)}}).catch(e=>{if(on)setActError(fieldReadError(e))});return()=>{on=false}},[projectId,role])
  useEffect(()=>{setActReason('');setActSummary('');setActError('');setActCrew('')},[scope])
  useEffect(()=>{setDecision('');setReason('');setReviewError('');setReviewing(false)},[scope])
+ // Task sửa chữa có binding: review qua repair attempts/reviews (ACCEPT/SUPPLEMENT), không chặn bằng readiness của FIELD.
+ const [binding,setBinding]=useState<{scope:string;value:RepairTaskBinding|null}|null>(null),[bindingError,setBindingError]=useState(''),[rDecision,setRDecision]=useState<'ACCEPT'|'SUPPLEMENT'|''>(''),[rReason,setRReason]=useState(''),[rBusy,setRBusy]=useState(false),[rError,setRError]=useState(''),[rDone,setRDone]=useState('')
+ useEffect(()=>{setRDecision('');setRReason('');setRError('');setRDone('')},[scope])
  let held:ReturnType<typeof fieldReviewCommands.pending>=null,journalError=''
  try{if(role==='PROJECT_MANAGER')held=fieldReviewCommands.pending(projectId,taskId)}catch(e){journalError=(e as Error).message}
  const review=async()=>{
@@ -30,6 +35,15 @@ export function FieldTaskReadDetails({projectId,taskId,onReviewed,onLoaded}:{pro
   try{const input=held?.body||{submissionId:current.task.latestSubmissionId||'',decision:decision as FieldReviewInput['decision'],reason};const value=await fieldReviewCommands.request(projectId,taskId,input,held?.version||current.task.version||'');if(latest.current!==start)return;setData({scope:start,value});setDecision('');setReason('');onReviewed?.(value.task)}catch(e){if(latest.current===start)setReviewError(fieldReadError(e))}finally{if(latest.current===start)setReviewing(false)}
  }
  const current=data?.scope===scope?data.value:null
+ const isRepairTask=!!current&&!!current.task.mode&&current.task.mode!=='MEASURE_ONLY'&&role==='PROJECT_MANAGER'
+ const rb=binding?.scope===scope?binding.value:null
+ useEffect(()=>{if(!isRepairTask||!current)return;const c=new AbortController();setBindingError('');resolveRepairTaskBinding(projectId,taskId,current.task.defectId,c.signal).then(v=>{if(!c.signal.aborted)setBinding({scope,value:v})}).catch(e=>{if(!c.signal.aborted)setBindingError(beErrorText(e))});return()=>c.abort()},[isRepairTask,scope,current?.task.version,current?.task.latestSubmissionId])
+ const repairReview=async()=>{
+  if(rBusy||!current||!rb||!rDecision||!current.task.latestSubmissionId)return
+  const start=scope;setRBusy(true);setRError('');setRDone('')
+  try{await reviewRepairTaskSubmission(rb,current.task.latestSubmissionId,rDecision,rReason);if(latest.current!==start)return;setRDone(rDecision==='ACCEPT'?'PM đã chấp nhận hồ sơ (BE xác nhận hạng mục Đã review). Bước xác nhận cuối là lệnh riêng ở màn Nghiệm thu.':'Đã yêu cầu bổ sung (BE xác nhận nhiệm vụ Cần bổ sung).');setRDecision('');setRReason('');setReload(n=>n+1);const t=await fieldTaskReadService.detail(projectId,taskId);if(latest.current===start)onReviewed?.(t)}catch(e){if(latest.current===start)setRError(beErrorText(e))}finally{if(latest.current===start)setRBusy(false)}
+ }
+ const useRepairReview=isRepairTask&&!!rb
  useEffect(()=>{if(current)onLoaded?.(current)},[current])
  const doAct=async()=>{
   if(!current||!actGuard.acquire())return
@@ -62,7 +76,17 @@ export function FieldTaskReadDetails({projectId,taskId,onReviewed,onLoaded}:{pro
     <p className="text-slate-500">Số đo, ảnh, READY/INCOMPLETE của lần nộp này hiển thị ở khối “Số đo và bằng chứng của lần nộp mới nhất” bên dưới.</p>
    </>}
   </>}
-  {role==='PROJECT_MANAGER'&&current&&(current.task.status?.toUpperCase()==='SUBMITTED'||held)&&<div className="border-t pt-3 space-y-2">
+  {isRepairTask&&current&&current.task.status?.toUpperCase()==='SUBMITTED'&&!held&&(bindingError?<p role="alert" className="text-rose-700 border-t pt-3">Không đọc được liên kết hạng mục sửa chữa: {bindingError}</p>:!binding||binding.scope!==scope?<p role="status" className="border-t pt-3">Đang đọc liên kết hạng mục sửa chữa…</p>:!rb?<p className="border-t pt-3 text-amber-800">Chưa tìm thấy hạng mục sửa chữa gắn với nhiệm vụ này; dùng review FIELD bên dưới.</p>:<div className="border-t pt-3 space-y-2">
+   <p className="font-semibold">PM thẩm định bản nộp sửa chữa hiện hành</p>
+   <p className="break-all text-slate-600">Hạng mục {rb.itemId.slice(0,8).toUpperCase()} · Gói {rb.packageId.slice(0,8).toUpperCase()} · Bản nộp {current.task.latestSubmissionId} · Phiên bản hạng mục {rb.version}</p>
+   <select aria-label="Quyết định review sửa chữa" disabled={rBusy} value={rDecision} onChange={e=>setRDecision(e.target.value as 'ACCEPT'|'SUPPLEMENT')} className="rg-field w-full"><option value="">Chọn quyết định</option><option value="ACCEPT">Chấp nhận hồ sơ và trình Giám sát</option><option value="SUPPLEMENT">Yêu cầu bổ sung</option></select>
+   <textarea aria-label="Ghi chú review sửa chữa" rows={2} maxLength={2000} disabled={rBusy} value={rReason} onChange={e=>setRReason(e.target.value)} placeholder="Ghi chú/lý do (bắt buộc khi yêu cầu bổ sung)" className="rg-field w-full" />
+   {rError&&<p role="alert" className="text-rose-700">{rError}</p>}
+   <button type="button" disabled={rBusy||!rDecision||(rDecision==='SUPPLEMENT'&&!rReason.trim())} onClick={()=>{void repairReview()}} className="rg-btn">{rBusy?'Đang gửi…':'Xác nhận review sửa chữa'}</button>
+   <p>BE tự kiểm điều kiện sửa chữa; readiness của FIELD không chặn bước này. Chấp nhận không đồng nghĩa nghiệm thu cuối.</p>
+  </div>)}
+  {rDone&&<p role="status" className="text-emerald-800">{rDone}</p>}
+  {role==='PROJECT_MANAGER'&&current&&!useRepairReview&&!(isRepairTask&&!held&&!bindingError&&binding?.scope!==scope)&&(current.task.status?.toUpperCase()==='SUBMITTED'||held)&&<div className="border-t pt-3 space-y-2">
    <p className="font-semibold">PM thẩm định lần nộp hiện tại</p>
    <select aria-label="Quyết định review FIELD" disabled={reviewing||!!held} value={held?.body.decision||decision} onChange={e=>setDecision(e.target.value as FieldReviewInput['decision'])} className="rg-field w-full"><option value="">Chọn quyết định</option><option value="CONFIRM">Xác nhận kết quả đo</option><option value="NO_DEFECT">Kết quả FIELD không có lỗi</option><option value="SUPPLEMENT">Yêu cầu bổ sung</option></select>
    <textarea aria-label="Lý do review FIELD" rows={2} maxLength={2000} disabled={reviewing||!!held} value={held?.body.reason||reason} onChange={e=>setReason(e.target.value)} className="rg-field w-full" />

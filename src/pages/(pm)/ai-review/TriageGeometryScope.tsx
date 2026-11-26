@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { triageGeometryService, type TriageRouteReference, type TriageGeometryPins, type TriagePublishedSet } from '../../../api/services/triageGeometryService'
 import { useAuthStore } from '../../../store/authStore'
-export function TriageGeometryScope({projectId, caseId, disabled, onChange, forField = false}: {forField?: boolean; projectId: string; caseId: string; disabled?: boolean; onChange: (requiresScope: boolean, pins?: TriageGeometryPins) => void}) {
+export function TriageGeometryScope({projectId, caseId, disabled, onChange, onRoad, forField = false}: {forField?: boolean; projectId: string; caseId: string; disabled?: boolean; onChange: (requiresScope: boolean, pins?: TriageGeometryPins) => void; onRoad?: (roadSectionId: string) => void}) {
   const epoch = useAuthStore(s => s.authEpoch), scope = `${epoch}:${caseId}:${projectId}`
   const [choice, setChoice] = useState({scope:'', roadId:'', setId:'', enabled:false})
   const current = choice.scope === scope ? choice : {scope, roadId:'', setId:'', enabled:false}
@@ -26,6 +26,7 @@ export function TriageGeometryScope({projectId, caseId, disabled, onChange, forF
     return()=>controller.abort()
   },[selection,road?.currentVersionId])
   useEffect(() => { onChange(current.enabled, current.enabled && state.scope === selection ? state.pins : undefined) }, [scope, current.enabled, selection, state])
+  useEffect(() => { onRoad?.(current.roadId) }, [scope, current.roadId])
   return <div className="space-y-2 min-w-0 rounded-lg border border-slate-200 p-2">
     <label className="flex gap-2"><input type="checkbox" checked={current.enabled} disabled={disabled||!projectId} onChange={e=>{setChoice({...current,enabled:e.target.checked});onChange(e.target.checked, e.target.checked && state.scope === selection ? state.pins : undefined)}} />{forField?'Gắn phạm vi tác nghiệp FIELD':'Gắn phạm vi để đi tiếp ghi nhận khiếm khuyết'}</label>
     <select aria-label="Tuyến hiện hành điều phối" value={current.roadId} disabled={disabled||!projectId||routes?.scope!==scope} onChange={e=>{onChange(current.enabled);setChoice({...current,roadId:e.target.value,setId:''})}} className="rg-field w-full min-w-0"><option value="">Chọn tuyến hiện hành</option>{routes?.scope===scope&&routes.rows.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select>

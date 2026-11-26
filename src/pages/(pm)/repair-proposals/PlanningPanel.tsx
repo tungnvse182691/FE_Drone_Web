@@ -20,6 +20,7 @@ export const PlanningPanel: React.FC<{ projectId: string; packageId: string; ite
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(''), [message, setMessage] = useState('')
   const [readFailed, setReadFailed] = useState(false)
+  const [minimal, setMinimal] = useState(false) // gói nhiều bên chịu trách nhiệm: BE chỉ trả mã/phiên bản, tên/mô tả/hạn = null
   const guard = useSubmitGuard()
   // Hạng mục nhận chuyển mang projectId gốc; URL dùng dự án chịu trách nhiệm hiện hành. Không đổi projectId, không thay bằng dữ liệu rỗng.
   const originProject = items.find((i) => i.projectId !== projectId)?.projectId
@@ -27,13 +28,13 @@ export const PlanningPanel: React.FC<{ projectId: string; packageId: string; ite
   const path = isPkg ? `/projects/${projectId}/repair-packages/${packageId}/planning` : `/projects/${projectId}/repair-packages/${packageId}/items/${target}/planning`
 
   const load = useCallback(async () => {
-    setLoading(true); setError(''); setMessage(''); setEtag(''); setReadFailed(false)
+    setLoading(true); setError(''); setMessage(''); setEtag(''); setReadFailed(false); setMinimal(false)
     try {
       const r = await apiClient.get<any>(path)
       const v = (r.headers.etag as string | undefined) || (r.data?.version ? `"${r.data.version}"` : '')
       if (!v) throw new Error('BE không trả phiên bản kế hoạch.')
       setEtag(v)
-      if (isPkg) { setName(r.data.name || ''); setDescription(r.data.description || ''); setDue(r.data.plannedDueAt ? String(r.data.plannedDueAt).slice(0, 10) : '') }
+      if (isPkg) { setMinimal(r.data.name == null && r.data.description == null && r.data.plannedDueAt == null && r.data.createdBy == null && r.data.createdAt == null); setName(r.data.name || ''); setDescription(r.data.description || ''); setDue(r.data.plannedDueAt ? String(r.data.plannedDueAt).slice(0, 10) : '') }
       else { setQty(r.data.plannedQuantity != null ? String(r.data.plannedQuantity) : ''); setUnit(r.data.plannedUnit || ''); setMaterials(r.data.plannedMaterials || '') }
     } catch (e) { setReadFailed(true); setError(`Không đọc được kế hoạch: ${exportError(e)}`) } finally { setLoading(false) }
   }, [path, isPkg])
@@ -75,9 +76,12 @@ export const PlanningPanel: React.FC<{ projectId: string; packageId: string; ite
       {loading && <Loading>Đang đọc kế hoạch…</Loading>}
       <Feedback error={error} message={message} />
       {readFailed && !loading && (
-        <div className="rg-alert rg-alert-warn" data-testid="planning-read-failed"><p className="min-w-0 break-words">Không đọc được kế hoạch — đây không phải trạng thái "chưa nhập kế hoạch". {originProject ? `Hồ sơ thuộc dự án gốc ${originProject.slice(0, 8)}; dự án chịu trách nhiệm hiện hành (đang xem) là ${projectId.slice(0, 8)}. Máy chủ hiện yêu cầu dự án gốc và trách nhiệm hiện hành cùng khớp khi đọc kế hoạch (cần BE xác nhận nguồn đọc cho PM dự án nhận); FE không tự đổi dự án hay dùng dữ liệu thay thế.` : 'Kiểm tra quyền/dự án rồi thử lại.'}</p><PanelButton onClick={() => { void load() }}>Thử lại</PanelButton></div>
+        <div className="rg-alert rg-alert-warn" data-testid="planning-read-failed"><p className="min-w-0 break-words">Không đọc được kế hoạch — đây không phải trạng thái "chưa nhập kế hoạch". {originProject ? `Hồ sơ thuộc dự án gốc …${originProject.slice(-8)}; dự án chịu trách nhiệm hiện hành (đang xem) là …${projectId.slice(-8)}. Máy chủ không trả kế hoạch cho đúng dự án chịu trách nhiệm hiện hành (xem mã lỗi ở trên); FE không tự đổi dự án hay dùng dữ liệu thay thế. Kế hoạch theo hạng mục nhận chuyển đọc được ở khối "Hồ sơ nghĩa vụ nhận chuyển" khi BE cho phép.` : 'Kiểm tra quyền/dự án rồi thử lại.'}</p><PanelButton onClick={() => { void load() }}>Thử lại</PanelButton></div>
       )}
-      {!loading && etag && (
+      {!loading && etag && isPkg && minimal && !!originProject && (
+        <div className="rg-alert rg-alert-warn" data-testid="planning-minimal"><p className="min-w-0 break-words">Gói có nhiều bên chịu trách nhiệm (dự án gốc …{originProject.slice(-8)}; dự án chịu trách nhiệm hiện hành …{projectId.slice(-8)}): máy chủ chỉ trả mã và phiên bản của gói, không trả tên, mô tả, hạn kế hoạch cho dự án này. Phần này không hiển thị vì chưa được cấp quyền đọc (không phải "chưa nhập kế hoạch") và không sửa tại đây. Dùng kế hoạch theo hạng mục để xem phần thuộc trách nhiệm của dự án.</p></div>
+      )}
+      {!loading && etag && !(isPkg && minimal && !!originProject) && (
         <div className="space-y-3">
           {isPkg ? (
             <>

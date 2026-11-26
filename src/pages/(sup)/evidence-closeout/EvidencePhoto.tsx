@@ -11,11 +11,13 @@ export interface EvidencePhotoProps {
   emptyText?: string
   className?: string
   zoomable?: boolean
+  /** contain = hiển thị đủ ảnh (không cắt); cover = lấp đầy khung. Mặc định cover (thumbnail). */
+  fit?: 'cover' | 'contain'
   onRef?: (state: 'loading' | 'ok' | 'error' | 'none') => void
 }
 
 /** Ảnh nghiệm thu với 4 trạng thái tách bạch: đang tải / chưa có ảnh / lỗi tải (kèm thử lại) / có ảnh. Không dùng <img> hỏng. */
-export const EvidencePhoto: React.FC<EvidencePhotoProps> = ({ projectId, photo, alt, emptyText = 'Chưa có ảnh', className = '', zoomable = true, onRef }) => {
+export const EvidencePhoto: React.FC<EvidencePhotoProps> = ({ projectId, photo, alt, emptyText = 'Chưa có ảnh', className = '', zoomable = true, fit = 'cover', onRef }) => {
   const [url, setUrl] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -44,7 +46,7 @@ export const EvidencePhoto: React.FC<EvidencePhotoProps> = ({ projectId, photo, 
     <div className={`relative w-full h-full ${className}`}>
       {state === 'ok' && (
         <>
-          <img src={url} alt={alt} className="w-full h-full object-cover" onClick={zoomable ? (e) => { e.stopPropagation(); setZoom(true) } : undefined} style={zoomable ? { cursor: 'zoom-in' } : undefined} />
+          <img src={url} alt={alt} className={`w-full h-full ${fit === 'contain' ? 'object-contain' : 'object-cover'}`} onClick={zoomable ? (e) => { e.stopPropagation(); setZoom(true) } : undefined} style={zoomable ? { cursor: 'zoom-in' } : undefined} />
           {zoom && (
             <div role="dialog" aria-modal="true" aria-label={alt} onClick={(e) => { e.stopPropagation(); setZoom(false) }} className="fixed inset-0 z-[9998] bg-slate-950/90 flex items-center justify-center p-6 cursor-zoom-out">
               <img src={url} alt={alt} className="max-w-full max-h-full object-contain rounded-lg" />

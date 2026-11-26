@@ -118,7 +118,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
                 onChange={(e) => setExportForm({ ...exportForm, includeOriginalFiles: e.target.checked })}
                 className="rounded text-[#C9A227] focus:ring-[#C9A227] w-4 h-4 cursor-pointer"
               />
-              <span className="text-slate-700">Đính kèm ảnh/video gốc độ phân giải cao phục vụ kiểm định</span>
+              <span className="text-slate-700">Kèm tệp gốc có quyền đọc (includeOriginalFiles) — chỉ áp dụng cho ZIP, PDF không kèm tệp gốc</span>
             </label>
           </div>
 

@@ -2,6 +2,7 @@ import { useCaseReportMedia, reportSourceLabelForCase } from './useCaseReportMed
 import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
 import React from 'react'
 import { DrawerReportDetails } from './DrawerReportDetails'
+import { ReportRoutingPanel } from './ReportRoutingPanel'
 import type { TriageCase } from './types'
 import { DrawerHeader } from './DrawerHeader'
 import { DrawerDecisionBanners } from './DrawerDecisionBanners'
@@ -13,6 +14,7 @@ import { DrawerDecisionForm } from './DrawerDecisionForm'
 import { DrawerFooter } from './DrawerFooter'
 
 export interface ReviewDetailDrawerProps {
+  onCaseChanged?: () => void
   onDefectRecorded?: (message: string) => void
   evidenceRequest?: CaseEvidenceRequestState
   selectedCase: TriageCase
@@ -46,6 +48,7 @@ export interface ReviewDetailDrawerProps {
 }
 
 export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
+  onCaseChanged,
   onDefectRecorded,
   selectedCase,
   evidenceRequest,
@@ -105,6 +108,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
             />
 
             <DrawerReportDetails key={selectedCase.id} caseId={selectedCase.id} caseStatus={selectedCase.case_status} onSplit={isSupervisor ? undefined : async reportId => { await onUnlinkReport(reportId) }} />
+            <ReportRoutingPanel key={selectedCase.id} caseId={selectedCase.id} caseVersion={selectedCase.etag || selectedCase.version} caseStatus={selectedCase.case_status} onCaseChanged={onCaseChanged} onNotify={onDefectRecorded} />
             <DrawerMediaViewer
               sourceLabel={sourceLabel}
               selectedCase={selectedCase}

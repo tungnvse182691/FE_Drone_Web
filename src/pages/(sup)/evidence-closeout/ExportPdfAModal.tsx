@@ -6,8 +6,6 @@ export interface ExportPdfAModalProps {
   onClose: () => void
   currentItem: CaseItem
   setExportFormat: (f: 'PDF_A' | 'ZIP_PACKAGE') => void
-  includeSha256Checksum?: boolean
-  setIncludeSha256Checksum?: (b: boolean) => void
   isExporting: boolean
   onExport: () => void
   caseCode?: string
@@ -19,8 +17,6 @@ export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
   onClose,
   currentItem,
   setExportFormat,
-  includeSha256Checksum,
-  setIncludeSha256Checksum,
   isExporting,
   onExport
 }) => {
@@ -53,7 +49,7 @@ export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
         {/* Body */}
         <div className="p-4 space-y-3.5 text-xs">
           <p className="text-slate-600 leading-relaxed">
-            Hệ thống kết xuất hồ sơ nghiệm thu kỹ thuật theo quy chuẩn TCVN 8819:2011 kèm mã băm SHA-256 chống chỉnh sửa.
+            Hệ thống tạo hồ sơ sửa chữa của hạng mục này từ dữ liệu máy chủ (ảnh hiện trường, quyết định, lịch sử). Hồ sơ là bản chụp (snapshot) có mã băm snapshot ghi trong manifest; máy chủ báo rõ phần dữ liệu còn thiếu nếu có.
           </p>
 
           <div className="space-y-2">
@@ -71,9 +67,9 @@ export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
                 className="mt-0.5 accent-[#C9A227]"
               />
               <div className="space-y-0.5">
-                <span className="font-semibold text-slate-900 block">Biên bản nghiệm thu kỹ thuật (PDF/A)</span>
+                <span className="font-semibold text-slate-900 block">Hồ sơ sửa chữa dạng PDF</span>
                 <span className="text-slate-500 text-[11px] block">
-                  Tệp PDF chuẩn lưu trữ (ISO 19005), tích hợp hình ảnh Trước/Sau, thông số K98 và mã băm SHA-256.
+                  Tệp PDF do máy chủ tạo; không kèm tệp ảnh gốc. Nội dung phụ thuộc dữ liệu hiện có của hạng mục.
                 </span>
               </div>
             </div>
@@ -91,27 +87,15 @@ export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
                 className="mt-0.5 accent-[#C9A227]"
               />
               <div className="space-y-0.5">
-                <span className="font-semibold text-slate-900 block">Gói hồ sơ bằng chứng gốc (ZIP Dossier)</span>
+                <span className="font-semibold text-slate-900 block">Gói hồ sơ sửa chữa (ZIP)</span>
                 <span className="text-slate-500 text-[11px] block">
-                  Chứa toàn bộ ảnh gốc, log tọa độ RTK GPS và file checksum.sha256 chống chối bỏ.
+                  Gói ZIP gồm repair-dossier.json và ảnh hiện trường của hạng mục (repair-evidence/) khi bật tùy chọn bên dưới. Mã băm từng tệp nằm trong manifest của hồ sơ.
                 </span>
               </div>
             </div>
           </div>
 
-          {setIncludeSha256Checksum && (
-            <label className="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded-md border border-slate-200">
-              <input
-                type="checkbox"
-                checked={!!includeSha256Checksum}
-                onChange={(e) => setIncludeSha256Checksum(e.target.checked)}
-                className="w-4 h-4 rounded text-[#C9A227] accent-[#C9A227]"
-              />
-              <span className="text-slate-800 font-medium text-xs">
-                Kèm phụ lục kiểm tra tính toàn vẹn (mã băm SHA-256) cho toàn bộ ảnh hiện trường
-              </span>
-            </label>
-          )}
+          <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-md border border-slate-200">PDF không kèm tệp gốc (máy chủ không hỗ trợ). Muốn kèm ảnh gốc, chọn định dạng ZIP.</p>
 
           <div className="bg-slate-50 p-2.5 rounded-md border border-slate-200 space-y-1 text-[11px] text-slate-600">
             <div className="flex justify-between">
@@ -152,7 +136,7 @@ export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
             ) : (
               <>
                 <span className="material-symbols-outlined text-[15px]">download</span>
-                <span>Tải xuống (PDF/A)</span>
+                <span>Tải xuống (PDF)</span>
               </>
             )}
           </button>

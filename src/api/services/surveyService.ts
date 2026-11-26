@@ -1,4 +1,5 @@
 import { apiClient } from '../client'
+import { SEVERITY_LABEL } from '../../utils/severity'
 import { defectRecurrenceService, type RecurrenceInput } from './defectRecurrenceService'
 import { projectService } from './projectService'
 import { aiApiErrorText } from './aiRunDetailService'
@@ -210,12 +211,7 @@ interface RunDetection {
   timestampMs: number
 }
 
-const SEVERITY_VI: Record<string, string> = {
-  CRITICAL: 'Khẩn cấp',
-  HIGH: 'Nghiêm trọng',
-  MEDIUM: 'Trung bình',
-  LOW: 'Nhẹ'
-}
+const SEVERITY_VI: Record<string, string> = SEVERITY_LABEL // bảng nhãn dùng chung (utils/severity.ts)
 
 // Dựng một phát hiện AI hoàn toàn từ dữ liệu BE (kết quả run + ai-candidates + candidate-decisions + defects)
 /** Mã hiển thị ổn định của một phát hiện: suy ra từ detectionId, không phụ thuộc thứ tự/phạm vi tải (danh sách và chi tiết luôn cùng mã). */
@@ -226,7 +222,7 @@ export const detectionDisplayCode = (detectionId: string) => `DET-${String(detec
  * Lỗi của phát hiện này chỉ ảnh hưởng chính nó (không chặn cả phiên, không nhớ trạng thái "blocked"); tải lại là thử lại thật.
  * "Chưa có quyết định" (disposition rỗng) khác "không đọc được" (error).
  */
-async function readCandidateState(projectId: string, detectionId: string): Promise<{ facts: AiCandidateFactsDto | null; decision: CandidateDecisionDto | null; error?: string }> {
+async function readCandidateState(projectId: string, detectionId: string): Promise<{ facts: AiCandidateFactsDto | null; decision: CandidateDecisionDto | null; error?: string; restricted?: boolean }> {
   let facts: AiCandidateFactsDto
   try { facts = await surveyService.getAiCandidateFacts(projectId, detectionId) } catch (e: any) {
     if (e?.name === 'CanceledError') throw e
@@ -235,6 +231,8 @@ async function readCandidateState(projectId: string, detectionId: string): Promi
   if (!facts.disposition?.decisionId) return { facts, decision: null }
   try { return { facts, decision: await surveyService.getCandidateDecision(projectId, facts.disposition.decisionId) } } catch (e: any) {
     if (e?.name === 'CanceledError') throw e
+    // B5: Giám sát được đọc dữ kiện ứng viên nhưng không được đọc quyết định/lý do của PM (403) — báo 'không được phép đọc', không coi là lỗi hay chưa có.
+    if (e?.response?.status === 403 && useAuthStore.getState().user?.role === 'SUPERVISOR') return { facts, decision: null, restricted: true }
     return { facts, decision: null, error: aiApiErrorText(e, `Không đọc được quyết định đã lưu của ${detectionDisplayCode(detectionId)} (GET candidate-decisions, chỉ PM đọc được)`) }
   }
 }
@@ -248,6 +246,7 @@ async function buildDetectionItem(
   // Khi không đọc được ứng viên, dựng phần hiển thị từ chính kết quả run (loại, độ tin cậy, khung, ảnh) và đánh dấu stateUnknown — không coi là chưa duyệt.
   const read = await readCandidateState(projectId, d.detectionId)
   const stateUnknown = !!read.error
+  const decisionRestricted = !!read.restricted
   const x = d as any
   const candFacts: AiCandidateFactsDto = read.facts || { typeCode: x.typeCode, confidence: x.confidence, timestampMs: x.timestampMs, frameFileId: x.frameFileId, frameFileVersion: x.frameFileVersion, sourceVideoFileId: x.sourceVideoFileId, segmentId: x.segmentId, positionStatus: x.positionStatus, boundingBox: Array.isArray(x.bbox) ? { x: x.bbox[0], y: x.bbox[1], width: x.bbox[2], height: x.bbox[3] } : undefined } as unknown as AiCandidateFactsDto
   const decisionDto = read.decision
@@ -270,7 +269,7 @@ async function buildDetectionItem(
   const confVal = candFacts.confidence ?? d.confidence
   const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
   const tsMs = candFacts.timestampMs ?? d.timestampMs
-  const severityLabel = (linkedDbDefect?.severity && SEVERITY_VI[linkedDbDefect.severity]) || 'Chưa được PM phân loại'
+  const severityLabel = (linkedDbDefect?.severity && SEVERITY_VI[linkedDbDefect.severity]) || (decisionRestricted ? 'Không thuộc phạm vi Giám sát được đọc' : 'Chưa được PM phân loại')
 
   return {
     id: d.detectionId,
@@ -285,6 +284,7 @@ async function buildDetectionItem(
     description: `Khung hình trích xuất tại mốc ${tsMs}ms${stateUnknown ? ' · Chưa xác định được trạng thái thẩm định (không đọc được từ máy chủ)' : ''}`,
     stateUnknown,
     stateError: read.error,
+    decisionRestricted,
     metrics: {},
     status,
     kmValue: Number.NaN,

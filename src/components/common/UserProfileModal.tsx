@@ -2,8 +2,7 @@ import { ProfilePasswordRecovery, useProfilePasswordState } from './ProfilePassw
 import React, { useState, useEffect } from 'react'
 import { RoleCode } from '../../types/enums'
 import { User } from '../../types/domain'
-import { profileService, UserProfileFact } from '../../api/services/profileService'
-import { userDirectory } from '../../api/services/userDirectory'
+import { profileService, selfPhoneService, UserProfileFact } from '../../api/services/profileService'
 import { useAuthStore } from '../../store/authStore'
 
 interface UserProfileModalProps {
@@ -25,6 +24,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false)
   const [saving, setSaving] = useState<boolean>(false)
   const [profile, setProfile] = useState<UserProfileFact | null>(null)
+  // SĐT lấy từ GET /me/phone-number (số Giám sát đã cập nhật); không dùng bản lưu cục bộ/danh bạ cũ.
+  const [selfPhone, setSelfPhone] = useState<{ status: 'loading' | 'ready' | 'error'; phone: string | null; confirmed: boolean; error: string }>({ status: 'loading', phone: null, confirmed: false, error: '' })
+  const [phoneReload, setPhoneReload] = useState(0)
 
   // State chỉnh sửa thông tin cá nhân
   const [fullName, setFullName] = useState<string>('')
@@ -73,6 +75,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       isMounted = false
     }
   }, [isOpen, currentUser])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const controller = new AbortController()
+    setSelfPhone({ status: 'loading', phone: null, confirmed: false, error: '' })
+    selfPhoneService.read(controller.signal)
+      .then(f => { if (!controller.signal.aborted) setSelfPhone({ status: 'ready', phone: f.phoneNumber, confirmed: f.phoneNumberConfirmed, error: '' }) })
+      .catch(e => { if (!controller.signal.aborted) setSelfPhone({ status: 'error', phone: null, confirmed: false, error: `Không đọc được số điện thoại: HTTP ${e?.response?.status || ''} ${e?.response?.data?.code || e?.message || ''}`.trim() }) })
+    return () => controller.abort()
+  }, [isOpen, currentUser?.id, phoneReload])
 
   if (!isOpen) return null
 
@@ -317,10 +329,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   <input
                     type="text"
                     disabled
-                    value={userDirectory.findUser(currentUser?.id, currentUser?.full_name)?.phone || (currentUser as any)?.phone || '—'}
+                    aria-label="Số điện thoại liên hệ"
+                    value={selfPhone.status === 'loading' ? 'Đang tải…' : selfPhone.status === 'error' ? 'Không đọc được' : selfPhone.phone || 'Chưa có thông tin'}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-700 bg-slate-100 font-mono cursor-not-allowed"
-                    title="Số điện thoại bảo mật được đồng bộ trực tiếp từ CSDL Backend"
+                    title="Số điện thoại đọc từ máy chủ (GET /me/phone-number)"
                   />
+                  {selfPhone.status === 'error' && <p role="alert" className="text-[11px] text-rose-700 mt-1">{selfPhone.error} <button type="button" className="underline" onClick={() => setPhoneReload(n => n + 1)}>Thử lại</button></p>}
+                  {selfPhone.status === 'ready' && selfPhone.phone && <p className="text-[11px] text-slate-500 mt-1">{selfPhone.confirmed ? 'Đã xác minh' : 'Chưa xác minh'}</p>}
                 </div>
 
                 {/* Vai trò */}

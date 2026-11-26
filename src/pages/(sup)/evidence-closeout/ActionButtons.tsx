@@ -66,7 +66,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         onClick={onOpenExportModal}
         type="button"
         className="px-3 h-8 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-medium text-xs rounded-md shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-        title="Kết xuất hồ sơ bằng chứng số (PDF/A hoặc ZIP)"
+        title="Kết xuất hồ sơ bằng chứng số (PDF hoặc ZIP)"
       >
         <span className="material-symbols-outlined text-[16px] text-slate-600">download</span>
         <span>Xuất hồ sơ</span>

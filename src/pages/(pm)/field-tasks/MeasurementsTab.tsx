@@ -18,6 +18,8 @@ import {
 } from '../../../api/services/fieldTaskService'
 import { PhotoLightboxModal } from '../../../components/common/PhotoLightboxModal'
 import { ImageComparisonSlider } from '../../../components/common/ImageComparisonSlider'
+import { useWarrantyWindow } from '../../../hooks/useWarrantyWindow'
+import { warrantyDueError, warrantyHint, warrantyMaxDateTime } from '../../../utils/warrantyDeadline'
 
 export interface MeasurementsTabProps {
   linkedDefectId?:string
@@ -45,6 +47,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const createContext = React.useRef({project:selectedProjectId,active:true})
   if(createContext.current.project!==selectedProjectId)createContext.current={project:selectedProjectId,active:true}
   React.useEffect(()=>{const context=createContext.current;context.active=true;return()=>{context.active=false}},[selectedProjectId])
+  const warranty=useWarrantyWindow(selectedProjectId==='ALL'||isSupervisor?undefined:selectedProjectId)
   // Bộ lọc trạng thái & từ khóa
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [searchTerm, setSearchTerm] = useState<string>('')
@@ -113,6 +116,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const [modalPhotoTab, setModalPhotoTab] = useState<'RULER' | 'DRONE' | 'SPLIT' | 'REUSED'>('RULER')
   // Dữ liệu GET thật của nhiệm vụ + bản nộp mới nhất (một nguồn cho khối hồ sơ và khối số đo/ảnh).
   const [detailRead, setDetailRead] = useState<{ taskId: string; read: FieldRead } | null>(null)
+  // Ảnh bằng chứng FIELD đang được chọn trong chi tiết (blob đã kiểm VERIFIED/checksum): nguồn duy nhất cho ảnh phóng to.
+  const [detailPhoto, setDetailPhoto] = useState<{ url: string; fileId: string; checksum: string; purpose: string; capturedAt: string | null } | null>(null)
   const [defectInfo, setDefectInfo] = useState<{ taskId: string; text: string } | null>(null)
   const liveRead = detailRead && selectedDetailTask && detailRead.taskId === selectedDetailTask.id ? detailRead.read : null
   React.useEffect(() => {
@@ -128,6 +133,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   // Modal Lightbox Phóng to ảnh & So sánh song song
   const [lightboxTask, setLightboxTask] = useState<FieldTask | null>(null)
   const [lightboxInitialMode, setLightboxInitialMode] = useState<'PRIMARY' | 'SECONDARY' | 'SPLIT'>('PRIMARY')
+  // Số đo/tọa độ lấy từ bản nộp hiện hành của chính nhiệm vụ đang phóng to (không có -> để trống, không tự điền).
+  const lightboxMeasure = (() => { const ms = lightboxTask && liveRead && lightboxTask.id === liveRead.task.id ? liveRead.submission?.measurements || [] : []; return ms.find((m) => Number.isFinite(m.latitude) && Number.isFinite(m.longitude)) || ms.find((m) => m.value != null) || null })()
 
   // Modal Tái sử dụng ảnh phản ánh (API-084 Evidence Reuse)
   const [isReuseModalOpen, setIsReuseModalOpen] = useState(false)
@@ -194,7 +201,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     try{
       if(selectedProjectId==='ALL')throw new Error('Chọn dự án cụ thể; không tự lấy dự án đầu tiên.')
       const target=availableDefects.find(d=>d.id===selectedDefectId)
-      if(!heldCreate){const missing:string[]=[];if(!target)missing.push('Khiếm khuyết');else if(!isSelectedDefectEligible)missing.push('Khiếm khuyết phải ở trạng thái OPEN');if(createScope.project!==selectedProjectId||createScope.enabled&&!createScope.pins)missing.push('Phạm vi hình học đã công bố (PUBLISHED)');if(missing.length)throw new FieldInputError('Chưa nhập hoặc nhập sai: '+missing.join('; ')+'.')}
+      if(!heldCreate){const missing:string[]=[];if(!target)missing.push('Khiếm khuyết');else if(!isSelectedDefectEligible)missing.push('Khiếm khuyết phải ở trạng thái OPEN');if(createScope.project!==selectedProjectId||createScope.enabled&&!createScope.pins)missing.push('Phạm vi hình học đã công bố (PUBLISHED)');if(missing.length)throw new FieldInputError('Chưa nhập hoặc nhập sai: '+missing.join('; ')+'.');const due=warrantyDueError(warranty,newDueAt,'Hạn xử lý');if(due)throw new FieldInputError(due)}
       const choice=heldCreate?.input||{defectId:target!.id,defectVersion:target!.version,routeVersionId:target!.route_version_id,assignedToUserId:selectedCrewId,requiredMeasurementType:newMeasurementType,instructions:newNotes,dueAt:newDueAt,...(createScope.pins?{pins:createScope.pins}:{})}
       const created=await fieldCreateCommands.request(selectedProjectId,choice)
       if(!current())return
@@ -863,7 +870,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </div>
 
               <label className="grid gap-1">Chỉ số cần đo<select aria-label="Loại đo FIELD canonical" value={newMeasurementType||''} onChange={e=>setNewMeasurementType(Number(e.target.value))} className="rg-field w-full"><option value="">Chọn loại đo</option>{FIELD_MEASUREMENT_TYPES.map(t=><option key={t.code} value={t.code}>{t.label}</option>)}</select></label>
-              <label className="grid gap-1">Hạn xử lý<input aria-label="Hạn xử lý FIELD" type="datetime-local" value={newDueAt} onChange={e=>setNewDueAt(e.target.value)} className="rg-field w-full" /></label>
+              <label className="grid gap-1">Hạn xử lý<input aria-label="Hạn xử lý FIELD" type="datetime-local" value={newDueAt} max={warrantyMaxDateTime(warranty)} onChange={e=>setNewDueAt(e.target.value)} className="rg-field w-full" /><span className="text-[11px] text-slate-500">{warrantyHint(warranty)}</span>{!heldCreate&&warrantyDueError(warranty,newDueAt,'Hạn xử lý')&&<span role="alert" data-testid="field-due-warranty-error" className="text-[11px] text-rose-700">{warrantyDueError(warranty,newDueAt,'Hạn xử lý')}</span>}</label>
               <TriageGeometryScope forField projectId={selectedProjectId==='ALL'?'':selectedProjectId} caseId={selectedDefectId} disabled={!!heldCreate||isSubmittingCreate} onChange={(enabled,pins)=>setCreateScope(old=>old.project===selectedProjectId&&old.enabled===enabled&&old.pins?.geometryVersion===(enabled?pins?.geometryVersion:undefined)&&old.pins?.routeVersionId===(enabled?pins?.routeVersionId:undefined)&&old.pins?.segmentSetId===(enabled?pins?.segmentSetId:undefined)?old:{project:selectedProjectId,enabled,pins:enabled?pins:undefined})} />
               <p>Chỉ tạo phiếu từ phản ánh đã ghi nhận và đối chiếu được nguồn. Nguồn khảo sát chưa có đủ thông tin đối chiếu sẽ bị chặn.</p>
               </fieldset>
@@ -895,7 +902,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingCreate||!!createJournalError||!heldCreate&&(!selectedDefectId||!isSelectedDefectEligible||!newMeasurementType||!newDueAt||!selectedCrewId||createScope.enabled&&!createScope.pins)}
+                  disabled={isSubmittingCreate||!!createJournalError||!heldCreate&&(!selectedDefectId||!isSelectedDefectEligible||!newMeasurementType||!newDueAt||!selectedCrewId||!!warrantyDueError(warranty,newDueAt,'Hạn xử lý')||createScope.enabled&&!createScope.pins)}
                   className="px-3.5 py-1.5 text-xs font-medium bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Icon name="check" size={15} />
@@ -1257,7 +1264,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <FieldSubmissionPhotos projectId={selectedDetailTask.project_id || ''} taskId={selectedDetailTask.id} read={liveRead} />
+                    <FieldSubmissionPhotos projectId={selectedDetailTask.project_id || ''} taskId={selectedDetailTask.id} read={liveRead} onPhoto={setDetailPhoto} />
                   )}
 
                   {/* Thumbnail chuyển đổi nhanh ở phía dưới */}
@@ -1735,20 +1742,20 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           isOpen={Boolean(lightboxTask)}
           onClose={() => setLightboxTask(null)}
           title={`Phiếu Đo: ${lightboxTask.code} • ${lightboxTask.defect_code}`}
-          subtitle={`${lightboxTask.defect_name || lightboxTask.measurement_type} — Km ${lightboxTask.chainage_km} (${lightboxTask.lane || 'Làn cơ giới'})`}
+          subtitle={`${lightboxTask.defect_name || lightboxTask.measurement_type} — ${lightboxTask.chainage_km != null ? `Km ${lightboxTask.chainage_km}` : 'Chưa có lý trình'}${lightboxTask.lane ? ` (${lightboxTask.lane})` : ''}`}
           initialViewMode={lightboxInitialMode}
-          primaryPhotoUrl={lightboxTask.evidence_photo_url || ''}
-          primaryPhotoLabel="Ảnh Thước Đo (Hiện trường)"
+          primaryPhotoUrl={(lightboxTask.id === selectedDetailTask?.id && detailPhoto?.url) || lightboxTask.evidence_photo_url || ''}
+          primaryPhotoLabel={lightboxTask.id === selectedDetailTask?.id && detailPhoto ? `Ảnh bằng chứng ${detailPhoto.purpose || ''} (Hiện trường)`.replace('  ', ' ') : 'Ảnh Thước Đo (Hiện trường)'}
           secondaryPhotoUrl={lightboxTask.defect_photo_url || ''}
           secondaryPhotoLabel="Ảnh Khảo Sát Drone"
-          measuredValue={lightboxTask.measured_value}
-          unit="mm"
+          measuredValue={lightboxMeasure?.value ?? lightboxTask.measured_value}
+          unit={lightboxMeasure?.unit || 'mm'}
           chainage={lightboxTask.chainage_km ?? undefined}
           lane={lightboxTask.lane}
-          gpsLat={lightboxTask.gps_lat || 16.2405}
-          gpsLng={lightboxTask.gps_lng || 108.1310}
-          deviceInfo={lightboxTask.exif_device || 'Samsung Galaxy Tab Active 4 Pro'}
-          capturedAt={lightboxTask.exif_captured_at || lightboxTask.created_at}
+          gpsLat={lightboxMeasure?.latitude ?? lightboxTask.gps_lat}
+          gpsLng={lightboxMeasure?.longitude ?? lightboxTask.gps_lng}
+          deviceInfo={lightboxTask.exif_device || undefined}
+          capturedAt={(lightboxTask.id === selectedDetailTask?.id && detailPhoto?.capturedAt) || lightboxTask.exif_captured_at || lightboxTask.created_at}
           technicianName={lightboxTask.technician_name}
           notes={lightboxTask.notes}
           statusBadge={

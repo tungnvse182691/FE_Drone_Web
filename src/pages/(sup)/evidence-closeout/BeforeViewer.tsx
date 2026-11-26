@@ -26,7 +26,7 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({ currentItem }) => {
 
       {/* Vùng hiển thị ảnh */}
       <div className="relative group aspect-video w-full overflow-hidden bg-slate-900">
-        <EvidencePhoto projectId={currentItem.project_id} photo={ref} alt="Hiện trạng hư hỏng mặt đường trước khi sửa chữa" emptyText="Chưa có ảnh trước: bản nộp không có ảnh BEFORE và khiếm khuyết không có ảnh nguồn" />
+        <EvidencePhoto projectId={currentItem.project_id} photo={ref} alt="Hiện trạng hư hỏng mặt đường trước khi sửa chữa" emptyText="Chưa có ảnh trước: bản nộp không có ảnh BEFORE và khiếm khuyết không có ảnh nguồn" fit="contain" />
 
         {/* HUD Định vị trên ảnh (chỉ hiện khi có dữ liệu) */}
         {currentItem.chainage && currentItem.chainage !== NO_DATA && (

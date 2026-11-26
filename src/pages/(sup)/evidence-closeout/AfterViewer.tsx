@@ -32,7 +32,7 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({ currentItem }) => {
 
       {/* Vùng hiển thị ảnh */}
       <div className="relative group aspect-video w-full overflow-hidden bg-slate-900">
-        <EvidencePhoto projectId={currentItem.project_id} photo={ref} alt="Mặt đường sau khi sửa chữa (ảnh AFTER của bản nộp)" emptyText="Chưa có ảnh sau: bản nộp hiện hành không có ảnh AFTER" />
+        <EvidencePhoto projectId={currentItem.project_id} photo={ref} alt="Mặt đường sau khi sửa chữa (ảnh AFTER của bản nộp)" emptyText="Chưa có ảnh sau: bản nộp hiện hành không có ảnh AFTER" fit="contain" />
 
         {/* HUD Crew */}
         <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md text-xs text-slate-800 shadow-2xs flex items-center gap-1.5 border border-slate-200/80 font-medium max-w-[85%]">

@@ -765,6 +765,8 @@ export interface TriageCase {
   /** Quyết định Report→Defect (KEEP_NEW) đã đọc lại từ BE. Tách khỏi trạng thái Case và trạng thái xác minh Defect. */
   decision_recorded?: boolean
   decision_read_error?: string
+  /** Lỗi đọc thông tin người gửi (GET /cases/{id}/reports) cho danh sách; không điền dữ liệu giả. */
+  reporter_read_error?: string
   /** Trạng thái Defect do BE trả (GET /defects/{id}); không suy ra từ Case. */
   defect_status?: string | null
   /** Case đã OPEN lại sau khi có bổ sung; kết luận trước đó chuyển vào lịch sử. */

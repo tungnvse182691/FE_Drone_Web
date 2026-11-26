@@ -205,11 +205,11 @@ export const AcceptanceList: React.FC = () => {
                   <span className="w-2.5 h-2.5 rounded-full bg-[#047857]" />
                   <span className="absolute inset-0 rounded-full bg-[#047857]/20" />
                 </div>
-                <span className="text-[11px] text-[#047857] font-bold uppercase tracking-wider">Đã đóng gói / Đạt</span>
+                <span className="text-[11px] text-[#047857] font-bold uppercase tracking-wider">Đã nghiệm thu xong</span>
               </div>
               <div className="flex items-baseline gap-2 pt-1">
-                <span className="text-2xl font-bold text-[#047857] font-sansation">{stats.closed}</span>
-                <span className="text-[11px] text-slate-500 font-medium">({stats.passed} chờ đóng)</span>
+                <span className="text-2xl font-bold text-[#047857] font-sansation">{stats.passed + stats.closed}</span>
+                <span className="text-[11px] text-slate-500 font-medium">(100% hạng mục đã nghiệm thu; BE chưa có trạng thái đóng gói riêng)</span>
               </div>
             </div>
           </div>
@@ -225,8 +225,7 @@ export const AcceptanceList: React.FC = () => {
               { id: 'ALL', label: 'Tất cả' },
               { id: 'PENDING_INSPECTION', label: 'Chờ nghiệm thu' },
               { id: 'REWORK_REQUIRED', label: 'Cần sửa lại' },
-              { id: 'PASSED', label: 'Chờ đóng đợt' },
-              { id: 'CLOSED', label: 'Đã đóng gói' }
+              { id: 'PASSED', label: 'Đã nghiệm thu xong' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -468,10 +467,10 @@ export const AcceptanceList: React.FC = () => {
                           navigate(`${basePath}/acceptance/${pkg.id}`)
                         }}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer bg-[#1A1D20] hover:bg-black text-[#F1E5C6] whitespace-nowrap"
-                        title="Hạng mục đã đạt 100%, vào kiểm tra và đóng đợt thi công"
+                        title="Tất cả hạng mục đã nghiệm thu; mở hồ sơ để xem kết quả (BE không có thao tác đóng gói riêng)"
                       >
-                        <Icon name="lock" size={14} className="text-[#C9A227]" />
-                        <span>Đóng đợt ngay</span>
+                        <Icon name="inventory_2" size={14} className="text-[#C9A227]" />
+                        <span>Xem kết quả nghiệm thu</span>
                       </button>
                     ) : (
                       <button

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
+import { severityLabel } from '../../../utils/severity'
 import { TriageCase } from './types'
 
 export interface TriageCardProps {
@@ -123,17 +124,17 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
   // Badge mức độ ưu tiên (Bo tròn 999px, font 11px font-weight 700, padding 5px 14px)
   const priorityBadge = (() => {
-    if (item.severity === 'UNKNOWN') return { label: 'Chưa xác định ưu tiên', bg: '#F1F5F9', text: '#475569' }
+    if (item.severity === 'UNKNOWN') return null // Chưa có mức độ từ máy chủ: không hiện nhãn, không suy diễn
     if (item.severity === 'CRITICAL') {
-      return { bg: '#F3E0E0', text: '#7F1D1D', label: 'Khẩn cấp' }
+      return { bg: '#F3E0E0', text: '#7F1D1D', label: severityLabel(item.severity) }
     }
     if (item.severity === 'HIGH') {
-      return { bg: '#F0E8D5', text: '#78350F', label: 'Ưu tiên Cao' }
+      return { bg: '#F0E8D5', text: '#78350F', label: severityLabel(item.severity) }
     }
     if (item.severity === 'MEDIUM') {
-      return { bg: '#F5EED3', text: '#8C6D1F', label: 'Ưu tiên Vừa' }
+      return { bg: '#F5EED3', text: '#8C6D1F', label: severityLabel(item.severity) }
     }
-    return { bg: '#F5EED3', text: '#8C6D1F', label: 'Ưu tiên Thấp' }
+    return { bg: '#F5EED3', text: '#8C6D1F', label: severityLabel(item.severity) }
   })()
 
   // Badge trạng thái xác minh (Bo tròn 999px, font 11px font-weight 700, padding 5px 14px)
@@ -211,7 +212,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
             </h3>
           </div>
           <div data-testid="card-badges" className="flex items-center gap-1.5 min-w-0 max-w-full flex-wrap justify-end">
-            <span
+            {priorityBadge && <span
               className="rounded-full text-[11px] font-bold px-[14px] py-[5px] max-w-full break-words"
               style={{
                 backgroundColor: priorityBadge.bg,
@@ -219,7 +220,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
               }}
             >
               {priorityBadge.label}
-            </span>
+            </span>}
             <span
               className="rounded-full text-[11px] font-bold px-[14px] py-[5px] max-w-full break-words"
               style={{
@@ -252,10 +253,6 @@ export const TriageCard: React.FC<TriageCardProps> = ({
           <span className="text-slate-800 font-semibold">{sourceLabel}</span>
           <span>•</span>
           <span className="text-slate-700">{item.project_name || 'Chưa gán dự án'}</span>
-          <span>•</span>
-          <span className="font-mono text-slate-700">
-            {item.stationing || 'Lý trình cập nhật'}
-          </span>
           <span>•</span>
           <span>{item.time_ago}</span>
         </div>

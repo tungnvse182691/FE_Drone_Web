@@ -251,6 +251,14 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                   </span>
                 </div>
 
+                {item.decisionRestricted && (
+                  <div role="status" data-testid="ai-decision-restricted-row" className="pl-2">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-700 break-words">
+                      <p className="font-semibold">Đã có quyết định của PM — nội dung quyết định không thuộc phạm vi Giám sát được đọc.</p>
+                      <p className="mt-0.5">Giám sát chỉ xem dữ kiện ứng viên; đây không phải "chưa có dữ liệu" và không phải lỗi tải.</p>
+                    </div>
+                  </div>
+                )}
                 {item.stateUnknown && (
                   <div role="alert" data-testid="ai-detection-state-unknown" className="pl-2">
                     <div className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-800 break-words">

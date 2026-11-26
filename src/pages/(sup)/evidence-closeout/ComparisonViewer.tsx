@@ -76,10 +76,10 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
       {/* CHẾ ĐỘ 2: VUỐT TRƯỢT SO SÁNH */}
       {viewMode === 'slider' && (
         <div className="space-y-3">
-          <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs select-none bg-slate-900 border border-slate-200">
+          <div className="relative w-full h-[min(70vh,640px)] min-h-[320px] rounded-xl overflow-hidden shadow-xs select-none bg-slate-900 border border-slate-200">
             {/* Ảnh sau sửa (Lớp nền) */}
             <div className="absolute inset-0">
-              <EvidencePhoto projectId={currentItem.project_id} photo={currentItem.after_ref} alt="Sau khi hoàn thành sửa chữa" emptyText="Chưa có ảnh sau" zoomable={false} />
+              <EvidencePhoto projectId={currentItem.project_id} photo={currentItem.after_ref} alt="Sau khi hoàn thành sửa chữa" emptyText="Chưa có ảnh sau" zoomable={false} fit="contain" />
             </div>
 
             {/* Ảnh trước sửa (Lớp phủ được cắt theo sliderPosition) */}
@@ -88,7 +88,7 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
               style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
             >
               <div className="absolute inset-0">
-                <EvidencePhoto projectId={currentItem.project_id} photo={currentItem.before_ref} alt="Trước khi sửa chữa" emptyText="Chưa có ảnh trước" zoomable={false} />
+                <EvidencePhoto projectId={currentItem.project_id} photo={currentItem.before_ref} alt="Trước khi sửa chữa" emptyText="Chưa có ảnh trước" zoomable={false} fit="contain" />
               </div>
               {/* Nhãn TRƯỚC SỬA */}
               <div className="absolute top-3 left-3 bg-rose-600/90 text-white font-medium text-xs px-2.5 py-1 rounded-md shadow-xs backdrop-blur-xs flex items-center gap-1.5">

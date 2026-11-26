@@ -8,6 +8,8 @@ import { surveyService } from '../../../api/services/surveyService'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { useCaseReportMedia } from './useCaseReportMedia'
+import { ReportMatchingPanel } from './ReportMatchingPanel'
+import { SEVERITY_OPTIONS } from '../../../utils/severity'
 import type { TriageCase } from './types'
 
 export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase: TriageCase; onRecorded?: (message: string) => void }) {
@@ -19,7 +21,8 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const reportId = reports.length === 1 ? reports[0].reportId : sourceChoice?.scope === caseScope ? sourceChoice.reportId : reports.some(r=>r.reportId===query?.get('reportId'))?query!.get('reportId')!:''
   const report = reports.find(r => r.reportId === reportId)
   const scope = `${auth.authEpoch}:${auth.user?.id}:${selectedCase.id}:${selectedCase.project_id}:${reportId}`
-  type Match = {defectId: string; version?: string | null; distanceMeters?: number | null; reasonCodes?: string[] | null}
+  type Match = {defectId: string; version?: string | null; distanceMeters?: number | null; accuracyMeters?: number | null; distanceStatus?: string | null; distanceMethod?: string | null; overlapStatus?: string | null; reasonCodes?: string[] | null}
+  const [expandState, setExpandState] = useState<{scope: string; on: boolean}>({scope: '', on: false})
   const [read, setRead] = useState<{scope: string; sourceVersion?: string; geometryVersion?: string; matches?: Match[]; error?: string} | null>(null)
   // Quyết định nguồn Report: KEEP_NEW (tạo Defect), LINK_EXISTING (gắn Defect hiện có), REJECT (loại nguồn Report; KHÁC kết luận Case NO_DEFECT).
   const [kindState, setKindState] = useState<{scope: string; kind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'; targetId: string; shown: boolean}>({scope: '', kind: 'KEEP_NEW', targetId: '', shown: false})
@@ -36,7 +39,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       let cursor: string | undefined, sourceVersion: string | undefined, geometryVersion: string | undefined
       const seen = new Set<string>(), matches: Match[] = []
       do {
-        const {data} = await apiClient.get(`/projects/${selectedCase.project_id}/candidates`, {params: {sourceKind: 'REPORT', sourceId: report.reportId, pageSize: 50, cursor}, signal: controller.signal})
+        const {data} = await apiClient.get(`/projects/${selectedCase.project_id}/candidates`, {params: {sourceKind: 'REPORT', sourceId: report.reportId, pageSize: 50, cursor, expand: expandState.scope === scope && expandState.on ? true : undefined}, signal: controller.signal})
         if (controller.signal.aborted || useAuthStore.getState().authEpoch !== auth.authEpoch) return
         if (data?.source?.kind !== 'REPORT' || data.source.id !== report.reportId || typeof data.source.version !== 'string' || !data.source.version || typeof data.geometryVersion !== 'string' || !data.geometryVersion || !Array.isArray(data.items) || data.nextCursor != null && (typeof data.nextCursor !== 'string' || !data.nextCursor)) throw new Error('Candidate thiếu hoặc sai Report/phiên bản nguồn/geometryVersion; chưa ghi nhận khiếm khuyết.')
         if (sourceVersion && (sourceVersion !== data.source.version || geometryVersion !== data.geometryVersion)) throw new Error('Phiên bản candidate thay đổi giữa các trang; cần đọc lại.')
@@ -47,7 +50,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       if (!controller.signal.aborted) setRead({scope, sourceVersion, geometryVersion, matches})
     })().catch(e => { if (!controller.signal.aborted && useAuthStore.getState().authEpoch === auth.authEpoch) setRead({scope, error: e?.response ? `Không đọc được nguồn Report: HTTP ${e.response.status} ${e.response.data?.code || ''}${e.response.data?.correlationId ? ` · Mã đối chiếu ${e.response.data.correlationId}` : ''}` : e.message || 'Không đọc được nguồn Report.'}) })
     return () => controller.abort()
-  }, [scope, allowed, !!report, media?.reportsError, media?.reportsLoading, selectedCase.version, reload])
+  }, [scope, allowed, !!report, media?.reportsError, media?.reportsLoading, selectedCase.version, reload, expandState.scope === scope && expandState.on])
   const [catalog, setCatalog] = useState<{scope:string; items:DefectTypeOption[]; error:string}|null>(null)
   const [roads, setRoads] = useState<TriageRouteReference[]>([]), [roadError,setRoadError]=useState('')
   const [packageRead,setPackageRead]=useState<{scope:string;version:string;error:string}|null>(null)
@@ -136,6 +139,11 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   </label>
   if(referenceId||currentRecorded?.result)return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
     <p className="font-bold text-slate-800">Kết quả ghi nhận phản ánh</p>
+    <ul data-testid="source-state" className="list-disc pl-4 text-slate-700">
+      <li>Liên kết nguồn (Report → Defect): {currentRecorded?.result ? (currentRecorded.result.decision.decision === 'REJECT' ? 'Đã từ chối nguồn Report (không có Defect)' : `${currentRecorded.result.decision.decision} → #DEF-${(currentRecorded.result.decision.defectId || '').slice(0, 8).toUpperCase()} (Defect: ${currentRecorded.result.defect?.status || 'chưa đọc'})`) : currentRecorded?.loading ? 'đang đọc từ máy chủ…' : 'chưa đọc được từ máy chủ'}</li>
+      <li>Kết luận Case: {selectedCase.case_status === 'CONCLUDED' ? 'Đã có kết luận' : 'Chưa kết luận (ghi nhận nguồn không phải kết luận Case; Case.defectIds chỉ cập nhật khi có kết luận)'}</li>
+      <li>Công bố cho người dân: thao tác riêng, không suy ra từ liên kết nguồn.</li>
+    </ul>
     {reportSelector}
     {currentRecorded?.loading&&<p role="status">Đang đọc quyết định và khiếm khuyết từ máy chủ…</p>}
     {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
@@ -156,6 +164,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       {(current?.error || sourceStale || packageMismatch) && <button type="button" disabled={!allowed || !report || commandBusy} onClick={() => { if (sourceStale) setCommand(old => ({...old, error: ''})); setReload(n => n + 1) }} className="text-xs underline">Thử tải lại dữ liệu ghi nhận</button>}
     </div>
     {reportSelector}
+    {allowed && !!report && selectedCase.project_id && <ReportMatchingPanel projectId={selectedCase.project_id} reportId={report.reportId} evidenceId={media?.selected?.reportId === report.reportId ? media.selected.evidence.evidenceId : null} sourceVersion={current?.sourceVersion} geometryVersion={current?.geometryVersion} matches={current?.matches} loading={!current} error={current?.error} expanded={expandState.scope === scope && expandState.on} onExpand={() => setExpandState({scope, on: true})} onChanged={() => setReload(n => n + 1)} />}
     <label className="grid min-w-0 gap-1">Loại quyết định nguồn Report
       <select aria-label="Loại quyết định nguồn Report" value={kind} disabled={!allowed||commandBusy||!!heldDecision} onChange={e=>changeKind({kind:e.target.value as 'KEEP_NEW'|'LINK_EXISTING'|'REJECT',targetId:'',shown:false})} className="rg-field w-full min-w-0 max-w-full">
         <option value="KEEP_NEW">Ghi nhận khiếm khuyết mới (KEEP_NEW)</option>
@@ -185,10 +194,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
         Mức độ nghiêm trọng
         <select aria-label="Mức độ nghiêm trọng" value={severity} onChange={event => changeForm('severity', event.target.value)} disabled={!allowed} className="rg-field w-full min-w-0 max-w-full">
           <option value="">Chọn mức độ</option>
-          <option value="LOW">Thấp</option>
-          <option value="MEDIUM">Trung bình</option>
-          <option value="HIGH">Cao</option>
-          <option value="CRITICAL">Nghiêm trọng</option>
+          {SEVERITY_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         {err('severity')}
       </label>

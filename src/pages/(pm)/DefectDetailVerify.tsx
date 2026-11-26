@@ -14,6 +14,8 @@ import {
 import { projectService } from '../../api/services/projectService'
 import { aiApiErrorText } from '../../api/services/aiRunDetailService'
 import { triageService } from '../../api/services/triageService'
+import { defectTypeCatalog, type DefectTypeOption } from '../../api/services/defectTypeCatalog'
+import { isSeverity, severityFromLabel } from '../../utils/severity'
 import { DefectStatus, Severity, DefectType, RoleCode } from '../../types/enums'
 import { Defect } from '../../types/domain'
 import { useAuthStore } from '../../store/authStore'
@@ -197,8 +199,10 @@ export const DefectDetailVerify: React.FC = () => {
   const [candidateMatches, setCandidateMatches] = useState<CandidateMatchItemDto[]>([])
 
   const [customDefectType, setCustomDefectType] = useState<DefectType | string | null>(null)
-  const [customTypeText, setCustomTypeText] = useState<string>('')
-  const [severity, setSeverity] = useState<Severity>(Severity.HIGH)
+  // Mức độ: không mặc định; chỉ lấy khi máy chủ có giá trị hợp lệ, còn lại PM phải tự chọn.
+  const [severity, setSeverity] = useState<Severity | ''>('')
+  const [typeCatalog, setTypeCatalog] = useState<{ status: 'loading' | 'error' | 'ready'; items: DefectTypeOption[]; error: string }>({ status: 'loading', items: [], error: '' })
+  const [typeCatalogReload, setTypeCatalogReload] = useState(0)
   const [notes, setNotes] = useState('Đã kiểm tra đối chiếu khung nhận diện AI và tọa độ trên CSDL.')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [isRecurrent, setIsRecurrent] = useState(false)
@@ -349,6 +353,7 @@ export const DefectDetailVerify: React.FC = () => {
         segmentSetId: matchedDet.item.segmentSetId,
         segmentId: matchedDet.item.segmentId,
         rawTypeCode: matchedDet.item.rawTypeCode,
+        rawSeverity: severityFromLabel(matchedDet.item.severityLevel),
         defect: mapDetectionToDefect(
           matchedDet.item,
           matchedDet.projectId,
@@ -365,6 +370,7 @@ export const DefectDetailVerify: React.FC = () => {
         segmentSetId: undefined as string | undefined,
         segmentId: matchedDef.dto.segmentId,
         rawTypeCode: matchedDef.dto.defectTypeCode,
+        rawSeverity: isSeverity(matchedDef.dto.severity) ? (matchedDef.dto.severity as Severity) : null,
         defect: mapBackendDefectDtoToDomain(matchedDef.dto, matchedDef.projectId, matchedDef.projectName)
       }
     }
@@ -384,6 +390,19 @@ export const DefectDetailVerify: React.FC = () => {
     copy.previous_epoch_image_url = undefined
     return copy
   }, [activeRecord, customDefectType])
+
+  // Mã loại hiện tại: mã PM vừa chọn từ danh mục, hoặc mã gốc của bản ghi (không tự đổi khi mã lạ).
+  const effectiveTypeCode = customDefectType != null ? String(customDefectType) : (activeRecord?.rawTypeCode || '')
+  useEffect(() => {
+    if (user?.role !== RoleCode.PROJECT_MANAGER) { setTypeCatalog({ status: 'ready', items: [], error: '' }); return }
+    const controller = new AbortController()
+    setTypeCatalog({ status: 'loading', items: [], error: '' })
+    defectTypeCatalog.read(controller.signal)
+      .then(items => { if (!controller.signal.aborted) setTypeCatalog({ status: 'ready', items, error: '' }) })
+      .catch(e => { if (!controller.signal.aborted) setTypeCatalog({ status: 'error', items: [], error: `Không tải được danh mục loại khiếm khuyết: HTTP ${e?.response?.status || ''} ${e?.response?.data?.code || e?.message || ''}`.trim() }) })
+    return () => controller.abort()
+  }, [user?.id, user?.role, authEpoch, typeCatalogReload])
+  const typeCatalogName = typeCatalog.items.find(t => t.code === effectiveTypeCode)?.name
 
   const [resolvedImageUrl, setResolvedImageUrl] = useState<string>('')
   const [resolvedPrevImageUrl, setResolvedPrevImageUrl] = useState<string>('')
@@ -471,10 +490,9 @@ export const DefectDetailVerify: React.FC = () => {
 
   useEffect(() => {
     if (defect) {
-      setSeverity(defect.severity)
+      setSeverity(activeRecord?.rawSeverity ?? '')
 
       setCustomDefectType(null)
-      setCustomTypeText('')
 
       setIsRecurrent(defect.decision_kind === 'LINK_EXISTING')
       setLinkedPriorCode(
@@ -536,31 +554,22 @@ export const DefectDetailVerify: React.FC = () => {
       return
     }
 
-    const effectiveType = customDefectType || defect.defect_type
-    const isCustom = effectiveType === 'CUSTOM'
-    if (isCustom && !customTypeText.trim()) {
-      showToast('Vui lòng nhập tên loại khiếm khuyết!')
-      return
+    // Loại khiếm khuyết: chỉ mã trong danh mục máy chủ (GET /catalog/defect-types); không tự chọn/đổi mã. Mức độ: PM tự chọn.
+    const typeValid = typeCatalog.status === 'ready' && typeCatalog.items.some(t => t.code === effectiveTypeCode)
+    const needClassification = newStatus === DefectStatus.VERIFIED || defect.source_kind === 'DEFECT'
+    if (needClassification) {
+      if (!typeValid) {
+        showToast(typeCatalog.status === 'error' ? 'Chưa tải được danh mục loại khiếm khuyết; bấm Thử lại trước khi ghi quyết định.' : 'Hãy chọn loại khiếm khuyết hợp lệ từ danh mục trước khi ghi quyết định.')
+        return
+      }
+      if (!isSeverity(severity)) {
+        showToast('Hãy chọn mức độ nghiêm trọng trước khi ghi quyết định.')
+        return
+      }
     }
-
-    let resolvedTypeCode = String(effectiveType)
-    let resolvedCustomLabel: string | undefined = undefined
-
-    if (isCustom) {
-      const slug = customTypeText
-        .trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/đ/gi, 'd')
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '')
-        .slice(0, 28)
-      resolvedTypeCode = slug ? `CUSTOM_${slug}` : 'CUSTOM_DEFECT'
-      resolvedCustomLabel = customTypeText.trim()
-    } else if (effectiveType === DefectType.LONGITUDINAL_CRACK && !customDefectType) {
-      resolvedTypeCode = 'CRACK'
-    }
+    const resolvedTypeCode: string | undefined = typeValid ? effectiveTypeCode : undefined
+    const resolvedSeverity: Severity | undefined = isSeverity(severity) ? severity : undefined
+    const resolvedCustomLabel: string | undefined = undefined
 
     if (!decisionGuard.acquire()) return
     setIsSubmitting(true)
@@ -571,9 +580,9 @@ export const DefectDetailVerify: React.FC = () => {
         const evidenceIds = await surveyService.resolveDefectEvidenceIds(defect.project_id, defect.id)
 
         await surveyService.assessDefect(defect.project_id, defect.id, {
-          defectTypeCode: resolvedTypeCode,
+          defectTypeCode: resolvedTypeCode as string,
           customTypeLabel: resolvedCustomLabel,
-          severity: severity as any,
+          severity: resolvedSeverity as any,
           reason: notes.trim(),
           evidenceIds
         })
@@ -596,9 +605,9 @@ export const DefectDetailVerify: React.FC = () => {
           runId: defect.run_id,
           segmentId: (defect as any).segment_id ?? null,
           decision: newStatus === DefectStatus.VERIFIED ? 'KEEP_NEW' : 'REJECT',
-          defectTypeCode: resolvedTypeCode,
+          defectTypeCode: resolvedTypeCode as string,
           customTypeLabel: resolvedCustomLabel,
-          severity: severity as any,
+          severity: resolvedSeverity as any,
           reason: notes.trim(),
           recurrence
         })
@@ -721,8 +730,6 @@ export const DefectDetailVerify: React.FC = () => {
     )
   }
 
-  const effectiveCustomLabel =
-    customDefectType === 'CUSTOM' ? customTypeText.trim() || 'Loại lỗi tự nhập' : undefined
 
   return (
     <div className="space-y-6">
@@ -746,6 +753,12 @@ export const DefectDetailVerify: React.FC = () => {
         </div>
       )}
 
+      {detectionItem?.decisionRestricted && (
+        <div role="status" data-testid="ai-decision-restricted" className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs">
+          <div className="font-bold">Quyết định của PM: không thuộc phạm vi Giám sát được đọc</div>
+          <div className="mt-0.5">Máy chủ cho biết ứng viên {detectionItem.code} đã có quyết định, nhưng Giám sát chỉ được xem dữ kiện ứng viên. Nội dung/lý do/kết quả quyết định của PM không hiển thị ở đây (đây không phải "chưa có dữ liệu" và Giám sát không có quyền quyết định thay).</div>
+        </div>
+      )}
       {writeLocked && detectionItem && (
         <div role="alert" data-testid="ai-detection-state-unknown" className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start justify-between gap-3 text-xs">
           <div>
@@ -777,13 +790,13 @@ export const DefectDetailVerify: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <Card>
-            {viewMode === 'GIS_MAP' && <DefectGisMapViewer defect={defectWithAuthImage || defect} severity={severity} segmentSetId={activeRecord?.segmentSetId} segmentId={activeRecord?.segmentId} />}
+            {viewMode === 'GIS_MAP' && <DefectGisMapViewer defect={defectWithAuthImage || defect} severity={severity || defect.severity} segmentSetId={activeRecord?.segmentSetId} segmentId={activeRecord?.segmentId} />}
 
             {viewMode === 'SINGLE' && (
               <DefectBoundingBoxViewer
                 defect={defectWithAuthImage || defect}
-                currentType={customDefectType || defect.defect_type}
-                customTypeLabel={effectiveCustomLabel}
+                currentType={effectiveTypeCode || defect.defect_type}
+                customTypeLabel={typeCatalogName}
               />
             )}
 
@@ -794,10 +807,10 @@ export const DefectDetailVerify: React.FC = () => {
         <div className="space-y-4">
           <DefectVerifyForm
             defect={defect}
-            currentType={customDefectType || defect.defect_type}
+            currentType={effectiveTypeCode}
             onTypeChange={(newType) => setCustomDefectType(newType)}
-            customTypeText={customTypeText}
-            onCustomTypeTextChange={setCustomTypeText}
+            originalTypeCode={activeRecord?.rawTypeCode || ''}
+            typeCatalog={{ ...typeCatalog, retry: () => setTypeCatalogReload(n => n + 1) }}
             liveBbox={defect.bounding_box}
             severity={severity}
             setSeverity={setSeverity}

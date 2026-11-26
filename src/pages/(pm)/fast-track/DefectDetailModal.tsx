@@ -1,25 +1,32 @@
+import { defectTypeLabel, useDefectTypeNames } from '../../../api/services/defectTypeNames'
 import React, { useState, useEffect } from 'react'
-import { fastTrackService } from '../../../api/services/fastTrackService'
+import { fastTrackService, type RepairPolicyView } from '../../../api/services/fastTrackService'
 import { useAuthStore } from '../../../store/authStore'
 import { exportError } from '../../../api/services/projectExportService'
 import { fastTrackStorage } from '../../../api/services/fastTrackJournal'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem } from './types'
+import { ProposalSourcePanel } from '../repair-proposals/ProposalSourcePanel'
 
 export interface DefectDetailModalProps {
   detailDefect: DefectItem | null
   onClose: () => void
+  /** Phản hồi tại màn hình sau khi lập gói (toast của trang). */
+  onPrepared?: (message: string) => void
+  /** Đường tới cấu hình chính sách khi chưa có policy phù hợp. */
+  onOpenPolicy?: () => void
 }
 
-function formatDefectTypeVi(code?: string): string {
-  if (!code) return 'Chưa phân loại'
-  const c = code.toUpperCase()
-  if (c.includes('POTHOLE')) return 'Ổ gà'
-  if (c.includes('CRACK')) return 'Nứt mặt đường'
-  if (c.includes('RUT')) return 'Vệt lún bánh xe'
-  if (c.includes('RAVEL')) return 'Bong bật cốt liệu'
-  return code
+// B15: mã lý do do máy chủ trả (GET .../eligibility.missingReasons) — hiển thị mã thật kèm giải nghĩa, mã lạ giữ nguyên, không đoán.
+const REASON_VI: Record<string, string> = {
+  POLICY_UNAVAILABLE: 'chưa có chính sách/phiên bản đã ghim cho hạng mục',
+  PINNED_POLICY_SOURCE_MISMATCH: 'nguồn của chính sách đã ghim không khớp',
+  ASSESSMENT_REQUIRED: 'cần đánh giá trước khi xác định điều kiện',
+  CURRENT_EXECUTION_AUTHORITY_DENIED: 'quyền thi công hiện hành chưa đủ',
+  TEST_ONLY_SOURCE_NOT_EXECUTABLE: 'nguồn TEST_ONLY không được dùng để thi công',
+  UNKNOWN: 'chưa đủ căn cứ để kết luận (giữ nguyên UNKNOWN)',
 }
+const reasonText = (r: string) => (REASON_VI[r.trim()] ? `${r.trim()} — ${REASON_VI[r.trim()]}` : r.trim())
 
 function formatSeverityVi(sev?: string): string {
   switch (sev?.toUpperCase()) {
@@ -61,12 +68,20 @@ function formatStatusVi(st?: string): string {
 
 export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
   detailDefect,
-  onClose
+  onClose,
+  onPrepared,
+  onOpenPolicy
 }) => {
   const isPM=useAuthStore(s=>s.user?.role==='PROJECT_MANAGER')
+  const { names: typeNames } = useDefectTypeNames()
   const [form,setForm]=useState<{fromMeters:string;toMeters:string;offsetFromMeters:string;offsetToMeters:string;segmentSetId:string;layoutRevisionId:string;slabId:string;repairPlan:string;checklistVersion:string;reason:string}>(()=>detailDefect && JSON.parse(localStorage.getItem(fastTrackStorage(detailDefect.projectId,`prepare-form:${detailDefect.defectId || detailDefect.id}`)) || 'null') || {fromMeters:'',toMeters:'',offsetFromMeters:'',offsetToMeters:'',segmentSetId:'',layoutRevisionId:'',slabId:'',repairPlan:'',checklistVersion:'',reason:''})
   useEffect(()=>{if(detailDefect && !detailDefect.itemId && isPM)localStorage.setItem(fastTrackStorage(detailDefect.projectId,`prepare-form:${detailDefect.defectId || detailDefect.id}`),JSON.stringify(form))},[detailDefect?.id,form,isPM])
   const [prepareError,setPrepareError]=useState(''),[preparing,setPreparing]=useState(false)
+  // Checklist lấy từ policy đã ban hành (PUBLISHED) đúng dự án + loại khiếm khuyết; không nhập tay, không tạo danh mục giả.
+  const [policies,setPolicies]=useState<{status:'idle'|'loading'|'error'|'ready';rows:RepairPolicyView[];error:string}>({status:'idle',rows:[],error:''})
+  useEffect(()=>{let active=true;if(!detailDefect || detailDefect.itemId || !isPM){setPolicies({status:'idle',rows:[],error:''});return};setPolicies({status:'loading',rows:[],error:''});let warn='';fastTrackService.getPolicies(detailDefect.projectId,m=>{warn=m}).then(rows=>{if(active)setPolicies({status:'ready',rows,error:warn})}).catch(e=>{if(active)setPolicies({status:'error',rows:[],error:exportError(e)})});return()=>{active=false}},[detailDefect?.id,detailDefect?.projectId,isPM])
+  const matchingPolicies=policies.rows.filter(r=>r.state==='PUBLISHED' && r.revision!=null && !!r.checklistVersion && r.defectTypeCode===detailDefect?.defectTypeCode)
+  const chosenPolicy=matchingPolicies.find(r=>r.checklistVersion===form.checklistVersion)
   const [preparationSources,setPreparationSources]=useState<Awaited<ReturnType<typeof fastTrackService.preparationSources>> | null>(null)
   useEffect(()=>{let active=true;if(!detailDefect || detailDefect.itemId || !isPM)return;setPreparationSources(null);fastTrackService.preparationSources(detailDefect).then(r=>{if(active)setPreparationSources(r)}).catch(e=>{if(active)setPrepareError(exportError(e))});return()=>{active=false}},[detailDefect?.id,isPM])
   const [sourceInfo,setSourceInfo]=useState(''),[reading,setReading]=useState(false),[readRevision,setReadRevision]=useState(0)
@@ -74,14 +89,15 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
   const prepare=async()=>{
     if(!detailDefect || preparing)return
     setPreparing(true);setPrepareError('')
-    try{if(!form.fromMeters || !form.toMeters || !form.offsetFromMeters || !form.offsetToMeters)throw new Error('Nhập rõ phạm vi; không tự lấy kích thước từ hình ảnh.')
-      await fastTrackService.prepareItem(detailDefect,{...form,fromMeters:Number(form.fromMeters),toMeters:Number(form.toMeters),offsetFromMeters:Number(form.offsetFromMeters),offsetToMeters:Number(form.offsetToMeters),segmentSetId:form.segmentSetId || null,layoutRevisionId:form.layoutRevisionId || null,slabId:form.slabId || null});window.dispatchEvent(new Event('fasttrack-refresh'));onClose()
+    try{if(!chosenPolicy)throw new Error('Chọn checklist từ chính sách đã ban hành của đúng loại khiếm khuyết; chưa có thì cấu hình chính sách trước (dữ liệu form được giữ).')
+      if(!form.fromMeters || !form.toMeters || !form.offsetFromMeters || !form.offsetToMeters)throw new Error('Nhập rõ phạm vi; không tự lấy kích thước từ hình ảnh.')
+      await fastTrackService.prepareItem(detailDefect,{...form,fromMeters:Number(form.fromMeters),toMeters:Number(form.toMeters),offsetFromMeters:Number(form.offsetFromMeters),offsetToMeters:Number(form.offsetToMeters),segmentSetId:form.segmentSetId || null,layoutRevisionId:form.layoutRevisionId || null,slabId:form.slabId || null});window.dispatchEvent(new Event('fasttrack-refresh'));onPrepared?.(`Đã lập gói và đề xuất hạng mục Fast Track cho ${detailDefect.code} (policy lần ban hành ${chosenPolicy.revision}, checklist ${chosenPolicy.checklistVersion}). Hạng mục chờ Giám sát duyệt.`);onClose()
     }catch(e){setPrepareError(exportError(e))}finally{setPreparing(false)}
   }
   if (!detailDefect) return null
 
   const isEligible = detailDefect.isFastTrackEligible === true
-  const missingReasons = detailDefect.violationReason ? [detailDefect.violationReason] : []
+  const missingReasons = detailDefect.violationReason ? detailDefect.violationReason.split(';').filter((r) => r.trim()).map(reasonText) : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -101,7 +117,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Loại khiếm khuyết: <strong className="text-slate-800">{formatDefectTypeVi(detailDefect.defectTypeCode)}</strong>
+              Loại khiếm khuyết: <strong className="text-slate-800">{defectTypeLabel(detailDefect.defectTypeCode, typeNames)}</strong>
             </p>
           </div>
           <button
@@ -136,6 +152,8 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
             )}
           </div>
 
+          <ProposalSourcePanel key={`${detailDefect.projectId}:${detailDefect.defectId || detailDefect.id}`} projectId={detailDefect.projectId} defectId={detailDefect.defectId || detailDefect.id} defectCode={detailDefect.code} hidePmRange />
+
           {!isEligible && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
@@ -147,12 +165,13 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
                   <li key={i}>{r}</li>
                 ))}
               </ul>
+              <p className="text-[10px] text-rose-700">Đây là điều kiện dữ liệu/chính sách do máy chủ báo; thiếu căn cứ được giữ ở trạng thái chưa xác định, không phải lỗi hệ thống.</p>
             </div>
           )}
         </div>
 
         {detailDefect.itemId && <div className="space-y-2 border-t pt-3 text-xs"><p role="status">{reading?'Đang đọc chi tiết và lịch sử phương án…':sourceInfo}</p><button type="button" disabled={reading} onClick={()=>setReadRevision(n=>n+1)} className="rg-btn">Đọc lại hồ sơ phương án</button></div>}
-        {isPM && !detailDefect.itemId && <div className="space-y-3 border-t pt-4"><h4 className="font-bold text-sm">Lập nghĩa vụ và hạng mục Fast Track</h4><p className="text-xs text-slate-500">Tuyến lấy theo hồ sơ hiện hành của khiếm khuyết. Phạm vi dưới đây phải có căn cứ thực địa; không suy từ AI.</p><div className="grid grid-cols-2 gap-2">{(Object.keys(form) as Array<keyof typeof form>).map((key,i)=><label key={key} className="text-xs">{['Từ lý trình (m)','Đến lý trình (m)','Độ lệch từ (m)','Độ lệch đến (m)','Bộ phân đoạn đã công bố (nếu có)','Bố trí mặt đường (nếu có)','Tấm (nếu có)','Phương án kỹ thuật','Checklist áp dụng','Căn cứ lập nghĩa vụ'][i]}{['segmentSetId','layoutRevisionId','slabId'].includes(key) ? <select aria-label={key==='segmentSetId'?'Phân đoạn phương án':key==='layoutRevisionId'?'Bố trí phương án':'Tấm phương án'} value={form[key]} onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value,...(key==='segmentSetId'?{layoutRevisionId:'',slabId:''}:key==='layoutRevisionId'?{slabId:''}:{})}))}} className="rg-field block w-full mt-1"><option value="">Không chọn — phạm vi theo lý trình</option>{key==='segmentSetId' ? preparationSources?.sets.map((r,i)=><option key={r.id} value={r.id}>Bộ phân đoạn đã công bố {i+1}</option>):[...new Set(preparationSources?.tasks.filter(r=>r.pins.segmentSetId===(form.segmentSetId || null) && (key!=='slabId' || r.pins.layoutRevisionId===form.layoutRevisionId)).map(r=>key==='layoutRevisionId'?r.pins.layoutRevisionId:r.pins.slabId).filter(Boolean))].map((id,i)=><option key={id} value={id!}>{key==='layoutRevisionId'?`Bố trí theo hồ sơ ${i+1}`:`Tấm ${id}`}</option>)}</select>:<input aria-label={key} value={form[key]} maxLength={key==='checklistVersion'?200:2000} type={['fromMeters','toMeters','offsetFromMeters','offsetToMeters'].includes(key)?'number':'text'} step="any" onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value}))}} className="rg-field block w-full mt-1"/>}</label>)}</div>{prepareError && <p role="alert" className="text-xs text-red-800">{prepareError}</p>}<button disabled={preparing} onClick={prepare} className="rg-btn text-xs font-bold text-[#8C6D1F]">{preparing?'Đang đối chiếu…':'Lập gói và đề xuất hạng mục'}</button></div>}
+        {isPM && !detailDefect.itemId && <div className="space-y-3 border-t pt-4"><h4 className="font-bold text-sm">Lập nghĩa vụ và hạng mục Fast Track</h4><p className="text-xs text-slate-500">Tuyến lấy theo hồ sơ hiện hành của khiếm khuyết. Phạm vi dưới đây phải có căn cứ thực địa; không suy từ AI.</p><div className="grid grid-cols-2 gap-2">{(Object.keys(form) as Array<keyof typeof form>).map((key,i)=><label key={key} className="text-xs">{['Từ lý trình (m)','Đến lý trình (m)','Độ lệch từ (m)','Độ lệch đến (m)','Bộ phân đoạn đã công bố (nếu có)','Bố trí mặt đường (nếu có)','Tấm (nếu có)','Phương án kỹ thuật','Checklist áp dụng','Căn cứ lập nghĩa vụ'][i]}{['segmentSetId','layoutRevisionId','slabId'].includes(key) ? <select aria-label={key==='segmentSetId'?'Phân đoạn phương án':key==='layoutRevisionId'?'Bố trí phương án':'Tấm phương án'} value={form[key]} onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value,...(key==='segmentSetId'?{layoutRevisionId:'',slabId:''}:key==='layoutRevisionId'?{slabId:''}:{})}))}} className="rg-field block w-full mt-1"><option value="">Không chọn — phạm vi theo lý trình</option>{key==='segmentSetId' ? preparationSources?.sets.map((r,i)=><option key={r.id} value={r.id}>Bộ phân đoạn đã công bố {i+1}</option>):[...new Set(preparationSources?.tasks.filter(r=>r.pins.segmentSetId===(form.segmentSetId || null) && (key!=='slabId' || r.pins.layoutRevisionId===form.layoutRevisionId)).map(r=>key==='layoutRevisionId'?r.pins.layoutRevisionId:r.pins.slabId).filter(Boolean))].map((id,i)=><option key={id} value={id!}>{key==='layoutRevisionId'?`Bố trí theo hồ sơ ${i+1}`:`Tấm ${id}`}</option>)}</select>:key==='checklistVersion'?<><select aria-label="Checklist áp dụng" value={chosenPolicy?.id||''} onChange={e=>{setPrepareError('');const row=matchingPolicies.find(r=>r.id===e.target.value);setForm(previous=>({...previous,checklistVersion:row?.checklistVersion||''}))}} disabled={policies.status!=='ready'||!matchingPolicies.length} className="rg-field block w-full mt-1"><option value="">{policies.status==='loading'?'Đang đọc chính sách…':matchingPolicies.length?'Chọn checklist từ chính sách':'Chưa có chính sách phù hợp'}</option>{matchingPolicies.map(r=><option key={r.id} value={r.id}>Policy {r.id.slice(0,8).toUpperCase()} · lần ban hành {r.revision} · checklist {r.checklistVersion}</option>)}</select>{chosenPolicy&&<span className="block text-[10px] text-slate-500 mt-1">Chính sách {chosenPolicy.id.slice(0,8).toUpperCase()} · lần ban hành {chosenPolicy.revision} · loại {defectTypeLabel(chosenPolicy.defectTypeCode,typeNames)} · checklist {chosenPolicy.checklistVersion}</span>}</>:<input aria-label={key} value={form[key]} maxLength={2000} type={['fromMeters','toMeters','offsetFromMeters','offsetToMeters'].includes(key)?'number':'text'} step="any" onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value}))}} className="rg-field block w-full mt-1"/>}</label>)}</div>{policies.status==='error' && <p role="alert" className="text-xs text-red-800">Không đọc được chính sách đã ban hành: {policies.error}</p>}{policies.status==='ready' && !matchingPolicies.length && <div role="alert" className="text-xs p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">Chưa có chính sách đã ban hành cho loại {defectTypeLabel(detailDefect.defectTypeCode,typeNames)} của dự án này nên chưa chọn được checklist. Dữ liệu form đang nhập được giữ lại.{onOpenPolicy && <button type="button" onClick={onOpenPolicy} className="block mt-1 underline font-semibold">Mở cấu hình chính sách</button>}</div>}{prepareError && <p role="alert" className="text-xs text-red-800">{prepareError}</p>}<button disabled={preparing || !chosenPolicy} onClick={prepare} className="rg-btn text-xs font-bold text-[#8C6D1F]">{preparing?'Đang đối chiếu…':'Lập gói và đề xuất hạng mục'}</button></div>}
         <div className="pt-2 flex justify-end border-t border-slate-100">
           <button
             onClick={onClose}

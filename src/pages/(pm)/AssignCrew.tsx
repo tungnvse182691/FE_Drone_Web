@@ -9,6 +9,8 @@ import { fastTrackFormSources, type FastTrackSource } from '../../api/services/f
 import { Users2, Calendar, ShieldAlert, ClipboardCheck, Smartphone, CheckCircle2 } from 'lucide-react'
 import { useToastStore } from '../../store/toastStore'
 import { useSubmitGuard } from '../../hooks/useSubmitGuard'
+import { useWarrantyWindow } from '../../hooks/useWarrantyWindow'
+import { warrantyDueError, warrantyHint, warrantyMaxDate } from '../../utils/warrantyDeadline'
 
 export const AssignCrew: React.FC = () => {
   const toast = useToastStore()
@@ -68,6 +70,8 @@ export const AssignCrew: React.FC = () => {
   }, [isLoading, items, params, loadError])
 
   const selected = items.find((it) => `${it.projectId}:${it.itemId}` === selectedItemKey) || null
+  const warranty = useWarrantyWindow(selected?.projectId)
+  const deadlineError = warrantyDueError(warranty, deadline, 'Hạn chót hoàn thành')
 
   useEffect(() => {
     setCrews([])
@@ -102,6 +106,7 @@ export const AssignCrew: React.FC = () => {
     if (!safetyNotes.trim()) return toast.error('Nhập chỉ dẫn và biện pháp an toàn giao thông.')
     const due = new Date(deadline + 'T23:59:59')
     if (!Number.isFinite(due.getTime()) || due.getTime() <= Date.now()) return toast.error('Hạn hoàn thành phải ở tương lai.')
+    if (deadlineError) return toast.error(deadlineError)
     if (!chosenSource) return toast.error(src.status === 'ready' ? 'Chọn nguồn khuyết tật hợp lệ do máy chủ xác định.' : 'Chưa xác định được nguồn khuyết tật của hạng mục; không thể giao việc.')
     if (result?.state === 'pending' && result.itemId === selected.itemId) return toast.error('Lệnh giao trước đó chưa đối chiếu xong; bấm "Đối chiếu lại" thay vì gửi lệnh mới.')
     if (!submitGuard.acquire()) return
@@ -225,6 +230,9 @@ export const AssignCrew: React.FC = () => {
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
+                max={warrantyMaxDate(warranty)}
+                error={deadlineError || undefined}
+                helperText={warrantyHint(warranty) || undefined}
                 required
               />
 
@@ -264,7 +272,7 @@ export const AssignCrew: React.FC = () => {
                 />
               </div>
 
-              <Button type="submit" disabled={submitting || !selected || !chosenSource} className="w-full mt-4" size="lg" icon={<Users2 className="w-4 h-4" />}>
+              <Button type="submit" disabled={submitting || !selected || !chosenSource || !!deadlineError} className="w-full mt-4" size="lg" icon={<Users2 className="w-4 h-4" />}>
                 Ban Hành Lệnh Giao Việc
               </Button>
             </form>

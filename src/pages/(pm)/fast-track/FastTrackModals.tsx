@@ -46,6 +46,7 @@ interface FastTrackModalsProps {
   dispatchNotes: string
   setDispatchNotes: (notes: string) => void
   handleExecuteDispatch: (task: FastTrackTaskInput) => void
+  showToast?: (message: string) => void
 }
 
 export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
@@ -78,7 +79,8 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
   crewTeams,
   dispatchNotes,
   setDispatchNotes,
-  handleExecuteDispatch
+  handleExecuteDispatch,
+  showToast
 }) => {
   return (
     <>
@@ -114,6 +116,8 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
         key={detailDefect?.id || 'none'}
         detailDefect={detailDefect}
         onClose={() => setDetailDefect(null)}
+        onPrepared={showToast}
+        onOpenPolicy={() => { setDetailDefect(null); setIsPolicyModalOpen(true) }}
       />
 
       <FastTrackDispatchModal

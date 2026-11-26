@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
+import { severityLabel } from '../../../utils/severity'
 import { CaseReportImage, evidenceGps, useCaseReportMedia, reportSourceLabelForCase } from './useCaseReportMedia'
 
 export interface PhotoZoomModalProps {
@@ -24,13 +25,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
   if (!isOpen) return null
 
   const severityText =
-    selectedCase.severity === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.severity === 'CRITICAL'
-      ? 'Khẩn cấp (Cấp 4)'
-      : selectedCase.severity === 'HIGH'
-      ? 'Nghiêm trọng (Cấp 3)'
-      : selectedCase.severity === 'MEDIUM'
-      ? 'Vừa (Cấp 2)'
-      : 'Nhẹ (Cấp 1)'
+    selectedCase.severity === 'UNKNOWN' ? 'Chưa xác định' : severityLabel(selectedCase.severity)
 
   const urgencyText =
     selectedCase.urgency === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.urgency === 'EMERGENCY'

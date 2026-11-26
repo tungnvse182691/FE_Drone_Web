@@ -1,5 +1,6 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
+import { SEVERITY_OPTIONS } from '../../../utils/severity'
 import type { TriageCase, ActiveTabFilter } from './types'
 
 export interface ReviewFilterBarProps {
@@ -151,10 +152,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
             <option value="ALL">Mọi cấp độ</option>
-            <option value="CRITICAL">Khẩn cấp</option>
-            <option value="HIGH">Cao</option>
-            <option value="MEDIUM">Vừa</option>
-            <option value="LOW">Bình thường</option>
+            {SEVERITY_OPTIONS.slice().reverse().map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
 

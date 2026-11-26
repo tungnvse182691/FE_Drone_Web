@@ -1,4 +1,6 @@
 import React from 'react'
+import { SEVERITY_LABEL } from '../../utils/severity'
+import { Severity } from '../../types/enums'
 
 export interface StatusBadgeProps {
   status: string
@@ -95,10 +97,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, classNa
       case 'RESOLVED': return 'Đã xử lý'
 
       // Severity
-      case 'CRITICAL': return 'Nguy cấp'
-      case 'HIGH': return 'Nghiêm trọng'
-      case 'MEDIUM': return 'Trung bình'
-      case 'LOW': return 'Nhẹ'
+      case 'CRITICAL': return SEVERITY_LABEL[Severity.CRITICAL]
+      case 'HIGH': return SEVERITY_LABEL[Severity.HIGH]
+      case 'MEDIUM': return SEVERITY_LABEL[Severity.MEDIUM]
+      case 'LOW': return SEVERITY_LABEL[Severity.LOW]
 
       // Defect Types
       case 'POTHOLE': return 'Ổ gà'

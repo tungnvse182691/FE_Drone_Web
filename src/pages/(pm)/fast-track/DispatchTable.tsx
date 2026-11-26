@@ -1,3 +1,4 @@
+import { defectTypeLabel, useDefectTypeNames } from '../../../api/services/defectTypeNames'
 import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, PolicyThresholdConfig } from './types'
@@ -19,16 +20,6 @@ export interface DispatchTableProps {
   onNavigateProposals?: () => void
   isSupervisor?: boolean
   eligibilityMap?: Record<string, { eligible: boolean; missingReasons: string[]; loading: boolean }>
-}
-
-function formatDefectTypeVi(code?: string): string {
-  if (!code) return 'Chưa phân loại'
-  const c = code.toUpperCase()
-  if (c.includes('POTHOLE')) return 'Ổ gà'
-  if (c.includes('CRACK')) return 'Nứt mặt đường'
-  if (c.includes('RUT')) return 'Vệt lún bánh xe'
-  if (c.includes('RAVEL')) return 'Bong bật cốt liệu'
-  return code
 }
 
 function formatSeverityVi(sev?: string): string {
@@ -96,6 +87,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
   onNavigateProposals
 }) => {
   const [isHovered, setIsHovered] = useState(false)
+  const { names: typeNames } = useDefectTypeNames()
 
   const cfg = (() => {
     if (!isEligible) {
@@ -149,7 +141,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
                 {defect.code}
               </span>
               <span className="ml-2 text-xs font-bold text-slate-800">
-                {formatDefectTypeVi(defect.defectTypeCode)}
+                {defectTypeLabel(defect.defectTypeCode, typeNames)}
               </span>
             </div>
           </div>

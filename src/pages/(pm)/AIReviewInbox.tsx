@@ -139,6 +139,7 @@ export const AIReviewInbox: React.FC = () => {
         loading={state.intake.detailLoading}
         error={state.intake.detailError}
         onRetry={state.intake.retryDetail}
+        onCaseChanged={state.intake.retryDetail}
         onClose={() => setIsDetailModalOpen(false)}
         selectedCase={selectedCase}
         isSupervisor={isSupervisor}

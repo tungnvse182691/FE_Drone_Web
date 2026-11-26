@@ -59,10 +59,10 @@ export const ForceChangePassword: React.FC = () => {
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1D20] flex flex-col justify-between relative overflow-x-hidden">
       {/* Light Aurora Background: 3 blobs + grid + 3 đường cong contour bezier */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[120px] -left-[120px] aurora-blob-1 rounded-full" />
-        <div className="absolute -bottom-[100px] -right-[100px] aurora-blob-2 rounded-full" />
-        <div className="absolute top-[40%] left-[30%] -translate-x-1/2 -translate-y-1/2 aurora-blob-3 rounded-full" />
-        <div className="absolute inset-0 aurora-grid-overlay" />
+        <div className="absolute -top-[120px] -left-[120px] aurora-blob-light-1 rounded-full" />
+        <div className="absolute -bottom-[100px] -right-[100px] aurora-blob-light-2 rounded-full" />
+        <div className="absolute top-[40%] left-[30%] -translate-x-1/2 -translate-y-1/2 aurora-blob-light-3 rounded-full" />
+        <div className="absolute inset-0 aurora-grid-light" />
         
         {/* Đường cong mờ contour lines */}
         <svg className="curves absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
@@ -100,11 +100,13 @@ export const ForceChangePassword: React.FC = () => {
       <main className="w-full flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10 z-10 my-2">
         <div className="w-full max-w-[560px] flex flex-col items-center">
           {/* Logo tròn 104px */}
-          <img
-            src="/logo.png"
-            alt="Logo Hoàng Hải RoadGuard"
-            className="float-logo-104 mb-5 bg-white"
-          />
+          <div className="w-[104px] h-[104px] rounded-full border-[3px] border-[rgba(201,162,39,0.5)] shadow-[0_14px_40px_rgba(201,162,39,0.28)] float-logo mb-5 overflow-hidden bg-white shrink-0">
+            <img
+              src="/logo.png"
+              alt="Logo Hoàng Hải RoadGuard"
+              className="w-full h-full object-cover rounded-full"
+            />
+          </div>
 
           {/* Eyebrow */}
           <div className="text-[12px] font-bold tracking-[0.4em] uppercase text-[#C9A227] mb-2.5">
@@ -121,7 +123,7 @@ export const ForceChangePassword: React.FC = () => {
 
           {/* Card viền gradient xoay - nền trắng */}
           <div className="w-full card-border-animated">
-            <div className="glass-card-inner">
+            <div className="glass-card-white">
               <ForcePasswordForm
                 tempPassword={tempPassword}
                 setTempPassword={setTempPassword}

@@ -10,6 +10,7 @@ import {SourceDefectPanel} from './SourceDefectPanel'
 import {PlanningPanel} from './PlanningPanel'
 import {NotificationSupervisorPanel} from './NotificationSupervisorPanel'
 import {RepairSafetyPanel} from './RepairSafetyPanel'
+import {RepairExportPanel} from './RepairExportPanel'
 import {useToastStore} from '../../../store/toastStore'
 
 export interface ProposalDetailModalProps {
@@ -145,12 +146,10 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
               <span className="text-[11px] text-slate-500">{selectedPackageForDetail.material_scope}</span>
             </div>
             <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
-              <span className="text-[11px] text-amber-900 font-medium block">Thời hạn &amp; Tiến độ kế hoạch</span>
+              <span className="text-[11px] text-amber-900 font-medium block">Hạn kế hoạch</span>
+              {/* Contract chỉ có plannedDueAt; không có số ngày thi công nên không hiển thị mục đó. */}
               <span className="text-lg font-mono font-black text-[#8F7212] mt-0.5 block">
-                {Number.isFinite(selectedPackageForDetail.duration_days)?`${selectedPackageForDetail.duration_days} ngày thi công`:'Chưa có thời gian kế hoạch từ nguồn đọc'}
-              </span>
-              <span className="text-[11px] text-amber-800">
-                Kế hoạch: {selectedPackageForDetail.date_range}
+                {selectedPackageForDetail.date_range||'Chưa nhập hạn kế hoạch'}
               </span>
             </div>
           </div>
@@ -228,6 +227,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
           {isPM && <PlanningPanel key={`plan:${selectedPackageForDetail.id}`} projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} onSaved={()=>{setReload(n=>n+1);window.dispatchEvent(new Event('repair-workflow-refresh'))}} />}
           <SourceDefectPanel key={selectedPackageForDetail.id} projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />
           {isPM && <NotificationSupervisorPanel projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />}
+          {isPM && <RepairExportPanel key={`export:${selectedPackageForDetail.id}`} projectId={selectedPackageForDetail.route_id} items={items.filter(i=>i.state!=='Cancelled')} />}
           {isPM && <RepairSafetyPanel projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />}
           {items.some(i=>i.mode==='FastTrack') && (
             <div className="flex flex-wrap gap-2">

@@ -46,7 +46,16 @@ export const fieldEvidenceReuseCommands={
   if(!receipt?.id||receipt.taskId!==taskId||receipt.fileId!==body.fileId||receipt.sourceKind!==body.sourceKind||receipt.fileChecksum!==body.expectedChecksum||receipt.reason!==body.reason||!receipt.occurredAt||file?.fileId!==body.fileId||file.state!=='VERIFIED'||file.checksum!==receipt.fileChecksum)throw new Error('Receipt/GET bằng chứng chưa khớp; không POST lại.')
   return {task,receipt,file}
  },
- async result(project:string,task:string){actor();const raw=sessionStorage.getItem(reference(project,task));if(!raw)return null;const c=JSON.parse(raw) as Intent;if(c.projectId!==project||c.taskId!==task||!c.receipt)throw new Error('Reference tái sử dụng sai phạm vi.');return this.readback(project,task,c.receipt,c.body)},
+ // B7: đọc lại từ BE (FIELD history details.evidenceReuse, chỉ PM/Giám sát có details) — không dùng sessionStorage làm nguồn duy nhất, đúng sau F5/phiên mới.
+ async result(project:string,task:string){
+  actor();const history=await fieldTaskReadService.history(project,task)
+  const rows=history.details?.evidenceReuse
+  if(!history.details)throw new Error('Máy chủ không trả chi tiết lịch sử (details) cho tài khoản này; chưa đọc được quyết định tái sử dụng ảnh.')
+  if(!rows?.length)return null
+  const last=[...rows].sort((a,b)=>Date.parse(a.occurredAt)-Date.parse(b.occurredAt))[rows.length-1]
+  const body:Body={fileId:last.fileId,sourceEvidenceId:last.sourceEvidenceId,sourceKind:last.sourceKind as 'REPORTER',expectedChecksum:last.fileChecksum,reason:last.reason}
+  return this.readback(project,task,{id:last.id,taskId:task,fileId:last.fileId,sourceKind:last.sourceKind,fileChecksum:last.fileChecksum,reason:last.reason,occurredAt:last.occurredAt},body)
+ },
  async request(project:string,taskId:string,source:ReuseSource|null,checksum:string,reason:string,version:string){
   const s=actor(),k=journal(project,taskId),held=this.pending(project,taskId)
   if(busy.has(k))throw new Error('Đang đối chiếu tái sử dụng bằng chứng.');busy.add(k)

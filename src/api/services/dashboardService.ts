@@ -3,6 +3,7 @@ import { TriageCase } from '../../types/domain'
 import { surveyService } from './surveyService'
 import { repairService } from './repairService'
 import { triageService } from './triageService'
+import { SEVERITY_LABEL } from '../../utils/severity'
 
 export interface H6ClockItem {
   id: string
@@ -78,12 +79,7 @@ interface ClockViewDto {
 }
 interface ClockPageDto { items?: ClockViewDto[] | null; continuation?: unknown }
 
-const SEVERITY_CODE_BY_VI: Record<string, string> = {
-  'Khẩn cấp': 'CRITICAL',
-  'Nghiêm trọng': 'HIGH',
-  'Trung bình': 'MEDIUM',
-  'Nhẹ': 'LOW',
-}
+const SEVERITY_CODE_BY_VI: Record<string, string> = Object.fromEntries(Object.entries(SEVERITY_LABEL).map(([code, label]) => [label, code]))
 
 const errorText = (e: unknown): string => {
   const anyErr = e as { response?: { status?: number; data?: { detail?: string; title?: string } }; message?: string }

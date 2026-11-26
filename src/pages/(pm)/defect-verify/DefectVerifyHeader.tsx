@@ -7,7 +7,7 @@ import { Icon } from '../../../components/ui/Icon'
 
 interface DefectVerifyHeaderProps {
   defect: Defect
-  severity: Severity
+  severity: Severity | ''
   viewMode: 'SINGLE' | 'TEMPORAL' | 'GIS_MAP'
   setViewMode: (mode: 'SINGLE' | 'TEMPORAL' | 'GIS_MAP') => void
   onBack: () => void
@@ -51,7 +51,7 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
               Thẩm Định Khiếm Khuyết CSDL: {defect.code}
             </h1>
             <StatusBadge status={defect.status} />
-            <StatusBadge status={severity} />
+            {severity && <StatusBadge status={severity} />}
             {defect.decision_kind === 'LINK_EXISTING' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
                 <Icon name="link" size={14} className="text-[#C9A227]" />

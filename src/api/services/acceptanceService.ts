@@ -154,16 +154,72 @@ function assertFresh(h: Head, expect?: ReviewExpect) {
     throw new AcceptanceStaleError('Hạng mục đã thay đổi phiên bản so với bản đang xem. Đã tải lại; hãy xem lại trước khi thao tác.')
 }
 
-async function postReview(h: Head, decision: 'ACCEPT' | 'SUPPLEMENT', reason?: string) {
+async function postReview(h: Head, decision: 'ACCEPT' | 'SUPPLEMENT', reason?: string, key?: string) {
   if (!h.taskId) throw new Error('Hạng mục chưa có lần thi công (attempt) để review.')
   if (!h.submissionId) throw new Error('Nhiệm vụ chưa có bản nộp (submission) để review.')
   const body: RepairAttemptReviewInput = { fieldSubmissionId: h.submissionId, decision, ...(reason && reason.trim() ? { reason: reason.trim().slice(0, 2000) } : {}) }
   const res = await apiClient.post(
     `/projects/${h.projectId}/repair-packages/${h.packageId}/items/${h.itemId}/tasks/${h.taskId}/attempts/reviews`,
     body,
-    { headers: { 'Idempotency-Key': idemKey(), 'If-Match': h.etag } }
+    { headers: { 'Idempotency-Key': key || idemKey(), 'If-Match': h.etag } }
   )
   return res.data as { reviewId?: string; decision?: string; submissionId?: string }
+}
+
+export interface SubmissionVersion { submissionId: string; revision: number | null; receivedAt: string | null; parentSubmissionId: string | null; effective: boolean; contentHash: string | null; review: { decision: string; reason: string | null; at: string | null; role: string | null; current: boolean } | null; evidence: PhotoRef[]; measurements: SubmissionMeasurement[] }
+export interface SubmissionLineage { taskId: string | null; versions: SubmissionVersion[]; attempts: Array<{ number: number; id: string; startedAt: string | null; finishedAt: string | null; serverReceivedAt: string | null; timeProvenance: string | null }>; notes: string[] }
+
+/** Liên kết task FIELD sửa chữa với hạng mục (binding hiện hành) để dùng review sửa chữa thay review FIELD. */
+export interface RepairTaskBinding { projectId: string; packageId: string; itemId: string; taskId: string; mode: string; state: string; version: string; submissionId: string | null; taskStatus: string | null }
+const reviewKeys = new Map<string, string>()
+const normStatus = (v: string | null | undefined) => String(v || '').toUpperCase().replace(/_/g, '')
+
+/**
+ * PM không đọc được task.repairContext (null), nên tìm hạng mục qua GET repair-packages/items/history:
+ * hạng mục cùng Defect có currentBinding.taskId (hoặc attempt/taskBindings) trùng task. Không thấy -> null (UI báo rõ, không đoán).
+ */
+export async function resolveRepairTaskBinding(projectId: string, taskId: string, defectId: string, signal?: AbortSignal): Promise<RepairTaskBinding | null> {
+  const pk = await apiClient.get<any>(`/projects/${projectId}/repair-packages`, { signal })
+  for (const pkg of pk.data?.items || []) {
+    if (pkg.defectId && pkg.defectId !== defectId) continue
+    const list = await apiClient.get<any>(`/projects/${projectId}/repair-packages/${pkg.id}/items`, { signal })
+    for (const it of list.data?.items || []) {
+      if (it.defectId && it.defectId !== defectId) continue
+      const hist = await apiClient.get<any>(`/projects/${projectId}/repair-packages/${pkg.id}/items/${it.id}/history`, { signal })
+      const h = hist.data || {}
+      const bound = h.item?.currentBinding?.taskId === taskId || (h.attempts || []).some((a: any) => a.taskId === taskId) || (h.taskBindings || []).some((b: any) => b.taskId === taskId)
+      if (!bound) continue
+      const cur = await itemEtag(projectId, pkg.id, it.id)
+      const task = await apiClient.get<any>(`/projects/${projectId}/field-inspection-tasks/${taskId}`, { signal })
+      return { projectId, packageId: pkg.id, itemId: it.id, taskId, mode: cur.mode, state: cur.state, version: cur.etag, submissionId: task.data?.latestSubmissionId ?? null, taskStatus: task.data?.status ?? null }
+    }
+  }
+  return null
+}
+
+/**
+ * Review sửa chữa (ACCEPT/SUPPLEMENT) cho bản nộp hiện hành của task có binding. KHÔNG kiểm submission.readiness của FIELD (BE tự kiểm điều kiện sửa chữa).
+ * Đọc lại item/task ngay trước khi gửi; key giữ nguyên khi gửi lại cùng nội dung; sau lệnh GET đối soát (ACCEPT -> item Reviewed; SUPPLEMENT -> task SupplementRequired).
+ * Bước xác nhận cuối (final-confirmation) là lệnh riêng, không gọi ở đây.
+ */
+export async function reviewRepairTaskSubmission(b: RepairTaskBinding, submissionId: string, decision: 'ACCEPT' | 'SUPPLEMENT', reason: string): Promise<{ state: string; taskStatus: string | null }> {
+  if (decision === 'SUPPLEMENT' && !reason.trim()) throw new Error('Cần nhập nội dung yêu cầu bổ sung.')
+  itemMeta.set(b.itemId, { projectId: b.projectId, packageId: b.packageId })
+  const h = await readHead(b.itemId)
+  if (h.taskId !== b.taskId) throw new AcceptanceStaleError('Hạng mục đã gắn nhiệm vụ khác; hãy tải lại hồ sơ.')
+  assertFresh(h, { submissionId, version: b.version })
+  if (h.state !== 'Submitted') throw new AcceptanceStaleError(`Hạng mục đang ở "${repairStateLabel(h.state)}", không còn ở bước PM đánh giá.`)
+  if (normStatus(h.taskStatus) === 'SUPPLEMENTREQUIRED') throw new AcceptanceStaleError('Đã yêu cầu bổ sung cho bản nộp này; đang chờ Crew nộp bản bổ sung.')
+  const kk = `${b.itemId}|${submissionId}|${decision}|${reason.trim()}`
+  const key = reviewKeys.get(kk) || idemKey()
+  reviewKeys.set(kk, key)
+  await postReview(h, decision, reason, key)
+  let after: Head
+  try { after = await readHead(b.itemId) } catch (e) { throw new Error(`Review ${decision} đã gửi nhưng chưa đọc lại được trạng thái (${beErrorText(e)}). Bấm "Đọc lại hồ sơ" để đối soát; không gửi review mới.`) }
+  const ok = decision === 'ACCEPT' ? after.state === 'Reviewed' : normStatus(after.taskStatus) === 'SUPPLEMENTREQUIRED'
+  if (!ok) throw new Error(`Review ${decision} đã gửi nhưng BE chưa phản ánh (hạng mục "${repairStateLabel(after.state)}", task "${after.taskStatus || '?'}"). Đọc lại hồ sơ để đối soát; không gửi review mới.`)
+  reviewKeys.delete(kk)
+  return { state: after.state, taskStatus: after.taskStatus }
 }
 
 async function postFinal(h: Head, reason: string) {
@@ -364,6 +420,7 @@ export const acceptanceService = {
         const crewId: string | null = last?.crewId ?? task?.assignedToUserId ?? null
         const crewName = crewId ? crew.names.get(String(crewId)) ?? null : null
         const step = pendingStepOf(it.state, it.mode, task?.status)
+        const gpsM = (submission?.measurements || []).find((m: any) => Number.isFinite(m.latitude) && Number.isFinite(m.longitude))
         const measurements: SubmissionMeasurement[] = (submission?.measurements || []).map((m: any) => ({ sampleId: m.sampleId, type: m.type, value: m.value, state: m.state, unit: m.unit, unknownReason: m.unknownReason }))
         mapped.push({
           id: it.id,
@@ -394,7 +451,7 @@ export const acceptanceService = {
           after_image: '',
           after_hash: afterRef?.checksum || 'Chưa có dữ liệu',
           after_time: last?.finishedAt ? new Date(last.finishedAt).toLocaleString('vi-VN') : 'Chưa có dữ liệu',
-          after_gps: 'Chưa có dữ liệu',
+          after_gps: gpsM ? `${Number(gpsM.latitude).toFixed(6)}, ${Number(gpsM.longitude).toFixed(6)} (WGS84, tọa độ số đo của bản nộp)` : 'Chưa có dữ liệu',
           after_crew: crewName || (crewId ? `Crew (chưa đọc được tên) · ID ${short(crewId)}` : 'Chưa có dữ liệu'),
           after_equipment: 'Chưa có dữ liệu',
           evidence_integrity_status: 'PENDING',
@@ -425,6 +482,57 @@ export const acceptanceService = {
       }
     }
     return JSON.parse(JSON.stringify(mapped))
+  },
+
+  /**
+   * Lịch sử các bản nộp của một hạng mục (B6/B7): GET repair history (intakeSubmissions, attemptReviews, attempts) + FIELD task history details.
+   * Review gắn theo submissionId do BE trả (KHÔNG theo thời gian mới nhất); ảnh/số đo mỗi bản đọc từ GET submissions/{id}, không từ attempt.evidence.
+   * Lỗi từng khối ghi vào notes (403 = không được phép đọc, khác với rỗng).
+   */
+  async getSubmissionLineage(projectId: string, packageId: string, itemId: string): Promise<SubmissionLineage> {
+    const notes: string[] = []
+    const hist = await apiClient.get<any>(`/projects/${projectId}/repair-packages/${packageId}/items/${itemId}/history`)
+    const h = hist.data || {}
+    const attempts: any[] = h.attempts || []
+    const taskId: string | null = h.item?.currentBinding?.taskId ?? attempts[attempts.length - 1]?.taskId ?? null
+    const links: any[] = h.intakeSubmissions || []
+    const reviews: any[] = h.attemptReviews || []
+    let fieldHist: any = null
+    if (taskId) {
+      try { fieldHist = (await apiClient.get<any>(`/projects/${projectId}/field-inspection-tasks/${taskId}/history`)).data } catch (e) { notes.push(`Không đọc được lịch sử FIELD của nhiệm vụ: ${beErrorText(e)}`) }
+    }
+    const fsubs: any[] = fieldHist?.details?.submissions || []
+    const freviews: any[] = fieldHist?.details?.reviews || []
+    const ids = [...new Set<string>([...links.map((l) => l.submissionId), ...fsubs.map((x) => x.id)].filter(Boolean))]
+    const effectiveId: string | null = links.find((l) => l.effective)?.submissionId ?? null
+    const versions: SubmissionVersion[] = []
+    for (const id of ids) {
+      const fs_ = fsubs.find((x) => x.id === id)
+      const link = links.find((l) => l.submissionId === id)
+      const rv = reviews.find((r) => r.submissionId === id) ?? null
+      const fr = freviews.find((r) => r.submissionId === id) ?? null
+      let detail: any = null
+      if (taskId) { try { detail = (await apiClient.get<any>(`/projects/${projectId}/field-inspection-tasks/${taskId}/submissions/${id}`)).data } catch (e) { notes.push(`Không đọc được bản nộp ${id.slice(0, 8)}: ${beErrorText(e)}`) } }
+      const toRef = (e: any): PhotoRef => ({ fileId: e.fileId, purpose: String(e.purpose || ''), taskId: taskId as string, checksum: e.checksumSha256, capturedAt: e.capturedAt ?? null, source: 'SUBMISSION' })
+      versions.push({
+        submissionId: id,
+        revision: fs_?.revision ?? detail?.revision ?? null,
+        receivedAt: fs_?.serverReceivedAt ?? detail?.serverReceivedAt ?? null,
+        parentSubmissionId: fs_?.parentSubmissionId ?? detail?.parentId ?? null,
+        effective: effectiveId ? id === effectiveId : false,
+        contentHash: link?.contentHash ?? fs_?.contentHash ?? null,
+        review: rv ? { decision: rv.decision, reason: rv.reason ?? null, at: rv.at ?? null, role: rv.role ?? null, current: !!rv.current } : fr ? { decision: fr.decision, reason: fr.reason ?? null, at: fr.occurredAt ?? null, role: null, current: false } : null,
+        evidence: ((detail?.evidence || []) as any[]).filter((e) => e.fileId).map(toRef),
+        measurements: ((detail?.measurements || []) as any[]).map((m) => ({ sampleId: m.sampleId, type: m.type, value: m.value, state: m.state, unit: m.unit, unknownReason: m.unknownReason })),
+      })
+    }
+    versions.sort((x, y) => (x.revision ?? 0) - (y.revision ?? 0))
+    return {
+      taskId,
+      versions,
+      attempts: attempts.map((a, i) => ({ number: i + 1, id: a.id, startedAt: a.startedAt ?? null, finishedAt: a.finishedAt ?? null, serverReceivedAt: a.serverReceivedAt ?? null, timeProvenance: a.timeProvenance ?? null })),
+      notes,
+    }
   },
 
   /** Ảnh trước/sau của bản nộp hiện hành cho thẻ danh sách (đọc theo yêu cầu, từng thẻ). Lỗi được ném ra để thẻ hiển thị. */

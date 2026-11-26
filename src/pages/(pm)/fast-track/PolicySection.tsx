@@ -1,3 +1,4 @@
+import { defectTypeLabel, useDefectTypeNames } from '../../../api/services/defectTypeNames'
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { policyRuleRange, policyRuleText, policyRuleSupported, policyRuleHasBounds } from '../../../api/services/fastTrackPolicyRules'
@@ -16,16 +17,6 @@ export interface PolicySectionProps {
   onOpenPolicyModal?: () => void
 }
 
-function formatDefectTypeVi(code?: string): string {
-  if (!code) return 'Không xác định'
-  const c = code.toUpperCase()
-  if (c.includes('POTHOLE')) return 'Ổ gà'
-  if (c.includes('CRACK')) return 'Nứt mặt đường'
-  if (c.includes('RUT')) return 'Vệt lún bánh xe'
-  if (c.includes('RAVEL')) return 'Bong bật cốt liệu'
-  return code
-}
-
 function formatStopConditionVi(cond: string): string {
   return cond
 }
@@ -42,6 +33,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
   onOpenPolicyModal
 }) => {
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false)
+  const { names: typeNames } = useDefectTypeNames()
   const [activeTab, setActiveTab] = useState<'audit' | 'history'>('audit')
 
   const areaRule=currentPolicy?.rules?.find(r=>r.code==='Area'),depthRule=currentPolicy?.rules?.find(r=>r.code==='DepressionDepth')
@@ -211,7 +203,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               </span>
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 <span className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold rounded">
-                  {formatDefectTypeVi(currentPolicy.defectTypeCode)}
+                  {defectTypeLabel(currentPolicy.defectTypeCode, typeNames)}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">
                   (Lần ban hành {currentPolicy.revision || 1})

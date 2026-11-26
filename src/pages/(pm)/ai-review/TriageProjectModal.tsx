@@ -4,6 +4,10 @@ import { TriageGeometryScope } from './TriageGeometryScope'
 import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
+import { useCaseReportMedia, evidenceGps } from './useCaseReportMedia'
+import { routingMapService, routingError } from '../../../api/services/routingMapService'
+
+export interface TriageGrounds { reportId: string; evidenceId?: string; roadSectionId?: string; routingEvaluationVersion?: string }
 
 export interface TriageProjectModalProps {
   assignedCase?: boolean
@@ -28,7 +32,8 @@ export interface TriageProjectModalProps {
   onConfirmTriageProject: (
     verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE',
     reason: string,
-    geometryPins?: TriageGeometryPins
+    geometryPins?: TriageGeometryPins,
+    grounds?: TriageGrounds
   ) => void
 }
 
@@ -52,14 +57,34 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
   const geometryPins = geometrySelection.scope === geometryScope ? geometrySelection.pins : undefined
   useEffect(() => { setGeometrySelection({scope:geometryScope,required:false}) }, [geometryScope])
 
+  const media = useCaseReportMedia()
+  const groundsMedia = !assignedCase && isOpen && !!media && media.caseId === targetTriageCase?.id && !media.reportsLoading && !media.reportsError ? media.selected : null
+  const gps = evidenceGps(groundsMedia?.evidence)
+  const [useGrounds, setUseGrounds] = useState(true), [useEval, setUseEval] = useState(false), [roadId, setRoadId] = useState('')
+  const evalKey = groundsMedia ? `${geometryScope}:${groundsMedia.reportId}:${groundsMedia.evidence.evidenceId}:${geometryPins?.geometryVersion || ''}` : ''
+  const [evalState, setEvalState] = useState<{key: string; version?: string; complete?: boolean; error?: string; loading?: boolean}>({key: ''})
+  useEffect(() => {
+    if (!useGrounds || !useEval || !groundsMedia || !gps.located || !geometryPins || !targetTriageCase) { setEvalState({key: ''}); return }
+    const controller = new AbortController(), key = evalKey
+    setEvalState({key, loading: true})
+    routingMapService.readCandidates(targetTriageCase.id, groundsMedia.reportId, groundsMedia.evidence.evidenceId, controller.signal)
+      .then(r => { if (!controller.signal.aborted) setEvalState({key, version: r.evaluationVersion, complete: r.completeness === 'COMPLETE'}) })
+      .catch(e => { if (!controller.signal.aborted) setEvalState({key, error: routingError(e)}) })
+    return () => controller.abort()
+  }, [useGrounds, useEval, evalKey, gps.located, geometryPins?.geometryVersion])
+  const evalReady = evalState.key === evalKey && !!evalState.version && !evalState.loading
+  const evalBlocking = useGrounds && useEval && !!groundsMedia && !evalReady
+  useEffect(()=>{if(isOpen){setUseGrounds(true);setUseEval(false)}},[isOpen,targetTriageCase?.id])
   useEffect(()=>{if(isOpen){setVerificationMethod(initialInput?.verificationMethod as any || '');setReason(initialInput?.reason || '')}},[isOpen,targetTriageCase?.id])
   if (!isOpen || !targetTriageCase) return null
 
   const selectedProj = projects.find((p) => p.id === selectedProjectId)
 
   const handleConfirm = () => {
-    if (requiresDefectScope && !geometryPins || projectsLoading || projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
-    onConfirmTriageProject(verificationMethod, reason, requiresDefectScope ? geometryPins : undefined)
+    if (requiresDefectScope && !geometryPins || evalBlocking || projectsLoading || projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
+    const pins = requiresDefectScope ? geometryPins : undefined
+    const grounds: TriageGrounds | undefined = useGrounds && groundsMedia ? {reportId: groundsMedia.reportId, evidenceId: groundsMedia.evidence.evidenceId, ...(pins && roadId ? {roadSectionId: roadId} : {}), ...(useEval && evalReady ? {routingEvaluationVersion: evalState.version} : {})} : undefined
+    onConfirmTriageProject(verificationMethod, reason, pins, grounds)
   }
 
   return (
@@ -167,7 +192,17 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             )}
           </div>
 
-          <TriageGeometryScope projectId={selectedProjectId} caseId={targetTriageCase.id} disabled={busy || held} onChange={(required,pins)=>setGeometrySelection(old=>old.scope===geometryScope && old.required===required && old.pins?.routeVersionId===pins?.routeVersionId && old.pins?.segmentSetId===pins?.segmentSetId && old.pins?.geometryVersion===pins?.geometryVersion ? old : {scope:geometryScope,required,pins})} />
+          <TriageGeometryScope projectId={selectedProjectId} caseId={targetTriageCase.id} disabled={busy || held} onRoad={setRoadId} onChange={(required,pins)=>setGeometrySelection(old=>old.scope===geometryScope && old.required===required && old.pins?.routeVersionId===pins?.routeVersionId && old.pins?.segmentSetId===pins?.segmentSetId && old.pins?.geometryVersion===pins?.geometryVersion ? old : {scope:geometryScope,required,pins})} />
+
+          {groundsMedia && <div className="rounded-lg border border-slate-200 p-2 space-y-1.5 min-w-0" data-testid="triage-grounds">
+            <label className="flex gap-2 font-semibold text-slate-700"><input type="checkbox" checked={useGrounds} onChange={e => setUseGrounds(e.target.checked)} />Ghi ảnh đang xem làm căn cứ điều phối (Case-level)</label>
+            <p className="text-slate-600 break-all">Report {groundsMedia.reportId} · ảnh {groundsMedia.evidence.evidenceId}</p>
+            <p className="text-slate-600">GPS ảnh: {gps.located ? `${gps.text} (${gps.source})` : 'Thiếu GPS — vẫn điều phối FIELD được nếu có dự án/lý do có căn cứ; thiếu GPS không có nghĩa là ngoài phạm vi.'}</p>
+            {useGrounds && <label className="flex gap-2 text-slate-700"><input type="checkbox" checked={useEval} disabled={!gps.located || !geometryPins} onChange={e => setUseEval(e.target.checked)} />Dùng kết quả đối chiếu tuyến (cần ảnh có GPS và đã chọn tuyến + bộ PUBLISHED)</label>}
+            {useGrounds && useEval && evalState.loading && <p role="status" className="text-slate-500">Đang đọc đủ các trang ứng viên…</p>}
+            {useGrounds && useEval && evalState.key === evalKey && evalState.error && <p role="alert" className="text-rose-700">{evalState.error}</p>}
+            {useGrounds && useEval && evalReady && <p role="status" className="text-slate-600">Đã đọc đối chiếu ({evalState.complete ? 'đầy đủ' : 'chưa đầy đủ'}); sẽ gửi routingEvaluationVersion. Lưu ý: khoảng cách chỉ để đối chiếu, UNKNOWN không phải ngoài phạm vi.</p>}
+          </div>}
 
           {/* 2. Định hướng phương thức xác minh (Spec 17_10 CaseTriageDto.verificationMethod) */}
           <div className="flex flex-col">
@@ -271,7 +306,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </button>
             <button
               type="button"
-              disabled={requiresDefectScope && !geometryPins || projectsLoading || !!projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
+              disabled={requiresDefectScope && !geometryPins || evalBlocking || projectsLoading || !!projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
               onClick={handleConfirm}
               className="px-3.5 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
             >

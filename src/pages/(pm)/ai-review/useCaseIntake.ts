@@ -78,14 +78,14 @@ export function useCaseIntake(defaultProjectFilter = 'UNASSIGNED') {
   const openCase=(id:string,triage=false)=>{requestedTriage.current=triage?id:'';const next=new URLSearchParams(params);if(id)next.set('caseId',id);else next.delete('caseId');setParams(next)}
   const filter=(key:'projectId'|'status',value:string)=>{const next=new URLSearchParams(params);next.set(key,value);next.delete('caseId');setParams(next)}
   const openTriage=()=>{if(!canTriage && !held)return;setProjectId(held?.body.projectId || (isProjectManager ? selected?.project_id : '') || '');setBaseVersion(held?.version || selected?.etag || selected?.version || '');setCommandError('');setTriageOpen(true)}
-  const execute=async(method?:CaseTriageInput['verificationMethod'],reason?:string,retry=false,geometryPins?: TriageGeometryPins)=>{
+  const execute=async(method?:CaseTriageInput['verificationMethod'],reason?:string,retry=false,geometryPins?: TriageGeometryPins,grounds?:{reportId:string;evidenceId?:string;roadSectionId?:string;routingEvaluationVersion?:string})=>{
     if(running.current || !isSupervisor && !isProjectManager || !selected || !retry && !canTriage)return
     const scope=detailScope,current=()=>selection.current===scope && useAuthStore.getState().authEpoch===auth.authEpoch
     running.current=true;setBusy(true);setCommandError('')
     try{
       const old=pendingCommand(caseId)
       if(retry && !old)throw new Error('Không có lệnh triage đang chờ.')
-      const input:CaseTriageInput=retry ? {...old!.body,version:old!.version} : {projectId:isProjectManager ? selected.project_id : projectId,verificationMethod:method,reason,version:baseVersion,...geometryPins}
+      const input:CaseTriageInput=retry ? {...old!.body,version:old!.version} : {projectId:isProjectManager ? selected.project_id : projectId,verificationMethod:method,reason,version:baseVersion,...geometryPins,...(isSupervisor?grounds:undefined)}
       if(!retry && isSupervisor && (targetLoading || targetError || !eligibleProjects.some(p=>p.id===projectId)))throw new Error('Chọn dự án từ danh sách server hiện tại.')
       const value=await (isProjectManager ? caseScopeService.request(caseId,input) : triageService.triageCase(caseId,input))
       if(!current())return

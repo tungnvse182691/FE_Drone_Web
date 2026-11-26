@@ -3,6 +3,7 @@ import { Button } from '../../../components/ui/Button'
 import { Icon } from '../../../components/ui/Icon'
 import { Defect } from '../../../types/domain'
 import { DefectStatus, Severity, DefectType } from '../../../types/enums'
+import { SEVERITY_OPTIONS, severityLabel, isSeverity } from '../../../utils/severity'
 import {
   BackendDefectDto,
   CandidateMatchItemDto,
@@ -14,14 +15,14 @@ interface DefectVerifyFormProps {
   defect: Defect
   currentType?: DefectType | string
   onTypeChange?: (val: DefectType | string) => void
-  customTypeText?: string
-  onCustomTypeTextChange?: (val: string) => void
+  originalTypeCode?: string
+  typeCatalog?: { status: 'loading' | 'error' | 'ready'; items: Array<{ code: string; name: string }>; error: string; retry: () => void }
   liveBbox?: BoundingBoxCoords
   isBboxModified?: boolean
   onSaveBbox?: () => Promise<void> | void
   isSavingBbox?: boolean
-  severity: Severity
-  setSeverity: (val: Severity) => void
+  severity: Severity | ''
+  setSeverity: (val: Severity | '') => void
   notes: string
   setNotes: (val: string) => void
   onVerify: (status: DefectStatus) => void
@@ -37,8 +38,8 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
   defect,
   currentType,
   onTypeChange,
-  customTypeText = '',
-  onCustomTypeTextChange,
+  typeCatalog,
+  originalTypeCode,
   liveBbox,
   isBboxModified = false,
   onSaveBbox,
@@ -78,15 +79,14 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
     }
   }, [recommendedDefects, selectedTargetDefectId])
 
-  const effectiveType = currentType || defect.defect_type
-  const isCustomMode = effectiveType === 'CUSTOM'
-  const origTypeLabel = formatDefectTypeLabel(defect.defect_type)
-  const effectiveTypeLabel = isCustomMode
-    ? customTypeText.trim() || 'Loại lỗi tự nhập'
-    : formatDefectTypeLabel(effectiveType)
-  const isTypeAdjusted = Boolean(
-    currentType && (currentType !== defect.defect_type || (isCustomMode && customTypeText.trim()))
-  )
+  const effectiveType = String(currentType || '')
+  // Nhãn theo danh mục máy chủ (name); mã không có trong danh mục giữ nguyên mã, không tự đổi.
+  const nameOf = (code?: string | null) => typeCatalog?.items.find(t => t.code === code)?.name || formatDefectTypeLabel(code)
+  const typeInCatalog = !!typeCatalog && typeCatalog.status === 'ready' && typeCatalog.items.some(t => t.code === effectiveType)
+  const origCode = originalTypeCode || effectiveType
+  const origTypeLabel = nameOf(origCode)
+  const effectiveTypeLabel = nameOf(effectiveType)
+  const isTypeAdjusted = Boolean(currentType && origCode && currentType !== origCode)
 
   const displayBbox = liveBbox || defect.bounding_box
   const stationingLabel = !Number.isFinite(defect.chainage_km) ? 'Chưa có lý trình từ server' : `Km ${Math.floor(defect.chainage_km)}+${String(
@@ -104,12 +104,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
 
   const formatDefectTypeVi = (code?: string | null) => formatDefectTypeLabel(code)
 
-  const formatSeverityVi = (sev?: string | null) => {
-    if (sev === 'CRITICAL') return 'Khẩn cấp'
-    if (sev === 'HIGH') return 'Nghiêm trọng'
-    if (sev === 'LOW') return 'Nhẹ'
-    return 'Trung bình'
-  }
+  const formatSeverityVi = (sev?: string | null) => severityLabel(sev)
 
   const formatStatusVi = (st?: string | null) => {
     if (st === 'VERIFIED') return 'Đã xác minh'
@@ -291,33 +286,32 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 </span>
               )}
             </div>
-            <select
-              disabled={isSupervisor}
-              value={effectiveType}
-              onChange={(e) => onTypeChange && onTypeChange(e.target.value)}
-              className={`w-full px-3 py-2 bg-white border rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-semibold text-slate-800 transition-colors ${
-                isSupervisor ? 'cursor-default opacity-80 bg-slate-50' : 'cursor-pointer'
-              } ${isTypeAdjusted ? 'border-amber-400 bg-amber-50/20' : 'border-[#E2E5E9]'}`}
-            >
-              <option value={DefectType.LONGITUDINAL_CRACK}>Vết nứt mặt đường (Nứt dọc)</option>
-              <option value={DefectType.POTHOLE}>Ổ gà mặt đường</option>
-              <option value={DefectType.TRANSVERSE_CRACK}>Nứt ngang mặt đường</option>
-              <option value={DefectType.ALLIGATOR_CRACK}>Nứt mạng lưới (da cá sấu)</option>
-              <option value={DefectType.RUTTING}>Lún vệt bánh xe</option>
-              <option value={DefectType.RAVELING}>Bong bật cốt liệu</option>
-              <option value="CUSTOM">+ Khác (PM tự nhập loại lỗi...)</option>
-            </select>
-
-            {isCustomMode && !isSupervisor && (
-              <div className="pt-1">
-                <input
-                  type="text"
-                  value={customTypeText}
-                  onChange={(e) => onCustomTypeTextChange && onCustomTypeTextChange(e.target.value)}
-                  placeholder="Nhập tên loại khiếm khuyết (VD: Sụt lún mép lề đường, Vỡ khe co giãn...)"
-                  className="w-full px-3 py-2 bg-amber-50/30 border border-amber-400 rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-semibold text-slate-800 text-xs"
-                />
-              </div>
+            {isSupervisor ? (
+              <p className="px-3 py-2 bg-slate-50 border border-[#E2E5E9] rounded-[10px] font-semibold text-slate-800 opacity-80">{effectiveType ? nameOf(effectiveType) : 'Chưa có dữ liệu'}</p>
+            ) : (
+              <>
+                <select
+                  aria-label="Loại khiếm khuyết mặt đường"
+                  value={typeInCatalog ? effectiveType : ''}
+                  disabled={!typeCatalog || typeCatalog.status !== 'ready' || !typeCatalog.items.length}
+                  onChange={(e) => onTypeChange && onTypeChange(e.target.value)}
+                  className={`w-full px-3 py-2 bg-white border rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-semibold text-slate-800 transition-colors cursor-pointer disabled:cursor-default disabled:bg-slate-50 ${isTypeAdjusted ? 'border-amber-400 bg-amber-50/20' : 'border-[#E2E5E9]'}`}
+                >
+                  <option value="">
+                    {!typeCatalog || typeCatalog.status === 'loading' ? 'Đang tải danh mục loại khiếm khuyết…' : typeCatalog.status === 'error' ? 'Lỗi tải danh mục' : !typeCatalog.items.length ? 'Danh mục chưa có loại hiệu lực' : 'Chọn loại khiếm khuyết'}
+                  </option>
+                  {typeCatalog?.items.map(t => <option key={t.code} value={t.code}>{t.name}</option>)}
+                </select>
+                {typeCatalog?.status === 'error' && (
+                  <p role="alert" className="text-[11px] text-rose-700">{typeCatalog.error} <button type="button" onClick={typeCatalog.retry} className="underline">Thử lại</button></p>
+                )}
+                {typeCatalog?.status === 'ready' && !!effectiveType && !typeInCatalog && (
+                  <p role="alert" className="text-[11px] text-amber-800">Mã loại hiện tại "{effectiveType}" không có trong danh mục hiệu lực. Hãy chọn loại hợp lệ; hệ thống không tự đổi mã.</p>
+                )}
+                {typeCatalog?.status === 'ready' && !effectiveType && (
+                  <p className="text-[11px] text-slate-500">Bản ghi chưa có mã loại; hãy chọn từ danh mục.</p>
+                )}
+              </>
             )}
           </div>
 
@@ -327,15 +321,14 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               Mức Độ Nghiêm Trọng (Cảm quan qua ảnh Drone)
             </label>
             <select
+              aria-label="Mức độ nghiêm trọng"
               value={severity}
               disabled={isSupervisor}
-              onChange={(e) => setSeverity(e.target.value as Severity)}
+              onChange={(e) => setSeverity(isSeverity(e.target.value) ? e.target.value : '')}
               className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-medium disabled:bg-slate-50 disabled:text-slate-600 disabled:cursor-default transition-colors"
             >
-              <option value={Severity.CRITICAL}>Khẩn cấp / Nguy cấp</option>
-              <option value={Severity.HIGH}>Nghiêm trọng</option>
-              <option value={Severity.MEDIUM}>Trung bình</option>
-              <option value={Severity.LOW}>Nhẹ / Theo dõi</option>
+              <option value="">Chọn mức độ</option>
+              {SEVERITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <p className="text-[11px] text-slate-500 mt-1 italic leading-tight">
               * Đánh giá cảm quan qua ảnh Drone để xếp thứ tự ưu tiên. Kích thước thực tế sẽ do Đội tuần tra đo đạc thực địa (Dài x Rộng x Sâu) để hệ thống phân luồng Fast Track hoặc lập Đợt sửa chữa.
@@ -494,7 +487,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               <div className="grid grid-cols-2 gap-2.5">
                 {/* 1. Chấp nhận */}
                 <Button
-                  disabled={!notes.trim() || isSubmitting || (isCustomMode && !customTypeText.trim())}
+                  disabled={!notes.trim() || isSubmitting || !typeInCatalog || !isSeverity(severity)}
                   onClick={() => onVerify(DefectStatus.VERIFIED)}
                   className="w-full bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-bold rounded-[10px] disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
                   icon={<Icon name="check_circle" size={18} />}

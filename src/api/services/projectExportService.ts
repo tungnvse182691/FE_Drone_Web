@@ -15,7 +15,7 @@ export function exportPeriod(from:string,to:string){
  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||start>=end)throw new Error('Khoảng thời gian không hợp lệ: Từ phải trước Đến.')
  return {from:start.toISOString(),to:end.toISOString()}
 }
-export function exportError(e:any){const d=e?.response?.data;if(e?.response?.status===409&&d?.code==='active_scope_conflict'){const pk=d.conflictingPackageId||d.packageId;return `Phạm vi đề xuất xung đột với hạng mục đang hoạt động. Vui lòng kiểm tra gói hiện có.${typeof pk==='string'?` Gói xung đột: ${pk}.`:''}${d.correlationId?` · ${d.correlationId}`:''}`}return e?.response?`HTTP ${e.response.status} ${d?.code||d?.title||e.message}${d?.correlationId?` · ${d.correlationId}`:''}`:e.message}
+export function exportError(e:any){const d=e?.response?.data;if(e?.response?.status===403&&e.exportStep){const cid=d?.correlationId||e.response.headers?.['x-correlation-id'],step=e.exportStep==='list'?'đọc danh sách yêu cầu xuất (GET /exports)':e.exportStep==='create'?'tạo yêu cầu xuất (POST /exports)':e.exportStep==='content'?'tải nội dung hồ sơ (GET /content)':'đọc yêu cầu xuất';return `Bị từ chối quyền khi ${step} (HTTP 403${d?.code?` ${d.code}`:''}).${e.exportStep==='content'?' Hồ sơ chưa được tải về; không coi là đã tải.':' Chưa tạo job xuất và chưa tải hồ sơ nào; không có gì được coi là đã hoàn tất.'}${cid?` · ${cid}`:''}`}if(e?.response?.status===409&&d?.code==='active_scope_conflict'){const pk=d.conflictingPackageId||d.packageId;return `Phạm vi đề xuất xung đột với hạng mục đang hoạt động. Vui lòng kiểm tra gói hiện có.${typeof pk==='string'?` Gói xung đột: ${pk}.`:''}${d.correlationId?` · ${d.correlationId}`:''}`}return e?.response?`HTTP ${e.response.status} ${d?.code||d?.title||e.message}${d?.correlationId?` · ${d.correlationId}`:''}`:e.message}
 export const projectExportService={
  pending(p:string):Intent|null {actor();const raw=sessionStorage.getItem(key(p));if(!raw)return null;const c=JSON.parse(raw) as Intent;if(c.projectId!==p||!c.key||!c.body?.kind)throw new Error('Journal export sai phạm vi; giữ nguyên để đối chiếu.');return c.rejected&&!c.received?null:c},
  async list(p:string,signal?:AbortSignal){const s=actor(),rows:ExportJob[]=[],seen=new Set<string>();let cursor:string|undefined
@@ -29,7 +29,7 @@ export const projectExportService={
   return {detail,manifest:data}
  },
  async content(p:string,id:string){const s=actor(),{detail,manifest}=await this.manifest(p,id);active(s);if(detail.status!=='SUCCEEDED')throw new Error('Export chưa hoàn tất; chỉ đọc lại trạng thái, không tự retry.');if(!detail.expiresAt||!Number.isFinite(Date.parse(detail.expiresAt))||Date.parse(detail.expiresAt)<=Date.now())throw new Error('Export đã hết hạn hoặc thiếu hạn tải.');let r
-  try{r=await apiClient.get<Blob>(`/projects/${p}/exports/${id}/content`,{responseType:'blob'})}catch(e:any){if(e.response?.data?.type?.includes('json')){try{e.response.data=JSON.parse(await e.response.data.text())}catch{/* Retain binary ProblemDetails. */}}throw e}active(s)
+  try{r=await apiClient.get<Blob>(`/projects/${p}/exports/${id}/content`,{responseType:'blob'})}catch(e:any){if(e&&typeof e==='object')e.exportStep='content';if(e.response?.data?.type?.includes('json')){try{e.response.data=JSON.parse(await e.response.data.text())}catch{/* Retain binary ProblemDetails. */}}throw e}active(s)
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await r.data.arrayBuffer())),v=>v.toString(16).padStart(2,'0')).join('');active(s)
   const expectedType=detail.format==='PDF'?'application/pdf':'application/zip';if(r.data.type.split(';')[0]!==expectedType||r.headers?.etag!==`"${digest}"`)throw new Error('Nội dung tải không khớp mediaType/checksum từ máy chủ.')
   return {blob:r.data,fileName:`${detail.id}.${detail.format.toLowerCase()}`,checksum:digest,manifest}
@@ -37,15 +37,17 @@ export const projectExportService={
  async create(p:string,input:ExportInput,signal?:AbortSignal){const s=actor(),k=key(p),held=this.pending(p)
   if(held&&JSON.stringify(held.body)!==JSON.stringify(input))throw new Error('Giữ nguyên body/key export đang chờ.')
   if(!held)exportPeriod(input.from||'',input.to||'')
+  if((input.repairItemIds?.length||input.repairPackageIds?.length)&&(input.from||input.to))throw new Error('Không trộn phạm vi hạng mục/gói sửa chữa với bộ lọc thời gian.')
+  if(input.repairItemIds?.length&&input.repairPackageIds?.length)throw new Error('Chọn theo hạng mục hoặc theo gói, không chọn cả hai.')
   if(!p||p==='ALL'||input.kind!=='DOSSIER'||!['PDF','ZIP'].includes(input.format)||typeof input.includeOriginalFiles!=='boolean'||input.format==='PDF'&&input.includeOriginalFiles||input.to&&!Number.isFinite(Date.parse(input.to)))throw new Error('Chọn dự án, định dạng PDF/ZIP; PDF không kèm tệp gốc.')
   if(busy.has(k))throw new Error('Đang đối chiếu yêu cầu xuất hồ sơ.');busy.add(k)
   try{let c=held
-   if(!c){await this.list(p,signal);active(s,signal);c={projectId:p,body:JSON.parse(JSON.stringify(input)),key:crypto.randomUUID()};sessionStorage.setItem(k,JSON.stringify(c))}
+   if(!c){try{await this.list(p,signal)}catch(e:any){if(e&&typeof e==='object')e.exportStep='list';throw e}active(s,signal);c={projectId:p,body:JSON.parse(JSON.stringify(input)),key:crypto.randomUUID()};sessionStorage.setItem(k,JSON.stringify(c))}
    if(!c.received){try{const r=await apiClient.post(`/projects/${p}/exports`,c.body,{signal,headers:{'Idempotency-Key':c.key},transformRequest:[(b:unknown)=>{active(s,signal);return JSON.stringify(b)}]});active(s,signal);c.received=true;c.receipt=r.data;sessionStorage.setItem(k,JSON.stringify(c))}catch(e:any){
-    const status=e?.response?.status,code=e?.response?.data?.code
+    const status=e?.response?.status,code=e?.response?.data?.code;if(e&&typeof e==='object')e.exportStep='create'
     // Only the first attempt with a definite validation rejection unlocks editing.
     // A journal restored from storage may have timed out: never replace its identity.
-    if(!held&&status===422&&['validation_error','export_invalid'].includes(code)){c.rejected={status,code,correlationId:e.response.data.correlationId||e.response.headers?.['x-correlation-id']};sessionStorage.setItem(k,JSON.stringify(c))}
+    if(!held&&(status===403||status===422&&['validation_error','export_invalid','export_source_unavailable'].includes(code))){c.rejected={status,code,correlationId:e.response.data.correlationId||e.response.headers?.['x-correlation-id']};sessionStorage.setItem(k,JSON.stringify(c))}
     throw e
    }}
    const receipt=c.receipt;if(!receipt)throw new Error('Thiếu receipt export; giữ journal.');job(receipt,p)

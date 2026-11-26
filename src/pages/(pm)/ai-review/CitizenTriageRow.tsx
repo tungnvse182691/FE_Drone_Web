@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
+import { severityLabel } from '../../../utils/severity'
 import { TriageCase } from './types'
 import { CitizenTriageChildRow } from './CitizenTriageChildRow'
 import { CitizenTriageStatusBadge } from './CitizenTriageStatusBadge'
@@ -179,21 +180,6 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
               </div>
             )}
 
-            {/* Nhãn phân loại tuyến & Lý trình */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span
-                className={`text-[10px] font-bold px-1.5 py-0.2 rounded border whitespace-nowrap ${
-                  item.stationing?.includes('Nhánh')
-                    ? 'bg-purple-50 text-purple-700 border-purple-200'
-                    : 'bg-blue-50 text-blue-700 border-blue-200'
-                }`}
-              >
-                {item.stationing?.includes('Nhánh') ? '[Tuyến nhánh]' : '[Trục chính]'}
-              </span>
-              <span className="font-mono text-xs font-semibold text-slate-800">
-                {item.stationing?.replace(/\[.*?\]\s*/, '')}
-              </span>
-            </div>
           </div>
         </td>
 
@@ -239,13 +225,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                 : 'bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            {item.severity === 'CRITICAL'
-              ? 'Khẩn cấp'
-              : item.severity === 'HIGH'
-              ? 'Cao'
-              : item.severity === 'MEDIUM'
-              ? 'Vừa'
-              : 'Thấp'}
+            {item.severity === 'UNKNOWN' ? '—' : severityLabel(item.severity)}
           </span>
         </td>
 

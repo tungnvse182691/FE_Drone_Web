@@ -104,8 +104,8 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
       {/* Cột 5: Thời gian thi công */}
       <td className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-800 text-xs">{Number.isFinite(pkg.duration_days)?`${pkg.duration_days} ngày`:'Chưa có thời hạn kế hoạch'}</span>
-          <span className="text-[11px] text-slate-500">{pkg.date_range}</span>
+          {/* Contract chỉ có plannedDueAt (hạn kế hoạch, PM nhập ở khối Kế hoạch); không có số ngày thi công nên không hiển thị mục này. */}
+          <span className="font-semibold text-slate-800 text-xs">{pkg.date_range||'Chưa nhập hạn kế hoạch'}</span>
         </div>
       </td>
 

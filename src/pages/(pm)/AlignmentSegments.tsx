@@ -9,6 +9,7 @@ import { Icon } from '../../components/ui/Icon'
 
 import { AlignmentHeader } from './alignment/AlignmentHeader'
 import { RouteSystemsRead } from './alignment/RouteSystemsRead'
+import { BranchServerStatus } from './alignment/BranchServerStatus'
 import { AlignmentMap } from './alignment/AlignmentMap'
 import { confirmedRouteCoordinates } from './alignment/alignmentSelection'
 import { segmentSetLabel } from './alignment/alignmentLabels'
@@ -329,6 +330,7 @@ export const AlignmentSegments: React.FC = () => {
       {geometryRead.newDraftError&&<p role="alert" className="text-xs text-rose-700">{geometryRead.newDraftError}</p>}
       {geometryRead.newSectionDraft&&<p role="status" className="text-xs text-slate-600">Bản nhập riêng cho đoạn đường {geometryRead.context?.roadSections.find(r=>r.roadSectionId===geometryRead.newSectionDraft)?.code||'đang kiểm tra'}. Tuyến hiện hành vẫn chỉ đọc, chưa thay đổi. Nhập dữ liệu nguồn rồi bấm Lưu bản nháp.{!geometryRead.newDraftTargetValid?' Reference tuyến đã thay đổi; hãy đọc lại trước khi lưu.':''}</p>}
       <RouteSystemsRead projectId={selectedProjectId} />
+      <BranchServerStatus projectId={selectedProjectId} localBranchCount={branches.length} />
 
       {/* WORKSPACE GRID: MAP + SIDEBAR */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">

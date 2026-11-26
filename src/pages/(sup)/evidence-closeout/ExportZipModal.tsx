@@ -53,7 +53,7 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
         {/* Body */}
         <div className="p-4 space-y-3.5 text-xs">
           <p className="text-slate-600 leading-relaxed">
-            Hệ thống kết xuất hồ sơ nghiệm thu kỹ thuật theo quy chuẩn TCVN 8819:2011 kèm mã băm SHA-256 chống chỉnh sửa.
+            Hệ thống tạo hồ sơ sửa chữa của hạng mục này từ dữ liệu máy chủ (ảnh hiện trường, quyết định, lịch sử). Hồ sơ là bản chụp (snapshot) có mã băm snapshot ghi trong manifest; máy chủ báo rõ phần dữ liệu còn thiếu nếu có.
           </p>
 
           <div className="space-y-2">
@@ -72,9 +72,9 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
                 className="mt-0.5 accent-[#C9A227]"
               />
               <div className="space-y-0.5">
-                <span className="font-semibold text-slate-900 block">Biên bản nghiệm thu kỹ thuật (PDF/A)</span>
+                <span className="font-semibold text-slate-900 block">Hồ sơ sửa chữa dạng PDF</span>
                 <span className="text-slate-500 text-[11px] block">
-                  Tệp PDF chuẩn lưu trữ (ISO 19005), tích hợp hình ảnh Trước/Sau, thông số K98 và mã băm SHA-256.
+                  Tệp PDF do máy chủ tạo; không kèm tệp ảnh gốc. Nội dung phụ thuộc dữ liệu hiện có của hạng mục.
                 </span>
               </div>
             </div>
@@ -91,9 +91,9 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
                 className="mt-0.5 accent-[#C9A227]"
               />
               <div className="space-y-0.5">
-                <span className="font-semibold text-slate-900 block">Gói hồ sơ bằng chứng gốc (ZIP Dossier)</span>
+                <span className="font-semibold text-slate-900 block">Gói hồ sơ sửa chữa (ZIP)</span>
                 <span className="text-slate-500 text-[11px] block">
-                  Chứa toàn bộ ảnh gốc, log tọa độ RTK GPS và file checksum.sha256 chống chối bỏ.
+                  Gói ZIP gồm repair-dossier.json và ảnh hiện trường của hạng mục (repair-evidence/) khi bật tùy chọn bên dưới. Mã băm từng tệp nằm trong manifest của hồ sơ.
                 </span>
               </div>
             </div>
@@ -108,7 +108,7 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
                 className="w-4 h-4 rounded text-[#C9A227] accent-[#C9A227]"
               />
               <span className="text-slate-800 font-medium text-xs">
-                Đóng gói kèm tệp ảnh Drone gốc GeoTIFF / Orthophoto chưa nén
+                Kèm ảnh hiện trường gốc của hạng mục (includeOriginalFiles); bỏ chọn nếu chỉ cần repair-dossier.json
               </span>
             </label>
           )}
@@ -152,7 +152,7 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
             ) : (
               <>
                 <span className="material-symbols-outlined text-[15px]">download</span>
-                <span>Tải xuống gói ZIP</span>
+                <span>Tải xuống (ZIP)</span>
               </>
             )}
           </button>

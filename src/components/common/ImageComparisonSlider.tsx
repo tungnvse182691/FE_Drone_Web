@@ -108,7 +108,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
           <img
             src={leftImageUrl}
             alt={leftLabel}
-            className="w-full h-full object-cover transition-transform"
+            className="w-full h-full object-contain transition-transform"
             style={{
               transform: `scale(${zoomLevel}) rotate(${rotation}deg)`
             }}
@@ -134,7 +134,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
           <img
             src={rightImageUrl}
             alt={rightLabel}
-            className="absolute inset-0 w-full h-full object-cover transition-transform"
+            className="absolute inset-0 w-full h-full object-contain transition-transform"
             style={{
               transform: `scale(${zoomLevel}) rotate(${rotation}deg)`
             }}

@@ -4,6 +4,7 @@ import { ReviewDetailDrawer } from './ReviewDetailDrawer'
 import { TriageCase } from './types'
 
 export interface ReviewDetailModalProps {
+  onCaseChanged?: () => void
   onDefectRecorded?: (message: string) => void
   evidenceRequest?: CaseEvidenceRequestState
   loading?: boolean

@@ -195,6 +195,7 @@ export const FastTrackDispatch: React.FC = () => {
         dispatchNotes={dispatchNotes}
         setDispatchNotes={setDispatchNotes}
         handleExecuteDispatch={handleExecuteDispatch}
+        showToast={showToast}
       />
 
       {/* Modal Phê duyệt độ phủ tuyến đường bảo hành (API-176 - SUP-08) */}
