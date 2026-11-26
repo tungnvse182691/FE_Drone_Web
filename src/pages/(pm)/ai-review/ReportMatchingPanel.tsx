@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { reportMatchingService, matchingError, type MatchingLocationView } from '../../../api/services/reportMatchingService'
 import { useAuthStore } from '../../../store/authStore'
 
@@ -20,10 +20,11 @@ export function ReportMatchingPanel({ projectId, reportId, evidenceId, sourceDes
 }) {
   const epoch = useAuthStore(s => s.authEpoch)
   const scope = `${epoch}:${projectId}:${reportId}`
+  const activeScope = useRef(scope); activeScope.current = scope
   const [view, setView] = useState<{ scope: string; data?: MatchingLocationView; error?: string } | null>(null), [reload, setReload] = useState(0)
   const [reason, setReason] = useState(''), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [ok, setOk] = useState('')
   useEffect(() => {
-    const c = new AbortController(); setView(null); setReason(''); setErr(''); setOk('')
+    const c = new AbortController(); setView(null); setReason(''); setErr(''); setOk(''); setBusy(false)
     reportMatchingService.read(projectId, reportId, c.signal).then(data => { if (!c.signal.aborted) setView({ scope, data }) }).catch(e => { if (!c.signal.aborted) setView({ scope, error: matchingError(e) }) })
     return () => c.abort()
   }, [scope, reload])
@@ -34,13 +35,15 @@ export function ReportMatchingPanel({ projectId, reportId, evidenceId, sourceDes
   const hasGps = !!target && target.latitude != null && target.longitude != null
   const confirm = async (replay = false) => {
     if (busy) return
+    const started = scope, active = () => activeScope.current === started && useAuthStore.getState().authEpoch === epoch
     setBusy(true); setErr(''); setOk('')
     try {
       const held = reportMatchingService.pending(projectId, reportId)
       const input = replay && held ? held.body : { sourceVersion: v!.data!.sourceVersion, geometryVersion: v!.data!.geometryVersion, evidenceId, segmentIds: [], reason }
       const fresh = await reportMatchingService.confirm(projectId, reportId, input)
+      if (!active()) return
       setView({ scope, data: fresh }); setOk('Đã xác nhận vị trí ảnh. Chưa xác nhận trùng hoặc liên kết khiếm khuyết.'); onChanged()
-    } catch (e) { setErr(matchingError(e)); setReload(n => n) } finally { setBusy(false) }
+    } catch (e) { if (active()) setErr(matchingError(e)) } finally { if (active()) setBusy(false) }
   }
   const refs = matches || []
   return <div className="rounded-lg border border-slate-200 bg-white p-2 space-y-2" data-testid="matching-panel">
