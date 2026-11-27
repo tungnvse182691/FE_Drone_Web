@@ -2,8 +2,45 @@ import React, { useEffect, useRef, useState } from 'react'
 import { reportMatchingService, matchingError, type MatchingLocationView } from '../../../api/services/reportMatchingService'
 import { useAuthStore } from '../../../store/authStore'
 
-export interface MatchRow { detail?: {defectTypeCode?: string; status?: string; description?: string; roadSectionVersionId?: string; geometry?:{srid:number;wkt:string}}; detailError?: string; defectId: string; version?: string | null; distanceMeters?: number | null; accuracyMeters?: number | null; distanceStatus?: string | null; distanceMethod?: string | null; overlapStatus?: string | null; reasonCodes?: string[] | null; historySummary?: { sourceLinkCount?: number } | null }
+export interface MatchRow { detail?: {defectTypeCode?: string; status?: string; description?: string; roadSectionVersionId?: string; geometry?:{srid:number;wkt:string}}; detailError?: string; defectId: string; priorityGroup?: number | null; version?: string | null; distanceMeters?: number | null; accuracyMeters?: number | null; distanceStatus?: string | null; distanceMethod?: string | null; overlapStatus?: string | null; reasonCodes?: string[] | null; historySummary?: { sourceLinkCount?: number } | null }
 const STATUS_LABEL: Record<string, string> = { GPS_MISSING: 'Ảnh thiếu GPS', GPS_UNCONFIRMED: 'Có GPS nhưng PM chưa xác nhận', GPS_CONFIRMED: 'PM đã xác nhận GPS ảnh', SCOPE_CONFIRMED: 'PM đã xác nhận phạm vi segment', MATCHING_LOCATION_STALE: 'Cần xác nhận lại vị trí' }
+
+const DISTANCE_NOTE: Record<string,string> = {
+  GPS_MISSING: 'Ảnh nguồn chưa có GPS để tính khoảng cách.',
+  GPS_UNCONFIRMED: 'Vị trí ảnh nguồn chưa được PM xác nhận.',
+  SCOPE_CONFIRMED: 'Đã xác nhận phạm vi đoạn tuyến nhưng chưa có tọa độ nguồn để tính khoảng cách.',
+  MATCHING_LOCATION_STALE: 'Vị trí đã xác nhận cần được kiểm tra lại.',
+  DISTANCE_SOURCE_UNAVAILABLE: 'Chưa đủ dữ liệu để tính khoảng cách.',
+  TARGET_GEOMETRY_MISSING: 'Khiếm khuyết đích chưa có hình học để tính khoảng cách.',
+  TARGET_GEOMETRY_INVALID: 'Hình học khiếm khuyết đích chưa hợp lệ để tính khoảng cách.',
+  TARGET_CRS_CONTEXT_MISSING: 'Thiếu căn cứ hệ tọa độ của khiếm khuyết đích.',
+  NATIVE_CRS_TRANSFORM_UNAVAILABLE: 'Chưa hỗ trợ chuyển hệ tọa độ của khiếm khuyết đích.',
+  GEOGRAPHIC_GEOMETRY_UNSUPPORTED: 'Chưa hỗ trợ tính khoảng cách cho dạng hình học đích này.',
+  TARGET_CRS_UNSUPPORTED: 'Chưa hỗ trợ hệ tọa độ của khiếm khuyết đích.',
+  TARGET_COORDINATES_OUTSIDE_CRS_AREA: 'Tọa độ đích nằm ngoài phạm vi hệ tọa độ hỗ trợ.',
+  SOURCE_OUTSIDE_SUPPORTED_CRS_AREA: 'Vị trí nguồn nằm ngoài phạm vi hệ tọa độ hỗ trợ.',
+  DISTANCE_UNAVAILABLE: 'Chưa tính được khoảng cách hợp lệ.'
+}
+export function matchingExplanation(m: MatchRow): string[] {
+  const reasons = m.reasonCodes || []
+  const groups = [
+    ['ASSIGNED_SEGMENT', 'Cùng đoạn tuyến với phạm vi nguồn đã xác nhận.'],
+    ['NEIGHBOR_SEGMENT', 'Đoạn tuyến liền kề với phạm vi nguồn đã xác nhận.'],
+    ['PROJECT_EXPANSION', 'Cùng dự án; chưa có căn cứ thuộc cùng đoạn hoặc đoạn liền kề.']
+  ]
+  const group = Number.isInteger(m.priorityGroup) ? groups[m.priorityGroup!] : undefined
+  const notes = [group && reasons.includes(group[0]) ? group[1] : 'Chưa đủ thông tin để giải thích phạm vi đối chiếu của mục này.']
+  if (m.distanceStatus === 'MEASURED' && typeof m.distanceMeters === 'number' && Number.isFinite(m.distanceMeters) && m.distanceMeters >= 0) {
+    notes.push(`Khoảng cách theo máy chủ: ${m.distanceMeters.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} m.`)
+  } else {
+    const status = m.distanceStatus && DISTANCE_NOTE[m.distanceStatus]
+    const reason = reasons.map(code => DISTANCE_NOTE[code]).find(Boolean)
+    notes.push(status || reason || 'Chưa có khoảng cách được xác nhận; không suy ra là gần.')
+  }
+  if (reasons.includes('HISTORICAL_LINK')) notes.push('Máy chủ ghi nhận liên kết trước đó giữa phản ánh này và khiếm khuyết đích.')
+  if (reasons.includes('ACCURACY_OVERLAP')) notes.push('Máy chủ ghi nhận vùng sai số chồng lấn; chưa phải kết luận trùng.')
+  return notes
+}
 
 function pointLocation(geometry?: {srid:number;wkt:string}) {
   if(geometry?.srid!==4326)return null
@@ -65,7 +102,7 @@ export function ReportMatchingPanel({ projectId, reportId, evidenceId, sourceDes
     {err && <p role="alert" className="text-rose-700">{err}</p>}{ok && <p role="status" className="text-emerald-700">{ok}</p>}
     <div className="border-t pt-2 space-y-1" data-testid="matching-results">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-slate-600">{expanded ? 'Đối chiếu mở rộng trong cùng dự án; không phải kết luận trùng' : 'Kết quả matching theo phạm vi vị trí nguồn'}</p>
+        <p className="text-slate-600">{expanded ? 'Danh sách cùng dự án để đối chiếu thủ công, chưa xác nhận trùng.' : 'Đối chiếu theo phạm vi vị trí nguồn, chưa xác nhận trùng.'}</p>
         {!expanded && <button type="button" disabled={loading} onClick={onExpand} className="rg-btn text-xs" data-testid="matching-expand">Tìm trong dự án</button>}
       </div>
       {loading && <p role="status" className="text-slate-500">Đang tìm khiếm khuyết…</p>}
@@ -81,7 +118,7 @@ export function ReportMatchingPanel({ projectId, reportId, evidenceId, sourceDes
           {pointLocation(m.detail?.geometry) && <p>Vị trí khiếm khuyết: {pointLocation(m.detail?.geometry)}</p>}
           {!m.detail?.description && !m.detailError && <p className="text-slate-500">Hồ sơ đọc được chưa cung cấp mô tả.</p>}
           {m.detail?.roadSectionVersionId && targetNames?.[m.detail.roadSectionVersionId] ? <p>Tuyến: {targetNames[m.detail.roadSectionVersionId]}</p> : !m.detailError && <p className="text-slate-500">Chưa có vị trí tuyến đọc được để hiển thị.</p>}
-          {typeof m.distanceMeters==='number' && Number.isFinite(m.distanceMeters) && m.distanceMeters>=0 && <p>Khoảng cách theo API: {m.distanceMeters.toLocaleString('vi-VN',{maximumFractionDigits:1})} m</p>}
+          {matchingExplanation(m).map(note => <p key={note} className="text-slate-600">{note}</p>)}
         </div>)}
       </>}
     </div>
