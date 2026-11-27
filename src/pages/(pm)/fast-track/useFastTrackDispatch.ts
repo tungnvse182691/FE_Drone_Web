@@ -3,6 +3,7 @@ import {
   DefectItem as DispatchDefectItem,
   CrewTeam, FastTrackTaskInput
 } from './types'
+import { useFastTrackPeople } from './useFastTrackPeople'
 import { useAuthStore } from '../../../store/authStore'
 import { exportError } from '../../../api/services/projectExportService'
 import { fastTrackService } from '../../../api/services/fastTrackService'
@@ -64,14 +65,22 @@ export function useFastTrackDispatch(
     }
   }, [selectedProjectId, showToast, epoch, revision])
 
+  const people = useFastTrackPeople([selectedProjectId, ...defects.map(d => d.originProjectId || d.projectId)])
+  const namedDefects = defects.map(d => {
+    const project = d.originProjectId || d.projectId
+    const name = d.assignedCrewId ? people.name(project, d.assignedCrewId) : undefined
+    const lookup = people.status(project)
+    return { ...d, assignedCrew: name, crewReadState: name ? 'ready' as const : d.crewReadState === 'ready' && lookup === 'forbidden' ? 'forbidden' as const : d.crewReadState === 'ready' && lookup === 'error' ? 'error' as const : d.crewReadState }
+  })
+
   const filteredDefects = useMemo(() => {
-    return defects.filter((d) => {
+    return namedDefects.filter((d) => {
       if (crewFilter !== 'ALL' && d.assignedCrew !== crewFilter) return false
       if (statusFilter === 'ELIGIBLE' && !d.isFastTrackEligible) return false
       if (statusFilter === 'VIOLATION' && d.canAssign) return false
       return true
     })
-  }, [defects, crewFilter, statusFilter])
+  }, [namedDefects, crewFilter, statusFilter])
 
   const selectedItems = useMemo(() => {
     return defects.filter((d) => selectedDefectIds.includes(d.id))
@@ -135,7 +144,7 @@ export function useFastTrackDispatch(
     setSelectedDispatchCrew,
     dispatchNotes,
     setDispatchNotes,
-    detailDefect,
+    detailDefect: detailDefect ? namedDefects.find(d => d.id === detailDefect.id) || detailDefect : null,
     setDetailDefect,
     filteredDefects,
     selectedItems,

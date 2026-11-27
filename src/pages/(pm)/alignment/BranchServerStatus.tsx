@@ -56,7 +56,7 @@ export const BranchServerStatus: React.FC<{ projectId: string; localBranchCount:
   ] : []
   const ready = checks.length > 0 && checks.every((c) => c.ok)
   return (
-    <section aria-label="Tuyến nhánh theo máy chủ" data-testid="branch-server-status" className="rounded-xl border border-slate-200 bg-white p-3 text-xs space-y-2">
+    <section hidden aria-label="Tuyến nhánh theo máy chủ" data-testid="branch-server-status" className="rounded-xl border border-slate-200 bg-white p-3 text-xs space-y-2">
       <header className="flex flex-wrap items-center gap-2">
         <h3 className="font-bold text-slate-800">Tuyến nhánh — trạng thái theo máy chủ</h3>
         <button type="button" onClick={() => setReload((n) => n + 1)} className="underline text-slate-600">Đọc lại</button>

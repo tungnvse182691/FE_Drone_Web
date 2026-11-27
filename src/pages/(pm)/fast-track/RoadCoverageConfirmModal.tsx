@@ -92,21 +92,18 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-brand-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
-              <Icon name="verified" size={18} className="text-[#C9A227]" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-brand-dark">Phê Duyệt Độ Phủ Tuyến Bảo Hành</h3>
-              <span className="text-[10px] text-slate-500">Kỹ sư Giám sát / Chủ đầu tư thẩm duyệt hồ sơ bàn giao tuyến</span>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1D20]/60">
+      <div className="bg-white rounded-[14px] max-w-lg w-full max-h-[90vh] overflow-y-auto border border-[#E2E5E9] shadow-xl overflow-hidden">
+        <div className="h-[3px] w-full bg-[#C9A227]" />
+        <div className="p-6 space-y-5">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E2E5E9]">
+          <div>
+            <h3 className="font-headline text-base font-bold text-[#1A1D20]">Phê Duyệt Độ Phủ Tuyến Bảo Hành</h3>
+            <span className="text-[11px] text-[#64748B] block mt-0.5">Kỹ sư Giám sát / Chủ đầu tư thẩm duyệt hồ sơ bàn giao tuyến</span>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 rounded-lg hover:bg-slate-100 transition-colors"
+            className="text-[#64748B] hover:text-[#1A1D20] cursor-pointer p-1.5 rounded-lg hover:bg-[#F6F7F9] transition-colors"
           >
             <Icon name="close" size={18} />
           </button>
@@ -272,25 +269,26 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E2E5E9]">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl bg-slate-100 hover:bg-slate-200 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 text-xs font-semibold text-[#1A1D20] rounded-lg bg-white border border-[#CBD5E1] hover:bg-[#F6F7F9] cursor-pointer disabled:opacity-50 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting || (!pending && !!validation)}
-              className="px-5 py-2 text-xs font-bold text-white bg-[#C9A227] hover:bg-[#b08d20] rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              className="px-5 py-2 text-xs font-semibold text-white bg-[#C9A227] hover:bg-[#B38D1D] rounded-lg cursor-pointer flex items-center gap-1.5 disabled:opacity-50 transition-colors"
             >
               {isSubmitting && <Icon name="sync" size={14} className="animate-spin" />}
               <span>{isSubmitting ? 'Đang đối chiếu...' : pending ? 'Đối chiếu xác nhận đã gửi' : 'Xác nhận phê duyệt độ phủ'}</span>
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   )

@@ -52,7 +52,7 @@ export function useFastTrackPolicy(selectedProjectId:string,showToast:(msg:strin
       setPolicyHistory(rows.map(r=>({id:r.id,draftId:r.draftId,revision:r.revision,version:r.checklistVersion,status:fastTrackService.policyView(r).status,activatedBy:r.actorId,activatedAt:r.at,route:r.reason,rules:r.measurements})))
       setPolicyError(policyReadWarning || (role==='SUPERVISOR'?'Chính sách và số liệu khiếm khuyết gốc hiện chỉ PM đọc được. Giám sát xem hạng mục sửa chữa và xác nhận độ phủ tại đây.':!rows.length?'Chưa có tham chiếu chính sách đã đọc; không suy thành chưa có policy trong hệ thống.':''))
     }else{setPolicies([]);setCurrentPolicy(null);setPolicyError(exportError(pol.reason))}
-    if(cov.status==='fulfilled'){setRoadCoverage(cov.value);setCoverageError(null);setAuditLogs((cov.value.history||[]).map(h=>({title:'Xác nhận độ phủ đã lưu',time:h.confirmedAtUtc,user:h.actorId,hash:h.id,note:`${h.provenance} · ${h.reason}`})))}else{setRoadCoverage(null);setCoverageError(exportError(cov.reason))}
+    if(cov.status==='fulfilled'){setRoadCoverage(cov.value);setCoverageError(null);setAuditLogs((cov.value.history||[]).map(h=>({title:'Xác nhận độ phủ đã lưu',time:h.confirmedAtUtc,user:h.actorId,hash:h.id,note:h.reason,provenance:h.provenance})))}else{setRoadCoverage(null);setCoverageError(exportError(cov.reason))}
   },[selectedProjectId,epoch,role])
   useEffect(()=>{void loadPolicyData();const refresh=()=>void loadPolicyData();window.addEventListener('fasttrack-refresh',refresh);return()=>{generation.current++;window.removeEventListener('fasttrack-refresh',refresh)}},[loadPolicyData])
   const readPolicy=async(row:RepairPolicyView,discard=false)=>{

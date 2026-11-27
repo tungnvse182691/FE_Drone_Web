@@ -28,6 +28,14 @@ export function useRepairProposalsState(){
     ;(async()=>{const list=await projectService.fetchProjects();if(c.signal.aborted||latest.current!==actor)return;setProjects(list);setReadScope(`${actor}:${requested}`);const selection=requested==='ALL'?list:list.filter(p=>p.id===requested);if(requested!=='ALL'&&!selection.length)throw new Error('Dự án liên kết không thuộc danh mục được phép đọc.');const data=await readProposalPackages(selection,c.signal);if(!c.signal.aborted)setRows(data)})().catch(e=>{if(!c.signal.aborted)setApiError(exportError(e))}).finally(()=>{if(!c.signal.aborted)setLoading(false)});return()=>c.abort()
   },[actor,requested,revision])
   useEffect(()=>{setOpen(false);setSelectedPackageForDetail(null)},[actor,requested])
+  useEffect(()=>{
+    const packageId=params.get('repairPackageId')
+    if(!isPM||!packageId||loading||apiError||readScope!==`${actor}:${requested}`)return
+    const match=rows.find(row=>row.raw.id.toLowerCase()===packageId.toLowerCase())
+    if(match)setSelectedPackageForDetail(match.view)
+    else showToast('Không tìm thấy gói sửa chữa được chọn trong dữ liệu được phép đọc.')
+    const next=new URLSearchParams(params);next.delete('repairPackageId');setParams(next,{replace:true})
+  },[params,isPM,loading,apiError,readScope,actor,requested,rows,setParams])
   useEffect(()=>{const refresh=()=>setRevision(n=>n+1);window.addEventListener('repair-workflow-refresh',refresh);return()=>window.removeEventListener('repair-workflow-refresh',refresh)},[])
   let pending:ReturnType<typeof repairWorkflowService.pendingCreation>=null,journalError='';try{if(isPM&&formRouteId)pending=repairWorkflowService.pendingCreation(formRouteId)}catch(e){journalError=exportError(e)}
   const handleRouteChange=(id:string)=>{hydrate.current=true;wantedDefect.current='';setFormRouteId(id);setFormSegmentId('');setSelectedDefect(null);setDefsEmpty();setApiForm(blank);setCreateError('');const saved=id&&auth.user?JSON.parse(localStorage.getItem(uiKey(auth.user.id,auth.user.role,id))||'null'):null;if(saved){setApiForm(saved.form);setFormPackageName(saved.reason);setFormTechnicalMethod(saved.plan);setFormSegmentId(saved.setId);wantedDefect.current=saved.defectId || ''}let held:typeof pending=null;try{held=isPM&&id?repairWorkflowService.pendingCreation(id):null}catch(e){setCreateError(exportError(e))}if(held){const f=held.input;setApiForm({...blank,fromMeters:String(f.fromMeters),toMeters:String(f.toMeters),offsetFromMeters:String(f.offsetFromMeters),offsetToMeters:String(f.offsetToMeters),checklistVersion:f.checklistVersion});setFormPackageName(f.reason);setFormTechnicalMethod(f.repairPlan);setFormSegmentId(f.segmentSetId||'')}}

@@ -33,6 +33,7 @@ export interface DefectItem {
   policyRevisionId?: string
   isFastTrackEligible: boolean
   violationReason?: string
+  crewReadState?: 'ready' | 'missing' | 'forbidden' | 'error'
   assignedCrewId?: string
   assignedCrew?: string
 }
@@ -80,6 +81,7 @@ export interface CrewTeam {
 }
 
 export interface AuditLogItem {
+  provenance?: string
   time: string
   user: string
   hash: string

@@ -1,10 +1,14 @@
-import { defectTypeLabel, useDefectTypeNames } from '../../../api/services/defectTypeNames'
+import { useFastTrackPeople } from './useFastTrackPeople'
+import { fastTrackTime, fastTrackTrialLabel, fastTrackPolicyVersion } from './defectPresentation'
+import { fastTrackTypeName } from './defectPresentation'
+import { useDefectTypeNames } from '../../../api/services/defectTypeNames'
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { policyRuleRange, policyRuleText, policyRuleSupported, policyRuleHasBounds } from '../../../api/services/fastTrackPolicyRules'
 import type { PolicyThresholdConfig, PolicyHistoryItem, RoadCoverageFact, AuditLogItem } from './types'
 
 export interface PolicySectionProps {
+  projectId: string
   onSelectCoverageScope?:(id:string)=>void
   onReadPolicy?: (id:string)=>void
   currentPolicy: PolicyThresholdConfig | null
@@ -22,6 +26,7 @@ function formatStopConditionVi(cond: string): string {
 }
 
 export const PolicySection: React.FC<PolicySectionProps> = ({
+  projectId,
   onSelectCoverageScope,
   onReadPolicy,
   currentPolicy,
@@ -32,6 +37,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
   onOpenRoadCoverageModal,
   onOpenPolicyModal
 }) => {
+  const people = useFastTrackPeople([projectId])
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false)
   const { names: typeNames } = useDefectTypeNames()
   const [activeTab, setActiveTab] = useState<'audit' | 'history'>('audit')
@@ -56,7 +62,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                 {currentPolicy ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                    {currentPolicy.version} ({currentPolicy.status==='DRAFT'?'DỰ THẢO':currentPolicy.status==='REVOKED'?'ĐÃ THU HỒI':'ĐÃ XUẤT BẢN'})
+                    {fastTrackPolicyVersion(currentPolicy.version)} ({currentPolicy.status==='DRAFT'?'DỰ THẢO':currentPolicy.status==='REVOKED'?'ĐÃ THU HỒI':'ĐÃ XUẤT BẢN'})
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
@@ -203,7 +209,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               </span>
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 <span className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold rounded">
-                  {defectTypeLabel(currentPolicy.defectTypeCode, typeNames)}
+                  {fastTrackTypeName(currentPolicy.defectTypeCode, typeNames)}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">
                   (Lần ban hành {currentPolicy.revision || 1})
@@ -294,16 +300,13 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                     <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-900">{log.title}</span>
-                        <span className="font-mono text-slate-400 text-[10px]">{log.time}</span>
+                        <span className="font-mono text-slate-400 text-[10px]">{fastTrackTime(log.time)}</span>
                       </div>
                       <p className="text-slate-600">
-                        Người thực hiện: <strong className="text-slate-800">{log.user}</strong> • Mã băm xác thực:{' '}
-                        <code className="bg-white px-1.5 py-0.5 rounded text-[10px] text-amber-700 border border-slate-200 font-mono">
-                          {log.hash}
-                        </code>
+                        Người thực hiện: <strong className="text-slate-800">{people.name(projectId,log.user) || 'Chưa có thông tin người thực hiện'}</strong>
                       </p>
                       <div className="text-[11px] text-slate-500 pt-0.5">
-                        {log.note}
+                        {fastTrackTrialLabel(log.provenance) && <span className="mr-2 font-semibold">{fastTrackTrialLabel(log.provenance)}</span>}{' '}{log.note}
                       </div>
                     </div>
                   ))
@@ -322,10 +325,12 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                   policyHistory.map((h, idx) => (
                     <div key={idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900">{h.version} · {h.status==='DRAFT'?'Dự thảo':h.status==='REVOKED'?'Đã thu hồi':`Lần ban hành ${h.revision ?? '—'}`}</span>
-                        <span className="text-[11px] text-slate-500">{h.activatedAt}</span>
+                        <span className="font-bold text-slate-900">{fastTrackPolicyVersion(h.version,h.revision)} · {h.status==='DRAFT'?'Dự thảo':h.status==='REVOKED'?'Đã thu hồi':`Lần ban hành ${h.revision ?? '—'}`}</span>
+                        <span className="text-[11px] text-slate-500">{fastTrackTime(h.activatedAt)}</span>
                       </div>
                       {h.id && onReadPolicy && <button type="button" onClick={()=>{onReadPolicy(h.id!);setIsActivityModalOpen(false)}} className="px-3 py-1.5 border rounded-lg bg-white text-slate-700">{h.status==='DRAFT'?'Đọc / Tiếp tục draft':'Chi tiết / Thu hồi'}</button>}
+                      <p className="text-slate-600">Người thực hiện: <strong>{people.name(projectId,h.activatedBy) || 'Chưa có thông tin người thực hiện'}</strong></p>
+                      <p className="text-slate-600">{h.route}</p>
                       <div className="text-slate-600 flex items-center gap-3">
                         <span>Diện tích: {policyRuleText(h.rules?.find((r: any)=>r.code==='Area'))}</span>
                         <span>•</span>

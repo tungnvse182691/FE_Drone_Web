@@ -3,6 +3,8 @@ import { assertPolicyRules } from './fastTrackPolicyRules'
 import { fastTrackFormSources, type DerivedRowRef } from './fastTrackFormSources'
 import { defectTypeCatalog } from './defectTypeCatalog'
 import { apiClient } from '../client'
+import { type FieldTaskDetail } from './fieldTaskReadService'
+import { workflowCollection } from './workflowCollection'
 import { useAuthStore } from '../../store/authStore'
 import { triageGeometryService } from './triageGeometryService'
 import { projectService } from './projectService'
@@ -229,10 +231,23 @@ export const fastTrackService = {
         }catch(e:any){result.push({id:t.currentRepairItemId,defectId:'',code:'Nhận chuyển · không đọc được',projectId:p,originProjectId:t.originProjectId,defectTypeCode:'',severity:'',status:'',isFastTrackEligible:false,canAssign:false,violationReason:`Không đọc được hạng mục nhận chuyển: ${e?.response?.status?'HTTP '+e.response.status+' '+(e.response.data?.code||''):e?.message||'lỗi'}`})}
       }
     }
-    if(result.some(r=>r.itemId && r.status!=='ReadyToAssign')) {
-      for(const row of result) {
-        const held=row.itemId && fastTrackPending(p,`assign:${row.itemId}`)
-        if(held && held.receipt){const native=await this.readAssignment(p,row,held.receipt,held.body);row.assignedCrewId=native.assignedToUserId;row.policyRevisionId=(held.body as any).policyRevisionId}
+    const taskPages = new Map<string, Promise<FieldTaskDetail[]>>()
+    for (const row of result.filter(r => r.itemId && r.packageId && !['ReadyToAssign','Cancelled'].includes(r.status))) {
+      try {
+        const item = await repairWorkflowService.detail(p, row.packageId!, row.itemId!) as Awaited<ReturnType<typeof repairWorkflowService.detail>> & { currentBinding?: { taskId: string; assignmentId: string; policyRevisionId?: string } | null }
+        row.assignedCrewId = undefined
+        if (!item.currentBinding) { row.crewReadState = 'missing'; continue }
+        const sourceProject = row.originProjectId || p
+        if (!taskPages.has(sourceProject)) taskPages.set(sourceProject, workflowCollection<FieldTaskDetail>(`/projects/${sourceProject}/field-inspection-tasks`, sourceProject))
+        const tasks = await taskPages.get(sourceProject)!
+        const task = tasks.find(t => t.id === item.currentBinding!.taskId) as (FieldTaskDetail & { assignmentId?: string }) | undefined
+        if (!task || task.projectId !== sourceProject || task.defectId !== row.defectId || task.assignmentId !== item.currentBinding.assignmentId) throw new Error('Nhiệm vụ không khớp hạng mục đang xem.')
+        row.assignedCrewId = task.assignedToUserId || undefined
+        row.policyRevisionId = item.currentBinding.policyRevisionId
+        row.crewReadState = row.assignedCrewId ? 'ready' : 'missing'
+      } catch (e: any) {
+        row.assignedCrewId = undefined
+        row.crewReadState = e?.response?.status === 403 ? 'forbidden' : 'error'
       }
     }
     return result

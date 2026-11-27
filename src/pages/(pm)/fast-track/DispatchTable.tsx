@@ -1,7 +1,9 @@
-import { defectTypeLabel, useDefectTypeNames } from '../../../api/services/defectTypeNames'
+import { fastTrackTypeName, fastTrackCrewLabel } from './defectPresentation'
+import { useDefectTypeNames } from '../../../api/services/defectTypeNames'
 import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, PolicyThresholdConfig } from './types'
+import { defectNotice, defectSeverity, defectStatus } from './defectPresentation'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export interface DispatchTableProps {
@@ -20,44 +22,6 @@ export interface DispatchTableProps {
   onNavigateProposals?: () => void
   isSupervisor?: boolean
   eligibilityMap?: Record<string, { eligible: boolean; missingReasons: string[]; loading: boolean }>
-}
-
-function formatSeverityVi(sev?: string): string {
-  switch (sev?.toUpperCase()) {
-    case 'LOW':
-      return 'Thấp (Nhẹ)'
-    case 'MEDIUM':
-      return 'Trung bình (Vừa)'
-    case 'HIGH':
-      return 'Cao (Nặng)'
-    case 'CRITICAL':
-      return 'Khẩn cấp (Rất nặng)'
-    default:
-      return sev || 'Chưa xác định'
-  }
-}
-
-function formatStatusVi(st?: string): string {
-  switch (st?.toUpperCase()) {
-    case 'READYTOASSIGN': return 'Sẵn sàng giao việc có điều kiện'
-    case 'ASSIGNED': return 'Đã giao Crew'
-    case 'INPROGRESS': return 'Đang thi công'
-    case 'SUBMITTED': return 'Chờ PM rà soát'
-    case 'REVIEWED': return 'Chờ xác nhận cuối'
-    case 'CONFIRMED': return 'Đã xác nhận'
-    case 'CANCELLED': return 'Đã hủy'
-    case 'OPEN':
-      return 'Chờ xử lý'
-    case 'IN_PROGRESS':
-      return 'Đang thi công'
-    case 'RESOLVED':
-    case 'COMPLETED':
-      return 'Đã hoàn thành'
-    case 'CLOSED':
-      return 'Đã đóng'
-    default:
-      return st || 'Đang theo dõi'
-  }
 }
 
 interface DefectCardProps {
@@ -90,7 +54,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
   const { names: typeNames } = useDefectTypeNames()
 
   const cfg = (() => {
-    if (!isEligible) {
+    if (defect.severity === 'CRITICAL') {
       return {
         border: '#E6A8A8',
         gradient: 'linear-gradient(90deg, #B91C1C 0%, #7F1D1D 100%)',
@@ -101,12 +65,12 @@ const DefectCard: React.FC<DefectCardProps> = ({
       }
     }
     return {
-      border: '#A7C4B8',
-      gradient: 'linear-gradient(90deg, #047857 0%, #065F46 100%)',
-      dot: '#047857',
-      halo: 'rgba(4, 120, 87, 0.15)',
-      bgTint: 'linear-gradient(180deg, #F0FDF7 0%, #ffffff 45%)',
-      hoverShadow: '0 12px 28px rgba(4, 120, 87, 0.15)'
+      border: '#CBD5E1',
+      gradient: 'linear-gradient(90deg, #64748B 0%, #475569 100%)',
+      dot: '#64748B',
+      halo: 'rgba(100, 116, 139, 0.15)',
+      bgTint: '#FFFFFF',
+      hoverShadow: '0 12px 28px rgba(100, 116, 139, 0.12)'
     }
   })()
 
@@ -137,11 +101,11 @@ const DefectCard: React.FC<DefectCardProps> = ({
               style={{ backgroundColor: cfg.dot, boxShadow: `0 0 0 4px ${cfg.halo}` }}
             />
             <div>
-              <span className={`font-mono font-bold text-sm ${isEligible ? 'text-slate-900' : 'text-[#B91C1C]'}`}>
+              <span className={`font-mono font-bold text-sm ${defect.severity === 'CRITICAL' ? 'text-[#B91C1C]' : 'text-slate-900'}`}>
                 {defect.code}
               </span>
               <span className="ml-2 text-xs font-bold text-slate-800">
-                {defectTypeLabel(defect.defectTypeCode, typeNames)}
+                {defect.defectTypeCode ? fastTrackTypeName(defect.defectTypeCode, typeNames) : 'Chưa có thông tin'}
               </span>
             </div>
           </div>
@@ -167,14 +131,14 @@ const DefectCard: React.FC<DefectCardProps> = ({
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
             <span className="text-[10px] text-slate-400 block font-medium">Mức độ nghiêm trọng</span>
             <span className={`font-bold ${
-              defect.severity === 'HIGH' || defect.severity === 'CRITICAL' ? 'text-rose-700' : 'text-slate-800'
+              defect.severity === 'CRITICAL' ? 'text-rose-700' : defect.severity === 'HIGH' ? 'text-orange-700' : 'text-slate-800'
             }`}>
-              {formatSeverityVi(defect.severity)}
+              {defectSeverity(defect.severity)}
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
             <span className="text-[10px] text-slate-400 block font-medium">Trạng thái CSDL</span>
-            <span className="font-bold text-slate-800">{formatStatusVi(defect.status)}</span>
+            <span className="font-bold text-slate-800">{defectStatus(defect.status)}</span>
           </div>
         </div>
 
@@ -198,7 +162,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
               </div>
               {missingReasons.length > 0 && (
                 <p className="text-[10px] text-rose-600 leading-tight">
-                  {missingReasons.join('; ')}
+                  {defectNotice(missingReasons.join('; '))}
                 </p>
               )}
             </div>
@@ -209,7 +173,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
       {/* Footer thẻ */}
       <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
         <div className="text-[11px] text-slate-500 truncate">
-          Phụ trách: <strong className="text-slate-700">{defect.assignedCrew || 'Chưa có thông tin Crew'}</strong>
+          Phụ trách: <strong className="text-slate-700">{fastTrackCrewLabel(defect)}</strong>
         </div>
         <button
           type="button"

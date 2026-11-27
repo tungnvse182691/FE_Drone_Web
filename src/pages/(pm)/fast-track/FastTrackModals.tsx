@@ -107,6 +107,7 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
       )}
 
       <AuditModal
+        projectId={projectId}
         isOpen={isAuditModalOpen}
         onClose={() => setIsAuditModalOpen(false)}
         auditLogs={auditLogs}

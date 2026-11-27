@@ -242,7 +242,7 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
               </div>
             </div>
           )}
-          <div className="rg-subcard" data-testid="processing-job-create">
+          {Boolean(false) && <><div className="rg-subcard" data-testid="processing-job-create">
             <SectionTitle icon="memory">Tạo job xử lý AI</SectionTitle>
             <div className="rg-grid">
               <Field label="Phạm vi xử lý" span="col-span-12 md:col-span-6">
@@ -275,9 +275,9 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
               <PanelButton disabled={!!busy || !dataset.scope[scopeIndex]} loading={busy === 'hints'} onClick={() => { void run('hints', async () => { const h = await surveyDatasetService.aiRunHints(record.projectId, dataset.scope[scopeIndex]); setAiFixtures(h.fixtures); setAiGeometry(h.geometryVersion); setMessage('Đã đọc phiên bản hình học của phạm vi đã chọn từ BE.') }) }}>{busy === 'hints' ? 'Đang lấy…' : 'Đọc phiên bản hình học và fixture'}</PanelButton>
               <PanelButton variant="primary" disabled={!!busy || !pre.trim() || !cfg.trim() || !modelVersionId.trim() || !aiFixture.trim() || !dataset.scope[scopeIndex]} loading={busy === 'ai-run'} onClick={() => { void run('ai-run', async () => { setAiError(''); try { const r = await surveyDatasetService.createAiRun(record.projectId, dataset, { scopeIndex, stage: aiStage, modelVersionId, preprocessingVersion: pre, configVersion: cfg, fixtureVersion: aiFixture }); setLastRunId(r.id); setTrackKey((n) => n + 1); setMessage(`Đã tạo lần chạy AI (runId ${r.id}, trạng thái ${r.status || '—'}). Theo dõi ngay bên dưới.`) } catch (e) { setAiError(aiApiErrorText(e, 'Không tạo được lần chạy AI (POST ai-mock-runs)')) } }) }}>{busy === 'ai-run' ? 'Đang gửi…' : 'Chạy AI mock'}</PanelButton>
             </div>
+          </div></>}
             <AiRunTracker projectId={record.projectId} taskId={record.id} datasetId={dataset.id} refreshKey={trackKey} highlightRunId={lastRunId}
               onViewJob={(id) => { setJobId(id); void run('job', async () => { setJob((await surveyDatasetService.job(id)).job) }) }} />
-          </div>
         </div>
       )}
       <div className="rg-subcard" data-testid="processing-job-view">

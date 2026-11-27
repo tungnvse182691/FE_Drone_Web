@@ -78,6 +78,7 @@ const formatRealtimeDeadline = (dueAtStr: string, now: Date) => {
 }
 
 export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = ({ clocks, error, truncated, onChanged }) => {
+  const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
   const [extendingClock, setExtendingClock] = useState<H6ClockItem | null>(null)
   const [extensionHours, setExtensionHours] = useState<number>(4)
@@ -148,10 +149,10 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
 
 
   return (
-    <div className="bg-white rounded-[16px] border border-[#E2E5E9] shadow-xs overflow-hidden">
+    <div className="min-w-0 bg-white rounded-[16px] border border-[#E2E5E9] shadow-xs overflow-hidden">
       {/* Widget Header */}
-      <div className="px-6 py-4 border-b border-[#E2E5E9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-50/70 to-white">
-        <div className="flex items-center gap-2.5">
+      <div className="px-4 sm:px-5 py-4 border-b border-[#E2E5E9] flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3 bg-gradient-to-r from-slate-50/70 to-white">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
             <Icon name="schedule" size={20} />
           </div>
@@ -181,7 +182,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
       </div>
 
       {/* Clocks List */}
-      <div className="divide-y divide-slate-100 p-2 sm:p-4">
+      <div className="divide-y divide-slate-100 p-2 sm:p-3">
         {error && (
           <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
             Không tải được đồng hồ thời hạn: {error}
@@ -193,19 +194,19 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
         {truncated && (
           <div className="p-2 text-[11px] text-amber-700">Còn thêm đồng hồ chưa nạp hết (BE phân trang).</div>
         )}
-        {evaluatedClocks.map((clock) => {
+        {evaluatedClocks.slice(0, expanded ? undefined : 3).map((clock) => {
           const kindInfo = getKindLabel(clock.kind)
           return (
             <div
               key={clock.id}
-              className={`p-3 sm:p-4 rounded-xl transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
+              className={`p-2 rounded-xl transition-all duration-200 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-2 ${
                 clock.dynamicOverdue
                   ? 'bg-rose-50/40 border border-rose-200/80 hover:bg-rose-50/70'
                   : 'hover:bg-slate-50/80 border border-transparent'
               }`}
             >
               {/* Left Info */}
-              <div className="flex items-start gap-3 min-w-0">
+              <div className="flex flex-wrap items-start gap-2 min-w-0">
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${kindInfo.color}`}
                 >
@@ -234,7 +235,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
                   <h4 className="text-sm font-semibold text-brand-dark mt-1 line-clamp-1">
                     {clock.title}
                   </h4>
-                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3">
+                  <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span>
                       Hạn xử lý: <span className="font-mono text-slate-700">{new Date(clock.currentDueAt).toLocaleString('vi-VN')}</span>
                     </span>
@@ -244,7 +245,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 self-end lg:self-center shrink-0">
+              <div className="flex flex-wrap items-center gap-2 self-start 2xl:self-center min-w-0">
                 <button
                   type="button"
                   onClick={() => setExtendingClock(clock)}
@@ -272,6 +273,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
             </div>
           )
         })}
+        {evaluatedClocks.length > 3 && <button type="button" aria-expanded={expanded} onClick={() => setExpanded(previous => !previous)} className="mt-2 px-2 py-2 text-xs font-semibold text-slate-600 underline cursor-pointer">{expanded ? 'Thu gọn' : 'Xem thêm'}</button>}
       </div>
 
       {/* Modal Xin gia hạn nhiệm vụ */}

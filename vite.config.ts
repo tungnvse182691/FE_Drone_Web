@@ -11,7 +11,7 @@ export default defineConfig({
     open: false,
     proxy: {
       '/api': {
-        target: 'https://localhost:28443',
+        target: 'https://localhost:38443',
         changeOrigin: true,
         secure: false, // Dev proxy only: local backend uses its own TLS certificate.
         headers: {

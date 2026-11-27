@@ -115,6 +115,7 @@ export const FastTrackDispatch: React.FC = () => {
       {(projectError || policyError || coverageError || dispatchError) && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl p-3">{[projectError,policyError,coverageError,dispatchError].filter(Boolean).join(' · ')}</p>}
       {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH XỬ LÝ NHANH ÁP DỤNG & ĐỘ PHỦ TUYẾN (API-175, API-176) */}
       <PolicySection
+        projectId={selectedProjectId}
         onSelectCoverageScope={selectCoverageScope}
         onReadPolicy={handleReadHistory}
         currentPolicy={currentPolicy}

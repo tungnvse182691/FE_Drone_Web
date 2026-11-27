@@ -152,7 +152,7 @@ export const AlignmentSegments: React.FC = () => {
         <option value="">{segmentWorkflow.sets.length ? 'Chọn bộ phân đoạn / bản mới' : 'Chưa có bộ phân đoạn trong cơ sở dữ liệu'}</option>
         {segmentWorkflow.sets.map((set, index) => <option key={set.id} value={set.id} >{segmentSetLabel(set, index)}</option>)}
       </select>
-      <details><summary>Chi tiết kỹ thuật</summary><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify({segmentSetId:segmentWorkflow.setId,sets:segmentWorkflow.sets},null,2)}</pre></details>
+      <details hidden><summary>Chi tiết kỹ thuật</summary><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify({segmentSetId:segmentWorkflow.setId,sets:segmentWorkflow.sets},null,2)}</pre></details>
       {!isSupervisor && <>
         <button type="button" disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onClick={() => segmentWorkflow.openSet('')} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Bản phân đoạn mới</button>
         <button type="button" disabled={!segmentWorkflow.editable || !segmentWorkflow.preview} onClick={() => { void segmentWorkflow.save() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{segmentWorkflow.snapshot ? 'Lưu bản nháp phân đoạn' : 'Lưu bản nháp phân đoạn'}</button>

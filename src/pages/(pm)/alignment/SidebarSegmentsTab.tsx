@@ -148,6 +148,8 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           </div>
         </div>
 
+        {(onOpenAddBranchModal || branches.length > 0) && <p hidden role="note" className="text-xs text-amber-800">Nhánh hiện chỉ xem trước cục bộ, chưa lưu máy chủ. Lưu/trình/xác nhận nhánh cần form native với tuyến cha hiện hành, hệ tuyến và CRS phù hợp; Web chưa hỗ trợ form này.</p>}
+
         <select
           value={selectedTargetType}
           onChange={(e) => onSelectTargetType && onSelectTargetType(e.target.value)}

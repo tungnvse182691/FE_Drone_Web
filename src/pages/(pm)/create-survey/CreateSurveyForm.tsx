@@ -195,25 +195,8 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
             </div>
           )}
 
-          {currentProject.serverSet && <div className="mt-2 text-xs text-slate-600 space-y-1"><p>Route {currentProject.routeVersionId} · Set {currentProject.serverSet.id} · PUBLISHED</p><p>Contract chỉ nhận nguyên segment. Mốc hợp lệ (m): {currentProject.serverSet.segments.map(s=>`${s.sequence}: ${s.startStationMeters}–${s.endStationMeters}`).join('; ')}</p><label className="block">Dải khảo sát<select aria-label="Dải khảo sát server" value={targetBand} onChange={e=>onTargetBandChange?.(e.target.value)} className="ml-2 border rounded-lg p-1"><option value="">Chọn dải</option><option value="SURFACE">Mặt đường (SURFACE)</option><option value="LEFT_EDGE">Mép trái (LEFT_EDGE)</option><option value="RIGHT_EDGE">Mép phải (RIGHT_EDGE)</option></select></label></div>}
+          {currentProject.serverSet && <div className="mt-2 text-xs text-slate-600 space-y-1"><label className="block">Dải khảo sát<select aria-label="Dải khảo sát server" value={targetBand} onChange={e=>onTargetBandChange?.(e.target.value)} className="ml-2 border rounded-lg p-1"><option value="">Chọn dải</option><option value="SURFACE">Mặt đường (SURFACE)</option><option value="LEFT_EDGE">Mép trái (LEFT_EDGE)</option><option value="RIGHT_EDGE">Mép phải (RIGHT_EDGE)</option></select></label></div>}
           {scopeSummary && <p role="status" className="text-xs text-slate-600 break-all">{scopeSummary}</p>}
-          {/* Thông tin phụ trợ */}
-          <div className="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1.5 px-0.5">
-            <Icon name="info" size={13} className="text-slate-400 shrink-0" />
-            <span>
-              {currentProject.hasAlignment ? (
-                <>
-                  Đang chọn dự án <strong>[{currentProject.code}] {currentProject.name}</strong> • Chiều dài:{' '}
-                  {currentProject.lengthKm} km (Km {currentProject.startKm} → Km {currentProject.endKm}).
-                </>
-              ) : (
-                <span className="text-amber-800 font-semibold">
-                  Dự án <strong>[{currentProject.code}] {currentProject.name}</strong> chưa có tim tuyến được phê duyệt trong hệ thống.
-                </span>
-              )}
-            </span>
-          </div>
-
           {/* Banner cảnh báo nếu dự án chưa có tim tuyến */}
           {!currentProject.hasAlignment && (
             <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5 leading-relaxed">
@@ -232,20 +215,14 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
             <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5">
               Lý Trình Bắt Đầu (Km)
             </label>
-            <select aria-label="Lý trình bắt đầu theo segment" value={startKm} disabled={!currentProject.serverSet} onChange={e=>setStartKm(e.target.value)} required className="w-full px-3.5 py-2 text-sm font-mono font-bold border border-[#E2E5E9] rounded-[10px]"><option value="">Chọn mốc segment</option>{currentProject.serverSet?.segments.map(s=><option key={s.id} value={String(s.startStationMeters / 1000)}>Km {s.startStationMeters / 1000} · {s.id}</option>)}</select>
-            <span className="text-[10px] text-slate-400 mt-1 block font-mono">
-              {currentProject.hasAlignment ? `Giới hạn tuyến: Km ${currentProject.startKm}` : 'Chưa có tim tuyến'}
-            </span>
+            <select aria-label="Lý trình bắt đầu theo segment" value={startKm} disabled={!currentProject.serverSet} onChange={e=>setStartKm(e.target.value)} required className="w-full px-3.5 py-2 text-sm font-mono font-bold border border-[#E2E5E9] rounded-[10px]"><option value="">Chọn mốc segment</option>{currentProject.serverSet?.segments.map(s=><option key={s.id} value={String(s.startStationMeters / 1000)}>Km {(s.startStationMeters / 1000).toFixed(3)}</option>)}</select>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5">
               Lý Trình Kết Thúc (Km)
             </label>
-            <select aria-label="Lý trình kết thúc theo segment" value={endKm} disabled={!currentProject.serverSet} onChange={e=>setEndKm(e.target.value)} required className="w-full px-3.5 py-2 text-sm font-mono font-bold border border-[#E2E5E9] rounded-[10px]"><option value="">Chọn mốc segment</option>{currentProject.serverSet?.segments.map(s=><option key={s.id} value={String(s.endStationMeters / 1000)}>Km {s.endStationMeters / 1000} · {s.id}</option>)}</select>
-            <span className="text-[10px] text-slate-400 mt-1 block font-mono">
-              {currentProject.hasAlignment ? `Đến tối đa: Km ${currentProject.endKm}` : 'Chưa có tim tuyến'}
-            </span>
+            <select aria-label="Lý trình kết thúc theo segment" value={endKm} disabled={!currentProject.serverSet} onChange={e=>setEndKm(e.target.value)} required className="w-full px-3.5 py-2 text-sm font-mono font-bold border border-[#E2E5E9] rounded-[10px]"><option value="">Chọn mốc segment</option>{currentProject.serverSet?.segments.map(s=><option key={s.id} value={String(s.endStationMeters / 1000)}>Km {(s.endStationMeters / 1000).toFixed(3)}</option>)}</select>
           </div>
         </div>
       </fieldset>
@@ -289,7 +266,6 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 Khảo sát cơ sở {hasBaseline ? '— Đã thiết lập mốc Baseline' : ''}
               </option>
             </select>
-            <span className="text-[10px] text-slate-500 mt-1.5 block">Loại khảo sát sẽ gửi cùng kế hoạch và nhiệm vụ.</span>
           </div>
 
           <div>
@@ -304,9 +280,6 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               required
               className="w-full h-10 px-3.5 py-2 text-sm bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] text-[#1A1D20]"
             />
-            <span className="text-[10px] text-slate-500 mt-1.5 block">
-              Thời gian cất cánh ngoài thực địa.
-            </span>
           </div>
 
           <div>
@@ -327,13 +300,13 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 </option>
               ))}
             </select>
-            <span className="text-[10px] text-slate-500 mt-1.5 block">
-              {operatorError || 'Chọn đúng Operator ID từ membership hiệu lực của dự án.'}
+            {operatorError && <span className="text-[10px] text-slate-500 mt-1.5 block">
+              {operatorError}
               {operatorError && <button type="button" aria-label="Operator hiệu lực"
               disabled={operatorLoading} onClick={onRetryOperators} className="ml-2 underline">Đọc lại Operator</button>}
-            </span>
+            </span>}
           </div>
-          <label className="block min-w-0 text-xs font-semibold text-slate-700 sm:col-span-3">Hạn hoàn thành nhiệm vụ (tùy chọn)<input type="datetime-local" aria-label="Hạn hoàn thành nhiệm vụ" value={dueAt} max={warrantyMaxDateTime(warranty)} onChange={e=>setDueAt?.(e.target.value)} className="mt-1 w-full h-10 px-3 border border-[#E2E5E9] rounded-[10px]" /><span className="block mt-1 text-[11px] font-normal text-slate-500">{warrantyHint(warranty)}</span>{dueWarrantyErr&&<span role="alert" data-testid="survey-due-warranty-error" className="block mt-1 text-[11px] font-normal text-rose-700">{dueWarrantyErr}</span>}</label>
+          <label className="block min-w-0 text-xs font-semibold text-slate-700 sm:col-span-3">Hạn hoàn thành nhiệm vụ (tùy chọn)<input type="datetime-local" aria-label="Hạn hoàn thành nhiệm vụ" value={dueAt} max={warrantyMaxDateTime(warranty)} onChange={e=>setDueAt?.(e.target.value)} className="mt-1 w-full h-10 px-3 border border-[#E2E5E9] rounded-[10px]" />{(warranty.status === 'loading' || warranty.status === 'unknown') && <span className="block mt-1 text-[11px] font-normal text-slate-500">{warrantyHint(warranty)}</span>}{dueWarrantyErr&&<span role="alert" data-testid="survey-due-warranty-error" className="block mt-1 text-[11px] font-normal text-rose-700">{dueWarrantyErr}</span>}</label>
         </fieldset>
       </div>
 
