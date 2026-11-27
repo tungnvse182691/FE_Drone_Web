@@ -4,6 +4,7 @@ import { apiClient } from '../client'
 // `id` là runId (lần chạy AI mock); `processingJobId` là mã job xử lý do BE sinh — hai mã KHÁC nhau, dùng cho hai API khác nhau
 // (runId → /ai-mock-runs/{runId}[/result]; processingJobId → /processing-jobs/{jobId}).
 export interface AiRunDetail {
+  workId?: string; firstDetectionId?: string | null
   id: string; projectId: string; stage?: string | null; mode?: string | null; status?: string | null
   processingJobId?: string | null; attemptId?: string | null; manifestHash?: string | null; resultId?: string | null
   fixtureVersion?: string | null; errorCode?: string | null; version?: string | null
@@ -21,7 +22,7 @@ export function aiApiErrorText(e: any, context = ''): string {
   const prefix = context ? `${context}: ` : ''
   if (!r) return `${prefix}${e?.message || 'Không kết nối được máy chủ'}`
   const d = (r.data && typeof r.data === 'object' ? r.data : {}) as Record<string, any>
-  const hint = r.status === 401 ? 'phiên Web chưa xác thực hoặc đã hết hạn' : r.status === 403 ? 'tài khoản không đủ quyền với tài nguyên này' : ''
+  const hint = r.status === 401 ? 'API từ chối xác thực; nếu phiên Web còn hợp lệ, cần kiểm tra cookie eligibility phía BE' : r.status === 403 ? 'tài khoản không đủ quyền với tài nguyên này' : ''
   const cid = d.correlationId || r.headers?.['x-correlation-id']
   const parts = [
     `HTTP ${r.status}`, d.code || d.title, hint,
@@ -40,22 +41,22 @@ export const aiRunDetailService = {
     if (data?.id !== runId || data.projectId !== projectId) throw new Error('BE trả lần chạy AI sai ID/dự án.')
     return data
   },
-  /** GET /projects/{p}/ai-mock-runs?surveyTaskId=&datasetId= — các lần chạy của đúng nhiệm vụ + bản nộp, mới nhất trước. */
+  /** FT95 work discovery: offset/hasMore; job IDs are never work IDs. */
   async listForDataset(projectId: string, taskId: string, datasetId: string, signal?: AbortSignal): Promise<AiRunDetail[]> {
+    const dataset = (await apiClient.get<{ id: string; projectId: string; surveyTaskId: string }>(`/datasets/${datasetId}`, { signal })).data
+    if (dataset.id !== datasetId || dataset.projectId !== projectId || dataset.surveyTaskId !== taskId) throw new Error('Bộ dữ liệu không thuộc dự án/nhiệm vụ đang xem.')
     const rows: AiRunDetail[] = []
-    let cursor: string | undefined
-    for (let page = 0; page < 10; page++) {
-      const { data } = await apiClient.get<{ items?: AiRunDetail[]; nextCursor?: string | null }>(`/projects/${projectId}/ai-mock-runs`, { params: { limit: 50, surveyTaskId: taskId, datasetId, cursor }, signal })
-      if (!Array.isArray(data?.items)) throw new Error('BE trả danh sách lần chạy AI sai contract.')
-      for (const r of data.items) {
-        if (!r.id || r.projectId !== projectId || (r.surveyTaskId && r.surveyTaskId.toLowerCase() !== taskId.toLowerCase()) || (r.datasetId && r.datasetId.toLowerCase() !== datasetId.toLowerCase())) throw new Error('BE trả lần chạy AI sai dự án/nhiệm vụ/bản nộp.')
-        rows.push(r)
+    for (let offset = 0; ; offset += 50) {
+      const { data } = await apiClient.get<{ items: Array<{ workId: string; jobId: string; state: string; errorCode?: string | null }>; hasMore: boolean }>(`/projects/${projectId}/ai-videos`, { params: { datasetId, offset, limit: 50 }, signal })
+      if (!Array.isArray(data?.items) || typeof data.hasMore !== 'boolean') throw new Error('BE trả danh sách work AI sai contract.')
+      for (const work of data.items) {
+        if (!work.workId || !work.jobId || !work.state) throw new Error('Work AI thiếu workId/jobId/state.')
+        const job = (await apiClient.get<{ id: string; status: string; resultId?: string | null }>(`/processing-jobs/${work.jobId}`, { signal })).data
+        if (job.id !== work.jobId || !job.status) throw new Error('BE trả job AI sai ID/trạng thái.')
+        rows.push({ id: work.workId, workId: work.workId, projectId, datasetId, surveyTaskId: taskId, processingJobId: job.id, firstDetectionId: job.resultId, status: job.status, stage: work.state, errorCode: work.errorCode })
       }
-      cursor = data.nextCursor || undefined
-      if (!cursor) break
+      if (!data.hasMore) return rows
+      if (!data.items.length) throw new Error('Phân trang work AI không tiến triển.')
     }
-    // Danh sách không có originCorrelationId/failure (chỉ GET run đơn có): đọc bổ sung từng run để hiển thị chẩn đoán.
-    const full = await Promise.all(rows.map((r) => this.read(projectId, r.id, signal)))
-    return full.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
   },
 }

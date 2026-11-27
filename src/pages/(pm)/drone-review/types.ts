@@ -33,6 +33,8 @@ export interface AIDetectionItem {
   }
   // Canonical Backend Candidate3 fields (AiCandidateFactsV1 & CandidateDecisionResponseDto)
   projectId?: string
+  workId?: string
+  jobId?: string
   runId?: string
   datasetVersionId?: string
   modelVersionId?: string

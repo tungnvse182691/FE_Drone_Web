@@ -1,10 +1,16 @@
 import { useAuthStore } from '../../../store/authStore'
 import { apiClient } from '../../../api/client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { AIDetectionItem } from './types'
 
 export interface MissionViewportProps {
+  isPlaying: boolean
+  setIsPlaying: (value: boolean) => void
+  playbackSpeed: number
+  currentTimeMs: number
+  onTimeChange: (value: number) => void
+  onDuration: (value: number) => void
   viewerMode: 'ORTHO' | 'GIS_MAP'
   corridorMapContainerRef: React.RefObject<HTMLDivElement | null>
   isAiOverlayVisible: boolean
@@ -21,7 +27,7 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
   detections,
   selectedDetectionId,
   onSelectDetection,
-  selectedItem
+  selectedItem, isPlaying, setIsPlaying, playbackSpeed, currentTimeMs, onTimeChange, onDuration
 }) => {
   const activeItem = selectedItem || detections.find((d) => d.id === selectedDetectionId) || null
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({})
@@ -49,6 +55,24 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
   }, [epoch, fileId, fileVersion])
   const frameUrl = frame?.key === imageKey ? frame.url : ''
   const isCurrentImgError = activeItem ? imageErrorMap[activeItem.id] : false
+
+  const video = useRef<HTMLVideoElement>(null)
+  const videoId = activeItem?.sourceVideoFileId
+  const [videoError, setVideoError] = useState('')
+  useEffect(() => { setVideoError(''); setIsPlaying(false) }, [epoch, videoId, setIsPlaying])
+  useEffect(() => {
+    const element = video.current
+    if (!element) return
+    element.playbackRate = playbackSpeed
+    if (isPlaying) void element.play().catch(() => { setVideoError('Không phát được video nguồn trong phiên hiện tại.'); setIsPlaying(false) })
+    else element.pause()
+  }, [isPlaying, playbackSpeed, videoId, viewerMode, setIsPlaying])
+  useEffect(() => {
+    if (video.current && Math.abs(video.current.currentTime * 1000 - currentTimeMs) > 300) video.current.currentTime = currentTimeMs / 1000
+  }, [currentTimeMs])
+  useEffect(() => {
+    if (activeItem) onTimeChange(activeItem.timestampMs || 0)
+  }, [activeItem?.id, onTimeChange])
 
   return (
     <div className="relative w-full aspect-[16/10] bg-slate-900 overflow-hidden select-none group">
@@ -79,6 +103,14 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
             />
           )}
 
+          {videoId && <video key={`${epoch}:${videoId}`} ref={video}
+            src={`/api/v1/files/${encodeURIComponent(videoId)}/content`} poster={frameUrl || undefined}
+            className="absolute inset-0 w-full h-full object-cover" playsInline preload="metadata"
+            onLoadedMetadata={e => { onDuration(Number.isFinite(e.currentTarget.duration) ? Math.max(1, e.currentTarget.duration * 1000) : 1); e.currentTarget.currentTime = (activeItem.timestampMs || 0) / 1000 }}
+            onTimeUpdate={e => onTimeChange(e.currentTarget.currentTime * 1000)}
+            onEnded={() => setIsPlaying(false)}
+            onError={() => { setVideoError('Không tải được video nguồn trong phiên hiện tại.'); setIsPlaying(false) }} />}
+          {videoError && <p role="alert" className="absolute bottom-10 left-3 text-xs text-white bg-slate-900">{videoError}</p>}
           {/* Vignette Shadow Overlay trắc địa */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none"></div>
 
@@ -97,7 +129,7 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
           </div>
 
           {/* AI BOUNDING BOX: Hộp giới hạn phát hiện khiếm khuyết của Road-YOLOv9 */}
-          {isAiOverlayVisible && activeItem.bbox && (
+          {isAiOverlayVisible && Math.abs(currentTimeMs - (activeItem.timestampMs || 0)) < 300 && activeItem.bbox && (
             <div
               key={`bbox-${activeItem.id}`}
               onClick={() => onSelectDetection(activeItem)}

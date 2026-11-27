@@ -13,6 +13,7 @@ export interface MissionViewerProps {
   setIsAiOverlayVisible: React.Dispatch<React.SetStateAction<boolean>>
   currentFrame: number
   setCurrentFrame: React.Dispatch<React.SetStateAction<number>>
+  setTotalFrames: React.Dispatch<React.SetStateAction<number>>
   totalFrames: number
   isPlaying: boolean
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
@@ -36,6 +37,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
   currentFrame,
   setCurrentFrame,
   totalFrames,
+  setTotalFrames,
   isPlaying,
   setIsPlaying,
   playbackSpeed,
@@ -59,7 +61,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
           <Icon name="photo_camera" size={18} className="text-[#C9A227]" />
           <div>
             <h3 className="font-bold text-xs text-[#1A1D20] leading-tight">
-              Khung hình trích xuất {selectedItem ? `#FR-${selectedItem.code || currentFrame}` : `#FR-${currentFrame}`}
+              Video nguồn · {(currentFrame / 1000).toFixed(2)}s / {(totalFrames / 1000).toFixed(2)}s
             </h3>
             <span className="font-mono text-[11px] text-slate-500">
               {selectedItem ? `${selectedItem.stationing} (${selectedItem.lane})` : 'Toàn tuyến'}
@@ -140,6 +142,8 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
 
       {/* Canvas Viewport: Ortho Photo vs Real MapLibre Map */}
       <MissionViewport
+        isPlaying={isPlaying} setIsPlaying={setIsPlaying} playbackSpeed={playbackSpeed}
+        currentTimeMs={currentFrame} onTimeChange={setCurrentFrame} onDuration={setTotalFrames}
         viewerMode={viewerMode}
         corridorMapContainerRef={corridorMapContainerRef}
         isAiOverlayVisible={isAiOverlayVisible}

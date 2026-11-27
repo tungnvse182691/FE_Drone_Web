@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { aiRunDetailService, isAiRunTerminal, type AiRunDetail } from '../../../api/services/aiRunDetailService'
-import { exportError } from '../../../api/services/projectExportService'
+import { aiApiErrorText } from '../../../api/services/aiRunDetailService'
 import { Empty, Loading, PanelButton, Pill, SectionTitle } from '../../../components/ui/PanelKit'
 
 const POLL_MS = 3000
@@ -11,9 +11,9 @@ const STATUS_TONE = (s?: string | null) => (/FAIL|ERROR/i.test(String(s)) ? 'bad
 const dt = (v?: string | null) => (v ? new Date(v).toLocaleString('vi-VN') : '—')
 
 /**
- * Theo dõi các lần chạy AI của một bản nộp: đọc từ BE (GET /projects/{p}/ai-mock-runs?surveyTaskId=&datasetId=) nên lần chạy vừa tạo
+ * Theo dõi các lần chạy AI của một bản nộp: đọc từ BE (GET /projects/{p}/ai-videos?datasetId=) nên công việc được BE phát hiện
  * luôn hiện lại sau khi nạp lại trang; tự đọc lại trong lúc còn QUEUED/RUNNING, dừng khi kết thúc hoặc khi rời màn.
- * runId (lần chạy AI) và processingJobId (job xử lý) là hai mã khác nhau, hiển thị riêng nhãn.
+ * workId (công việc AI) và processingJobId (job xử lý) là hai mã khác nhau, hiển thị riêng nhãn.
  */
 export const AiRunTracker: React.FC<{
   projectId: string; taskId: string; datasetId: string
@@ -42,14 +42,14 @@ export const AiRunTracker: React.FC<{
           timer = setTimeout(() => { void load() }, POLL_MS)
         } else setStalled(false)
       } catch (e) {
-        if (alive && !ctl.signal.aborted) setError(`Không đọc được các lần chạy AI của bản nộp: ${exportError(e)}`)
+        if (alive && !ctl.signal.aborted) { setRuns(null); setError(`Không đọc được work AI real của bản nộp (GET ai-videos): ${aiApiErrorText(e)}`) }
       }
     }
-    setRuns(null); setStalled(false); void load()
+    setRuns(null); setError(''); setStalled(false); void load()
     return () => { alive = false; ctl.abort(); if (timer) clearTimeout(timer) }
   }, [projectId, taskId, datasetId, refreshKey, manual])
 
-  const open = (r: AiRunDetail) => navigate(`/pm/surveys/${taskId}?run=${encodeURIComponent(r.id)}&dataset=${encodeURIComponent(datasetId)}`)
+  const open = (r: AiRunDetail) => navigate(`/pm/surveys/${taskId}?work=${encodeURIComponent(r.workId!)}&job=${encodeURIComponent(r.processingJobId!)}&dataset=${encodeURIComponent(datasetId)}${r.firstDetectionId ? `&det=${encodeURIComponent(r.firstDetectionId)}` : ''}`)
 
   return (
     <div className="space-y-2" data-testid="ai-run-tracker">
@@ -62,10 +62,10 @@ export const AiRunTracker: React.FC<{
         <div key={r.id} data-testid="ai-run-row" data-run-id={r.id} data-status={r.status || ''} className={`rg-row space-y-1.5 ${highlightRunId === r.id ? '!border-brand-navy' : ''}`}>
           <div className="flex flex-wrap items-center gap-2">
             <Pill tone={STATUS_TONE(r.status)}>{r.status || '—'}</Pill>
-            <span className="text-[11px] text-slate-500">{r.stage || '—'} · {r.mode || '—'} · fixture {r.fixtureVersion || '—'}{r.datasetVersionNo ? ` · bản nộp ${r.datasetVersionNo}` : ''} · {dt(r.createdAt)}</span>
+            <span className="text-[11px] text-slate-500">{r.stage || '—'} · trạng thái work/job do BE trả{r.datasetVersionNo ? ` · bản nộp ${r.datasetVersionNo}` : ''} · {dt(r.createdAt)}</span>
             {highlightRunId === r.id && <span className="rg-pill rg-pill-info">Vừa tạo</span>}
           </div>
-          <p className="text-[11px] font-mono break-all"><span className="font-sans font-semibold">Mã lần chạy AI (runId):</span> {r.id}</p>
+          <p className="text-[11px] font-mono break-all"><span className="font-sans font-semibold">Mã công việc AI (workId):</span> {r.id}</p>
           <p className="text-[11px] font-mono break-all"><span className="font-sans font-semibold">Mã job xử lý (processingJobId):</span> {r.processingJobId || '—'}</p>
           <p className="text-[11px] font-mono break-all" data-testid="ai-run-origin"><span className="font-sans font-semibold">Mã đối chiếu gốc của lần chạy (originCorrelationId):</span> {r.originCorrelationId || '—'}</p>
           {/^FAIL/i.test(String(r.status)) && <p role="alert" className="text-xs text-rose-700 break-words">Lần chạy thất bại: {r.errorCode ? `BE báo mã lỗi ${r.errorCode}` : 'BE không trả mã lỗi'}{r.failure?.reasonCode ? ` · reasonCode ${r.failure.reasonCode}` : ''}{r.failure?.step ? ` · bước ${r.failure.step}` : ''}{r.failure?.field ? ` · trường ${r.failure.field}` : ''}{r.failure?.recovery ? ` · Hướng xử lý: ${r.failure.recovery}` : ''}{r.failure?.originCorrelationId || r.originCorrelationId ? ` · originCorrelationId ${r.failure?.originCorrelationId || r.originCorrelationId}` : ''}.</p>}

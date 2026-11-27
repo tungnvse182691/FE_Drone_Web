@@ -8,6 +8,8 @@ const { code } = await transform(source
   .replace("import { apiClient } from '../client'", 'const apiClient = globalThis.testCandidateClient')
   .replace("import { useAuthStore } from '../../store/authStore'", 'const useAuthStore = globalThis.testCandidateAuth')
   .replace("import { defectRecurrenceService, type RecurrenceInput } from './defectRecurrenceService'", 'const defectRecurrenceService = globalThis.testRecurrenceReadback')
+  .replace("import { SEVERITY_LABEL } from '../../utils/severity'", 'const SEVERITY_LABEL = {}')
+  .replace("import { aiApiErrorText } from './aiRunDetailService'", 'const aiApiErrorText = e => e.message')
   .replace("import { projectService } from './projectService'", 'const projectService = {}'), { loader: 'ts', format: 'esm' })
 const receipt = { id: 'decision', sourceId: 'source', sourceKind: 'AI_DETECTION', decision: 'LINK_EXISTING', defectId: 'target', version: 'version', supersedesDecisionId: null }
 const request = { sourceId: 'source', sourceKind: 'AI_DETECTION', decision: 'LINK_EXISTING', targetDefectId: 'target', targetVersion: 'target-version', sourceVersion: 'source-version', geometryVersion: 'geometry-version', reason: '[TEST-FE] Link' }
@@ -28,8 +30,9 @@ Object.assign(globalThis, {
   } },
 })
 const { surveyService } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
+surveyService.getAiCandidateFacts = async () => ({ projectId: 'project', detectionId: 'source', routeVersionId: 'real-route', segmentId: null, sourceVersion: 'source-version', geometryVersion: 'geometry-version' })
 
-test('Web PM verifies the committed AI decision without the Bearer-only head lookup', async () => {
+test('Web PM verifies the committed AI decision after candidate source validation', async () => {
   assert.deepEqual(await surveyService.decideCandidate('project', request), receipt)
   assert.deepEqual(calls, [['POST', base], ['GET', `${base}/decision`]])
   assert.equal(store.size, 0)
@@ -57,4 +60,25 @@ test('recurrence is submitted atomically and a failed lifecycle readback does no
   await surveyService.decideCandidate('project', payload)
   assert.deepEqual(calls, [['POST', base], ['GET', `${base}/decision`], ['GET', `${base}/decision`]])
   assert.equal(store.size, 0)
+})
+
+
+test('FT95 KEEP_NEW derives route from candidate facts and blocks stale snapshots before POST', async () => {
+  calls.length = 0; store.clear(); lifecycleReady = false
+  readback = postReceipt = { ...receipt, decision: 'KEEP_NEW', defectId: 'new-defect' }
+  const payload = { ...request, decision: 'KEEP_NEW', defectTypeCode: 'TRANSVERSE_CRACK', severity: 'LOW', runId: 'real-work-id' }
+  await surveyService.decideCandidate('project', payload)
+  assert.equal(postedBody.classification.roadSectionVersionId, 'real-route')
+  assert.equal(calls.some(c => c[1].includes('ai-mock-runs')), false)
+  calls.length = 0
+  await assert.rejects(surveyService.decideCandidate('project', { ...payload, sourceVersion: 'stale' }), /Nguồn AI đã thay đổi/)
+  assert.equal(calls.some(c => c[0] === 'POST'), false)
+})
+
+test('FT95 REJECT reads its receipt without creating a defect', async () => {
+  calls.length = 0; store.clear()
+  readback = postReceipt = { ...receipt, decision: 'REJECT', defectId: null }
+  await surveyService.decideCandidate('project', { ...request, decision: 'REJECT' })
+  assert.equal(postedBody.classification, null)
+  assert.deepEqual(calls, [['POST', base], ['GET', `${base}/decision`]])
 })

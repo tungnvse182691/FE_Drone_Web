@@ -255,7 +255,7 @@ async function buildDetectionItem(
   const status: AIDetectionItem['status'] = decisionKind === 'REJECT' ? 'REJECTED'
     : decisionKind === 'KEEP_NEW' || decisionKind === 'LINK_EXISTING' ? 'APPROVED' : 'PENDING'
   let linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
-  if (defectId && !linkedDbDefect) linkedDbDefect = (await surveyService.getDefectById(projectId, defectId).catch(() => null))?.defect
+  if (defectId && !linkedDbDefect) linkedDbDefect = (await surveyService.getDefectById(projectId, defectId))?.defect
   const bboxX = candFacts.boundingBox?.x ?? d.bbox[0]
   const bboxY = candFacts.boundingBox?.y ?? d.bbox[1]
   const bboxW = candFacts.boundingBox?.width ?? d.bbox[2]
@@ -299,6 +299,8 @@ async function buildDetectionItem(
     },
     projectId,
     runId,
+    workId: candFacts.mode === 'REAL' ? candFacts.runId : undefined,
+    jobId: candFacts.jobId,
     datasetVersionId: candFacts.datasetVersionId,
     modelVersionId: candFacts.modelVersionId,
     fixtureVersion: candFacts.fixtureVersion,
@@ -327,7 +329,6 @@ export const surveyService = {
 async refreshDetection(item: AIDetectionItem): Promise<AIDetectionItem> {
     if (!item.projectId || !item.runId) throw new Error('Phát hiện thiếu projectId/runId để đọc lại.')
     const defectMap = new Map<string, BackendDefectDto>()
-    for (const df of await this.getProjectDefects(item.projectId)) defectMap.set(df.id.toLowerCase(), df)
     const b = item.rawBbox || { x: 0, y: 0, width: 0, height: 0 }
     const raw = { detectionId: item.id, typeCode: item.rawTypeCode || '', confidence: item.confidence, bbox: [b.x, b.y, b.width, b.height], frameFileId: item.frameFileId, timestampMs: item.timestampMs } as unknown as RunDetection
     return buildDetectionItem(item.projectId, item.runId, raw, defectMap)
@@ -482,21 +483,34 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
   /**
    * Lấy chi tiết nhiệm vụ khảo sát theo ID hoặc Code từ CSDL thật
    */
+  async getRealSurvey(taskId: string, datasetId: string): Promise<SurveyMissionItem> {
+    const ds = (await apiClient.get<{ id: string; surveyTaskId: string; projectId: string }>(`/datasets/${datasetId}`)).data
+    if (ds.id !== datasetId || ds.surveyTaskId !== taskId || !ds.projectId) throw new Error('Bản nộp không thuộc nhiệm vụ đang xem.')
+    const task = (await apiClient.get<{ id: string; projectId: string; surveyType?: string; status: string }>(`/survey-tasks/${taskId}`)).data
+    if (task.id !== taskId || task.projectId !== ds.projectId) throw new Error('Nhiệm vụ không thuộc dự án của bản nộp.')
+    const type = task.surveyType === 'BASELINE' || task.surveyType === 'PERIODIC' || task.surveyType === 'AD_HOC' ? task.surveyType : null
+    return { id: task.id, task_ids: [task.id], code: task.id, title: 'Thẩm định AI của bản nộp',
+      project_id: ds.projectId, project_name: '', survey_type: type, survey_type_label: task.surveyType || '',
+      start_km: '', end_km: '', flight_date: '', pilot_name: '', drone_model: '', total_photos: Number.NaN,
+      gsd_resolution: '', ai_defects_count: Number.NaN, ai_pending_count: Number.NaN, coverage_percent: Number.NaN,
+      serverStatus: task.status, status_label: task.status }
+  },
+
   async getSurveyById(id: string): Promise<SurveyMissionItem | undefined> {
     const list = await this.getSurveys()
     return list.find((s) => s.id === id || s.code === id) || list.find((s) => s.task_ids?.some((t) => t.toLowerCase() === id.toLowerCase()))
   },
 
   /**
-   * Lấy danh sách phát hiện AI từ kết quả run AI thật trên Backend Candidate3
-   * Kết hợp SWG-053 (/ai-mock-runs/{runId}/result), SWG-005 (/ai-candidates/{detectionId}) và SWG-020 (/candidate-decisions/{decisionId})
+   * Đọc phát hiện FT95 real theo detectionId từ URL.
+   * BE chưa có API list detection theo job; không lấy kết quả mock thay thế.
    */
   async getSurveyDetections(
     surveyId: string,
     preloadedMission?: SurveyMissionItem,
     preloadedProjectId?: string,
-    // Ngữ cảnh mở từ "Mở kết quả" của lần chạy AI vừa tạo: chỉ đọc đúng lần chạy (và bản nộp) đó; không có thì giữ hành vi cũ (mọi lần chạy SUCCEEDED của nhiệm vụ).
-    scope?: { runId?: string; datasetId?: string }
+    // Real detail is scoped by dataset/work/job/detection from the URL; no mock result discovery.
+    scope?: { runId?: string; workId?: string; jobId?: string; datasetId?: string; detectionId?: string }
   ): Promise<AIDetectionItem[]> {
     await ensureBearerToken()
 
@@ -508,35 +522,17 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
     const projectId = preloadedProjectId || target?.project_id
     if (!projectId) throw new Error('Không xác định được dự án của nhiệm vụ khảo sát từ máy chủ.')
 
-    // Chỉ lấy lần chạy gắn với nhiệm vụ của đợt đang xem (BE trả surveyTaskId; lọc phía FE trên danh sách đã đọc).
-    const taskIds = new Set((target?.task_ids?.length ? target.task_ids : [surveyId]).map((t) => String(t).toLowerCase()))
-    const taskRuns = (await this.readSurveyPage(`/projects/${projectId}/ai-mock-runs`)).filter((r) => r.surveyTaskId && taskIds.has(String(r.surveyTaskId).toLowerCase()))
-    if (scope?.runId) {
-      const wanted = taskRuns.find((r) => String(r.id).toLowerCase() === scope.runId!.toLowerCase())
-      if (!wanted) throw new Error('Lần chạy AI được chọn không thuộc nhiệm vụ khảo sát này (hoặc máy chủ không còn trả về).')
-      if (scope.datasetId && (wanted as { datasetId?: string | null }).datasetId && String((wanted as { datasetId?: string | null }).datasetId).toLowerCase() !== scope.datasetId.toLowerCase()) throw new Error('Lần chạy AI được chọn không thuộc bản nộp đã chỉ định.')
-      if (wanted.status !== 'SUCCEEDED') throw new Error(`Lần chạy AI chưa có kết quả để thẩm định (trạng thái ${wanted.status || '—'}).`)
+    if (!scope?.detectionId) throw new Error('BE FT95 chưa có API phân trang phát hiện theo job. Không thể tải toàn bộ danh sách AI real.')
+    const facts = await this.getAiCandidateFacts(projectId, scope.detectionId)
+    if (facts.detectionId !== scope.detectionId || facts.projectId !== projectId || facts.mode !== 'REAL' ||
+        (scope.jobId && facts.jobId !== scope.jobId) || (scope.workId && facts.runId !== scope.workId)) throw new Error('Phát hiện không thuộc work/job/dự án AI real đang xem.')
+    if (scope.datasetId) {
+      const ds = (await apiClient.get<{ id: string; projectId: string; surveyTaskId: string; dataVersionId: string }>(`/datasets/${scope.datasetId}`)).data
+      if (ds.id !== scope.datasetId || ds.projectId !== projectId || ds.dataVersionId !== facts.datasetVersionId || !target?.task_ids?.includes(ds.surveyTaskId)) throw new Error('Phát hiện không thuộc bộ dữ liệu/nhiệm vụ đang xem.')
     }
-    const runs = taskRuns.filter((r) => r.status === 'SUCCEEDED' && (!scope?.runId || String(r.id).toLowerCase() === scope.runId.toLowerCase()))
-    if (runs.length === 0) return []
-    // Đọc kết quả của MỌI lần chạy SUCCEEDED (BE không gắn lần chạy với chuyến bay nên không được chỉ lấy runs[0]);
-    // gộp theo detectionId để phát hiện không bị trùng giữa các lần chạy.
-    const results = await Promise.all(runs.map(async (run) => ({
-      run,
-      detections: (await apiClient.get<{ detections: RunDetection[] }>(`/projects/${projectId}/ai-mock-runs/${run.id}/result`)).data?.detections || []
-    })))
-    const defectMap = new Map<string, BackendDefectDto>()
-    for (const df of await this.getProjectDefects(projectId)) defectMap.set(df.id.toLowerCase(), df)
-
-    const seen = new Set<string>()
-    const flat: { runId: string; d: RunDetection }[] = []
-    for (const r of results) for (const d of r.detections) {
-      const key = String((d as any).detectionId ?? '').toLowerCase()
-      if (key && seen.has(key)) continue
-      if (key) seen.add(key)
-      flat.push({ runId: r.run.id, d })
-    }
-    return Promise.all(flat.map((x) => buildDetectionItem(projectId, x.runId, x.d, defectMap)))
+    const bbox = facts.boundingBox
+    const raw: RunDetection = { detectionId: facts.detectionId, typeCode: facts.typeCode, confidence: facts.confidence, bbox: [bbox.x, bbox.y, bbox.width, bbox.height], frameFileId: facts.frameFileId, timestampMs: facts.timestampMs }
+    return [await buildDetectionItem(projectId, facts.runId, raw, new Map())]
   },
 
   /**
@@ -609,16 +605,11 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
       payload = { ...payload, sourceVersion: m.source?.version, geometryVersion: m.geometryVersion }
       if (!payload.sourceVersion || !payload.geometryVersion) throw new Error('BE không trả snapshot sourceVersion/geometryVersion của ứng viên.')
     }
-    // KEEP_NEW cần roadSectionVersionId: lấy từ phạm vi bộ dữ liệu của lần chạy AI (run → dataset → scope), khớp segmentId nếu có.
-    if (payload.decision === 'KEEP_NEW' && !payload.roadSectionVersionId && payload.sourceKind === 'AI_DETECTION' && payload.runId) {
-      const run = (await apiClient.get<{ datasetId?: string | null }>(`/projects/${projectId}/ai-mock-runs/${payload.runId}`)).data
-      if (!run?.datasetId) throw new Error('Lần chạy AI chưa gắn bộ dữ liệu nên không xác định được phiên bản tuyến.')
-      const ds = (await apiClient.get<{ scope?: Array<{ routeVersionId: string; segmentIds?: string[] }> }>(`/datasets/${run.datasetId}`)).data
-      const scopes = ds.scope || []
-      const hit = payload.segmentId ? scopes.filter((x) => x.segmentIds?.some((id) => id.toLowerCase() === String(payload.segmentId).toLowerCase())) : scopes
-      const versions = [...new Set(hit.map((x) => x.routeVersionId))]
-      if (versions.length !== 1) throw new Error('Không xác định duy nhất phiên bản tuyến của phát hiện từ phạm vi bộ dữ liệu.')
-      payload = { ...payload, roadSectionVersionId: versions[0] }
+    if (payload.sourceKind === 'AI_DETECTION') {
+      const facts = await this.getAiCandidateFacts(projectId, payload.sourceId)
+      if (facts.projectId !== projectId || facts.detectionId !== payload.sourceId || !facts.routeVersionId) throw new Error('Dữ kiện AI thiếu phiên bản tuyến hoặc sai nguồn.')
+      if (payload.sourceVersion !== facts.sourceVersion || payload.geometryVersion !== facts.geometryVersion) throw new Error('Nguồn AI đã thay đổi; đọc lại trước khi thẩm định.')
+      payload = { ...payload, roadSectionVersionId: facts.routeVersionId, segmentId: facts.segmentId }
     }
     if (payload.decision === 'KEEP_NEW' && (!payload.defectTypeCode || !payload.severity || !payload.roadSectionVersionId)) throw new Error('Thiếu classification có căn cứ cho KEEP_NEW.')
     if (payload.decision === 'LINK_EXISTING' && (!payload.targetDefectId || !payload.targetVersion)) throw new Error('Thiếu Defect ID/version đích đã đọc.')

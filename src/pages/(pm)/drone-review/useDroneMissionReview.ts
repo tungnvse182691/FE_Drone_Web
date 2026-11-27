@@ -12,7 +12,7 @@ export function useDroneMissionReview(
   surveyId: string = '',
   currentSurvey?: SurveyMissionItem | null,
   // Ngữ cảnh từ "Mở kết quả" (lần chạy AI + bản nộp): chỉ đọc phát hiện của đúng lần chạy đó.
-  runScope?: { runId?: string; datasetId?: string; detectionId?: string; onSelect?: (detectionId: string) => void }
+  runScope?: { runId?: string; workId?: string; jobId?: string; datasetId?: string; detectionId?: string; onSelect?: (detectionId: string) => void }
 ) {
   const scopeRunId = runScope?.runId || ''
   const scopeDatasetId = runScope?.datasetId || ''
@@ -20,7 +20,7 @@ export function useDroneMissionReview(
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [currentFrame, setCurrentFrame] = useState<number>(1)
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0)
-  const totalFrames = 100
+  const [totalFrames, setTotalFrames] = useState<number>(1)
   const detectionGuard = useSubmitGuard()
   const reFlightGuard = useSubmitGuard()
   const baselineGuard = useSubmitGuard()
@@ -28,7 +28,6 @@ export function useDroneMissionReview(
   const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false)
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
   // detectionId yêu cầu từ URL (?det=): chỉ đọc lúc mở; khớp theo detectionId, không có thì báo rõ — không chọn bản ghi đầu.
-  const wantedDetectionId = useRef((runScope?.detectionId || '').toLowerCase())
   const [selectedDetectionId, setSelectedDetectionId] = useState<string>('')
   const [selectionError, setSelectionError] = useState<string>('')
 
@@ -65,11 +64,12 @@ export function useDroneMissionReview(
     const fetchDetections = async () => {
       if (!surveyId) { setDetections([]); setDetectionsError(''); setIsLoadingDetections(false); return }
       try {
-        setIsLoadingDetections(true); setDetectionsError('')
-        const data = await surveyService.getSurveyDetections(surveyId, undefined, undefined, scopeRunId ? { runId: scopeRunId, datasetId: scopeDatasetId || undefined } : undefined)
+        setIsLoadingDetections(true); setDetections([]); setSelectedDetectionId(''); setDetectionsError(''); setIsPlaying(false)
+        if (!currentSurvey) return
+        const data = await surveyService.getSurveyDetections(surveyId, currentSurvey, currentSurvey.project_id, { workId: runScope?.workId, jobId: runScope?.jobId, datasetId: scopeDatasetId || undefined, detectionId: runScope?.detectionId })
         if (isMounted) {
           setDetections(data)
-          const wanted = wantedDetectionId.current
+          const wanted = (runScope?.detectionId || '').toLowerCase()
           if (wanted && !data.some((d) => d.id.toLowerCase() === wanted)) {
             setSelectionError(`Không tìm thấy phát hiện AI có ID ${wanted} trong ${scopeRunId ? 'lần chạy AI đã chọn' : 'nhiệm vụ này'}. Không hiển thị phát hiện khác thay thế.`)
             setSelectedDetectionId('')
@@ -97,46 +97,26 @@ export function useDroneMissionReview(
     return () => {
       isMounted = false
     }
-  }, [surveyId, scopeRunId, scopeDatasetId])
+  }, [surveyId, currentSurvey, scopeRunId, scopeDatasetId, runScope?.workId, runScope?.jobId, runScope?.detectionId])
 
   const totalCount = detections.length
   const approvedCount = detections.filter((d) => d.status === 'APPROVED').length
   const rejectedCount = detections.filter((d) => d.status === 'REJECTED').length
   const pendingCount = detections.filter((d) => d.status === 'PENDING').length
   const reviewedCount = approvedCount + rejectedCount
-  const reviewProgressPercent = Math.round((reviewedCount / totalCount) * 100)
+  const reviewProgressPercent = totalCount ? Math.round((reviewedCount / totalCount) * 100) : 0
 
   const [viewerMode, setViewerMode] = useState<'ORTHO' | 'GIS_MAP'>('ORTHO')
   const corridorMapContainerRef = useRef<HTMLDivElement>(null)
   const corridorMapInstanceRef = useRef<maplibregl.Map | null>(null)
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setCurrentFrame((prev) => {
-          if (prev >= totalFrames) {
-            setIsPlaying(false)
-            return totalFrames
-          }
-          return prev + Math.floor(4 * playbackSpeed)
-      })
-    }, 100)
-  }
-  return () => clearInterval(interval)
-}, [isPlaying, playbackSpeed])
 
 const isBaselineLocked = isLockedSuccess
 
 const handleSelectDetection = (item: AIDetectionItem) => {
   setSelectedDetectionId(item.id)
     setSelectionError('')
-    wantedDetectionId.current = item.id.toLowerCase()
     runScope?.onSelect?.(item.id)
-    const frameMap: Record<string, number> = {}
-    if (frameMap[item.id]) {
-      setCurrentFrame(frameMap[item.id])
-    }
+    setCurrentFrame(item.timestampMs || 0)
     showToast(`Đã trích xuất khung hình ${item.code} tại lý trình ${item.stationing}`)
   }
 
@@ -296,7 +276,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     const projectId = det?.projectId || currentSurvey?.project_id
     if (!det || !projectId) throw new Error('Không xác định được dự án của phát hiện AI.')
     if (det.stateUnknown) throw new Error('Chưa xác định được trạng thái thẩm định của phát hiện này (không đọc được từ máy chủ). Bấm Thử lại trước khi ghi quyết định để tránh tạo trùng.')
-    const payload: Parameters<typeof surveyService.decideCandidate>[1] = { sourceKind: 'AI_DETECTION', sourceId: det.id, decision, reason, runId: det.runId, segmentId: det.segmentId ?? null }
+    const payload: Parameters<typeof surveyService.decideCandidate>[1] = { sourceKind: 'AI_DETECTION', sourceId: det.id, decision, reason, segmentId: det.segmentId ?? null }
     if (decision === 'KEEP_NEW') {
       const SEV: Record<string, 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'> = { 'Khẩn cấp': 'CRITICAL', 'Nghiêm trọng': 'HIGH', 'Trung bình': 'MEDIUM', 'Nhẹ': 'LOW' }
       const severity = SEV[severityLevel || '']
@@ -316,8 +296,9 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     if (!detectionGuard.acquire()) return
     try {
       const targetDet = detections.find((d) => d.id === detId)
-      const d = await decide(detId, 'KEEP_NEW', (reason || 'PM xác nhận phát hiện AI là khiếm khuyết').trim(), customTypeCode, customSeverityLevel || targetDet?.severityLevel)
-      setDetections((prev) => prev.map((x) => (x.id === detId ? { ...x, status: 'APPROVED', decisionKind: d.decision } : x)))
+      await decide(detId, 'KEEP_NEW', (reason || 'PM xác nhận phát hiện AI là khiếm khuyết').trim(), customTypeCode, customSeverityLevel || targetDet?.severityLevel)
+      const refreshed = await surveyService.refreshDetection(targetDet!)
+      setDetections((prev) => prev.map((x) => x.id === detId ? refreshed : x))
       showToast('Đã lưu quyết định KEEP_NEW trên máy chủ.')
     } catch (err: any) {
       showToast(`Lỗi máy chủ: ${err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi khi lưu quyết định thẩm định AI'}`)
@@ -327,8 +308,10 @@ const handleSelectDetection = (item: AIDetectionItem) => {
   const handleRejectDetection = async (detId: string, reason?: string) => {
     if (!detectionGuard.acquire()) return
     try {
-      const d = await decide(detId, 'REJECT', (reason || 'PM từ chối phát hiện AI').trim())
-      setDetections((prev) => prev.map((x) => (x.id === detId ? { ...x, status: 'REJECTED', decisionKind: d.decision } : x)))
+      const target = detections.find(x => x.id === detId)
+      await decide(detId, 'REJECT', (reason || 'PM từ chối phát hiện AI').trim())
+      const refreshed = await surveyService.refreshDetection(target!)
+      setDetections((prev) => prev.map(x => x.id === detId ? refreshed : x))
       showToast('Đã lưu quyết định REJECT trên máy chủ.')
     } catch (err: any) {
       showToast(`Lỗi máy chủ: ${err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi khi bác bỏ phát hiện AI'}`)
@@ -359,6 +342,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     playbackSpeed,
     setPlaybackSpeed,
     totalFrames,
+    setTotalFrames,
     isCanvasFullscreen,
     setIsCanvasFullscreen,
     statusFilter,

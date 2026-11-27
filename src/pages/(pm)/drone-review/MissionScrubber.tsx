@@ -57,10 +57,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
 
         {/* Defect marker dots along timeline */}
         {detections.map((d) => {
-          const minKm = Math.min(...detections.map((x) => x.kmValue), 0)
-          const maxKm = Math.max(...detections.map((x) => x.kmValue), 1)
-          const range = Math.max(0.01, maxKm - minKm)
-          const percent = Math.max(0, Math.min(100, ((d.kmValue - minKm) / range) * 100))
+          const percent = Math.max(0, Math.min(100, (d.timestampMs || 0) / totalFrames * 100))
           const dotColor =
             d.status === 'APPROVED'
               ? 'bg-emerald-500'
@@ -94,9 +91,9 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setCurrentFrame((prev) => Math.max(1, prev - 50))}
+            onClick={() => setCurrentFrame((prev) => Math.max(1, prev - 5000))}
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 cursor-pointer"
-            title="Lùi 50 frames"
+            title="Lùi 5 giây"
             type="button"
           >
             <Icon name="skip_previous" size={16} />
@@ -112,9 +109,9 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
           </button>
 
           <button
-            onClick={() => setCurrentFrame((prev) => Math.min(totalFrames, prev + 50))}
+            onClick={() => setCurrentFrame((prev) => Math.min(totalFrames, prev + 5000))}
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 cursor-pointer"
-            title="Tiến 50 frames"
+            title="Tiến 5 giây"
             type="button"
           >
             <Icon name="skip_next" size={16} />

@@ -17,6 +17,8 @@ export const DroneMissionAIReview: React.FC = () => {
   // Ngữ cảnh khi mở từ "Mở kết quả" của lần chạy AI vừa tạo: ?run=<runId>&dataset=<datasetId>.
   const [searchParams, setSearchParams] = useSearchParams()
   const runId = searchParams.get('run') || ''
+  const workId = searchParams.get('work') || ''
+  const jobId = searchParams.get('job') || ''
   const datasetId = searchParams.get('dataset') || ''
   const detParam = searchParams.get('det') || ''
   const { user } = useAuthStore()
@@ -24,6 +26,7 @@ export const DroneMissionAIReview: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const [currentSurvey, setCurrentSurvey] = useState<SurveyMissionItem | null>(null)
+  const [surveyError, setSurveyError] = useState('')
   const [isLoadingSurvey, setIsLoadingSurvey] = useState<boolean>(true)
 
   const {
@@ -36,6 +39,7 @@ export const DroneMissionAIReview: React.FC = () => {
     playbackSpeed,
     setPlaybackSpeed,
     totalFrames,
+    setTotalFrames,
     isCanvasFullscreen,
     setIsCanvasFullscreen,
     statusFilter,
@@ -66,6 +70,7 @@ export const DroneMissionAIReview: React.FC = () => {
     retryDetection
   } = useDroneMissionReview(id || '', currentSurvey, {
     runId: runId || undefined,
+    workId: workId || undefined, jobId: jobId || undefined,
     datasetId: datasetId || undefined,
     detectionId: detParam || undefined,
     // Giữ detectionId (cùng run/dataset) trên URL để F5/điều hướng lại đúng phát hiện đang xem.
@@ -82,13 +87,13 @@ export const DroneMissionAIReview: React.FC = () => {
         return
       }
       try {
-        setIsLoadingSurvey(true)
-        const survey = await surveyService.getSurveyById(id)
+        setIsLoadingSurvey(true); setCurrentSurvey(null); setSurveyError('')
+        const survey = datasetId ? await surveyService.getRealSurvey(id, datasetId) : await surveyService.getSurveyById(id)
         if (isMounted) {
           setCurrentSurvey(survey || null)
         }
       } catch (err) {
-        console.error('Lỗi khi tải thông tin đợt bay:', err)
+        if (isMounted) setSurveyError(err instanceof Error ? err.message : 'Không tải được nhiệm vụ từ BE.')
       } finally {
         if (isMounted) {
           setIsLoadingSurvey(false)
@@ -99,7 +104,9 @@ export const DroneMissionAIReview: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [id])
+  }, [id, datasetId])
+
+  if (surveyError) return <div role="alert" className="rg-alert rg-alert-error">{surveyError}</div>
 
   // Trường hợp đang tải
   if (isLoadingSurvey) {
@@ -198,17 +205,18 @@ export const DroneMissionAIReview: React.FC = () => {
   return (
     <div className="space-y-4">
       {!id && <div role="alert" className="rg-alert rg-alert-warn"><p className="flex-1 min-w-0">Chưa chọn đợt khảo sát: đường dẫn thiếu mã nhiệm vụ. Mở từ danh sách khảo sát để xem phát hiện AI của đúng đợt.</p></div>}
-      {runId && (
+      {(runId || workId) && (
         <div role="note" data-testid="ai-run-scope-banner" className="rg-alert bg-brand-surfaceAlt border-brand-border text-slate-700">
           <Icon name="smart_toy" size={16} className="text-brand-navy shrink-0" />
           <p className="flex-1 min-w-0 text-xs">
-            Đang xem kết quả của <strong>lần chạy AI</strong> <span className="font-mono">{runId.slice(0, 8)}</span>
+            Đang xem kết quả của <strong>{workId ? 'work AI real' : 'lần chạy AI'}</strong> <span className="font-mono">{(workId || runId).slice(0, 8)}</span>
             {datasetId ? <> trên <strong>bản nộp</strong> <span className="font-mono">{datasetId.slice(0, 8)}</span></> : null}.
-            Đây không phải mã job xử lý. Các thao tác thẩm định giữ nguyên.
+            {jobId ? `Job xử lý: ${jobId}.` : 'Đây không phải mã job xử lý.'}
           </p>
           <button type="button" onClick={() => setSearchParams({}, { replace: true })} className="text-xs font-semibold underline cursor-pointer whitespace-nowrap">Xem tất cả lần chạy của nhiệm vụ</button>
         </div>
       )}
+      {detParam && !detectionsError && <div role="note" className="rg-alert rg-alert-warn">Đang đọc một phát hiện theo detectionId. BE FT95 chưa có API tải toàn bộ danh sách/phân trang theo job; số lượng bên dưới chỉ thuộc phát hiện đang mở.</div>}
       {detectionsError && <div role="alert" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">Không tải được danh sách phát hiện AI: {detectionsError}</p></div>}
       {selectionError && <div role="alert" data-testid="ai-detection-not-found" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">{selectionError}</p></div>}
       {/* Toast Notification */}
@@ -257,6 +265,7 @@ export const DroneMissionAIReview: React.FC = () => {
           currentFrame={currentFrame}
           setCurrentFrame={setCurrentFrame}
           totalFrames={totalFrames}
+          setTotalFrames={setTotalFrames}
           isPlaying={isPlaying}
           setIsPlaying={setIsPlaying}
           playbackSpeed={playbackSpeed}
