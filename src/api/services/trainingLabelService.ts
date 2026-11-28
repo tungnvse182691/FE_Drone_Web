@@ -16,15 +16,19 @@ const annotation = (b: LabelBox) => ({ kind: 'BBOX', coordinateSpace: 'NORMALIZE
 
 export const trainingLabelService = {
   /** GET /projects/{p}/labels (phân trang bằng nextCursor). */
-  async list(projectId: string): Promise<TrainingLabel[]> {
+  async list(projectId: string, signal?: AbortSignal): Promise<TrainingLabel[]> {
     const rows: TrainingLabel[] = []
+    const cursors = new Set<string>()
     let cursor: string | undefined
-    for (let i = 0; i < 20; i++) {
-      const { data } = await apiClient.get<{ items?: TrainingLabel[]; nextCursor?: string | null }>(`/projects/${projectId}/labels`, { params: { pageSize: 50, cursor } })
+    for (let i = 0; signal || i < 20; i++) {
+      const { data } = await apiClient.get<{ items?: TrainingLabel[]; nextCursor?: string | null }>(`/projects/${projectId}/labels`, { params: { pageSize: 50, cursor }, signal })
       if (!Array.isArray(data?.items)) throw new Error('Danh sách nhãn sai contract.')
+      if (signal && data.items.some(row => row.projectId !== projectId || !row.version)) throw new Error('Nhãn không khớp dự án hoặc thiếu phiên bản.')
       rows.push(...data.items)
       cursor = data.nextCursor || undefined
       if (!cursor) break
+      if (signal && cursors.has(cursor)) throw new Error('Máy chủ trả lặp trang nhãn.')
+      cursors.add(cursor)
     }
     return rows
   },
@@ -48,30 +52,33 @@ export const trainingLabelService = {
     return out
   },
   /** POST /projects/{p}/labels — sourceVersion/fileId lấy từ GET ai-candidates/{detectionId} (BE kiểm candidate_stale). */
-  async create(projectId: string, detectionId: string, box: LabelBox, defectTypeCode: string, reason: string) {
+  async create(projectId: string, detectionId: string, box: LabelBox, defectTypeCode: string, reason: string,
+    pinned?: { sourceVersion: string; frameFileId: string; key: string }) {
     if (!validBox(box)) throw new Error('Khung chọn phải nằm trong ảnh (0..1, rộng/cao > 0).')
     if (!defectTypeCode.trim() || !reason.trim()) throw new Error('Cần nhập mã loại khiếm khuyết và lý do.')
-    const { data: cand } = await apiClient.get<{ detectionId: string; sourceVersion: string; frameFileId: string }>(`/projects/${projectId}/ai-candidates/${detectionId}`)
+    const cand = pinned ? { ...pinned, detectionId } : (await apiClient.get<{ detectionId: string; sourceVersion: string; frameFileId: string }>(`/projects/${projectId}/ai-candidates/${detectionId}`)).data
     if (cand?.detectionId !== detectionId || !cand.sourceVersion || !cand.frameFileId) throw new Error('BE trả candidate AI sai contract.')
     return (await apiClient.post<TrainingLabel>(`/projects/${projectId}/labels`, {
       sourceKind: 'AI_DETECTION', sourceId: detectionId, sourceVersion: cand.sourceVersion, fileId: cand.frameFileId,
       annotation: annotation(box), defectTypeCode: defectTypeCode.trim(), reason: reason.trim(),
-    }, { headers: { 'Idempotency-Key': crypto.randomUUID() } })).data
+    }, { headers: { 'Idempotency-Key': pinned?.key ?? crypto.randomUUID() } })).data
   },
   /** POST /projects/{p}/labels/{id}/revisions — If-Match = version nhãn mới nhất. */
-  async revise(projectId: string, labelId: string, box: LabelBox, defectTypeCode: string, reason: string) {
+  async revise(projectId: string, labelId: string, box: LabelBox, defectTypeCode: string, reason: string,
+    pinned?: { fileId: string; version: string; key: string }) {
     if (!validBox(box)) throw new Error('Khung chọn phải nằm trong ảnh (0..1, rộng/cao > 0).')
     if (!defectTypeCode.trim() || !reason.trim()) throw new Error('Cần nhập mã loại khiếm khuyết và lý do.')
-    const label = await this.read(projectId, labelId)
+    const label = pinned ?? await this.read(projectId, labelId)
     return (await apiClient.post<TrainingLabel>(`/projects/${projectId}/labels/${labelId}/revisions`, {
       fileId: label.fileId, annotation: annotation(box), defectTypeCode: defectTypeCode.trim(), reason: reason.trim(),
-    }, { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': quote(label.version) } })).data
+    }, { headers: { 'Idempotency-Key': pinned?.key ?? crypto.randomUUID(), 'If-Match': quote(label.version) } })).data
   },
   /** POST /labels/{id}/review — APPROVE | REJECT, If-Match = version nhãn mới nhất. */
-  async review(projectId: string, labelId: string, decision: 'APPROVE' | 'REJECT', reason: string) {
+  async review(projectId: string, labelId: string, decision: 'APPROVE' | 'REJECT', reason: string,
+    pinned?: { version: string; key: string }) {
     if (!reason.trim()) throw new Error('Cần nhập lý do duyệt/từ chối.')
-    const label = await this.read(projectId, labelId)
-    return (await apiClient.post<TrainingLabel>(`/labels/${labelId}/review`, { decision, reason: reason.trim() }, { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': quote(label.version) } })).data
+    const label = pinned ?? await this.read(projectId, labelId)
+    return (await apiClient.post<TrainingLabel>(`/labels/${labelId}/review`, { decision, reason: reason.trim() }, { headers: { 'Idempotency-Key': pinned?.key ?? crypto.randomUUID(), 'If-Match': quote(label.version) } })).data
   },
   /** GET /files/{id}/content — ảnh khung hình để xem khi vẽ nhãn (Bearer dev, xem devFileBearer). */
   async frameUrl(fileId: string): Promise<string> {

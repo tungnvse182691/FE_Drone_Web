@@ -25,7 +25,9 @@ Tất cả file nằm dưới `src/pages/`. Thư mục con cùng tên màn (ví 
 | `fast-track`, `dispatch` | `(pm)/FastTrackDispatch` (+ `fast-track/*`) | Chính sách Fast Track + điều phối | `…/repair-policies/*`, `…/road-coverage`, `POST …/items/{i}/assign {policyRevisionId}` | ✔ (bước giao bị BE chặn) |
 | `acceptance`, `acceptance/:batchId`, `evidence-closeout` | `(sup)/AcceptanceList`, `EvidenceCloseoutDetail` | Gói nghiệm thu, duyệt ảnh 3 pha | `…/items/{i}/attempts/reviews`, `…/final-confirmation`, DOSSIER theo hạng mục | — (cần Crew nộp) |
 | `offline` (`conflicts` chuyển hướng) | `(pm)/OfflineCoordination` | Thiết bị, lô offline, xung đột | `…/offline/*` (GET), thu hồi | ✔ mở / — dữ liệu |
-| `research-validation`, `audit-trail`, `reports`, `risk-analytics` | `(sup)/ResearchValidation`, `AuditTrail`, `RiskAnalytics` | Xác thực nghiên cứu, nhật ký kiểm toán, thống kê | `GET /projects/{p}/reports/*`, nhật ký | ✔ mở |
+| `research-validation` | `(sup)/research/ResearchWorkspace` | Đọc nguồn AI REAL và khung hình. PM quản lý nhãn và yêu cầu xuất nhãn trong dự án được giao | Dataset, `ai-videos`, `ai-jobs/{job}/detections`, `ai-candidates/{id}`, `labels`, `exports` loại TRAINING | Đã kiểm đọc nguồn REAL, nhãn và lượt xuất trên local |
+| `reports` | `(sup)/risk-analytics/ReportingMenu` | Tổng quan, đối chiếu chỉ số, lịch sử, bình đồ và hồ sơ DOSSIER. Xác nhận nguồn thống kê cần dữ liệu hợp lệ | `GET …/reports/{summary,items,timeline}`, `…/defect-statistics`, `…/exports` | Đã kiểm đọc, bộ lọc, phân trang và danh sách xuất trên local |
+| `audit-trail`, `risk-analytics` | `(sup)/AuditTrail`, `RiskAnalytics` | Nhật ký và thống kê | `GET /projects/{p}/reports/*`, nhật ký | ✔ mở |
 | `retention`, `system-control`, `legal-hold` | `(sup)/SystemControl` | Lưu trữ + phong tỏa (PM xem) | `retention/*` | ✔ mở |
 | `personnel`, `team` | `(sup)/PersonnelManagement` | Nhân sự | `GET /users`, `…/member-contacts` | ✔ mở |
 | `profile` | `(pm)/ProfilePage` | Hồ sơ cá nhân, đơn vị công tác | `GET /profile`, `PUT /profile` | ✔ |
@@ -45,7 +47,9 @@ Tất cả file nằm dưới `src/pages/`. Thư mục con cùng tên màn (ví 
 | `offline` | `(pm)/OfflineCoordination` | Cấp/thu hồi bàn giao | `…/offline/*` | — dữ liệu |
 | `system-control`, `admin`, `retention`, `legal-hold` | `(sup)/SystemControl` (+ `system-control/*`) | **Lưu trữ, đánh giá, căn cứ, phong tỏa**, danh mục loại khiếm khuyết (`DefectTypeAdminPanel`), sửa đơn vị người dùng (`UserOrganizationEditor`) | `…/retention/*`, `POST /retention/holds`, `PUT /users/{id}/organization`, `…/catalog/defect-types/admin` | ✔ |
 | `personnel`, `team` | `(sup)/PersonnelManagement` | **Mời nhân sự**, vai trò, đổi mật khẩu | `POST /invitations`, `GET /users` | ✔ |
-| `research-validation`, `audit-trail`, `reports`, `risk-analytics` | `(sup)/…` | Như PM (chỉ đọc) | GET | ✔ mở |
+| `research-validation` | `(sup)/research/ResearchWorkspace` | Đọc nguồn AI REAL và khung hình theo phạm vi được cấp | Dataset, `ai-videos`, `ai-jobs/{job}/detections`, `ai-candidates/{id}` | Đã kiểm đọc trên local |
+| `risk-analytics` | `(sup)/risk-analytics/ReportingMenu` | Đọc báo cáo và thống kê. DOSSIER chịu quyền riêng của dự án và nguồn | `GET …/reports/{summary,items,timeline}`, `GET …/defect-statistics`, `…/exports` | Đã kiểm đọc, phân trang và phản hồi 403 khi thiếu quyền xuất trên local |
+| `audit-trail`, `reports` | `(sup)/AuditTrail`, `RiskAnalytics` | Nhật ký và thống kê | GET | ✔ mở |
 | `profile`, `notifications` | `(pm)/ProfilePage`, `NotificationsHandoffHub` | Hồ sơ / thông báo | như PM | ✔ mở |
 
 ## 4. Phân quyền theo màn (Report 3 §3.1.3, rút gọn)

@@ -1,25 +1,28 @@
 import React from 'react'
 import type { Rpt06RiskSegment } from './types'
+type SegmentRow = Pick<Rpt06RiskSegment, 'id' | 'section_name' | 'chainage_display' | 'start_km_num' | 'end_km_num' | 'coordinates'> & { length?: number }
 
-export interface RiskDeteriorationSectionProps {
+export interface RiskDeteriorationSectionProps<T extends SegmentRow = Rpt06RiskSegment> {
   loading?: boolean
   error?: string
   warnings?: string[]
   hasMapGeometry?: boolean
-  segments: Rpt06RiskSegment[]
+  segments: T[]
   activeSegmentId: string
   activeSegment?: Rpt06RiskSegment
   mapContainerRef: React.RefObject<HTMLDivElement | null>
   mapLayer: 'satellite' | 'vector'
   setMapLayer: (l: 'satellite' | 'vector') => void
-  onFocusSegment: (segment: Rpt06RiskSegment) => void
+  onFocusSegment: (segment: T) => void
   onZoomIn: () => void
   onZoomOut: () => void
   onFitBounds: () => void
   projectName: string
+  wrapLayerControls?: boolean
+  renderLayout?: (map: React.ReactNode, segmentTable: React.ReactNode) => React.ReactNode
 }
 
-export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> = ({
+export const RiskDeteriorationSection = <T extends SegmentRow,>({
   loading,
   error,
   warnings = [],
@@ -33,14 +36,16 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
   onZoomIn,
   onZoomOut,
   onFitBounds,
-  projectName
-}) => {
-  return (
-    <section className="space-y-4">
+  projectName,
+  wrapLayerControls,
+  renderLayout
+}: RiskDeteriorationSectionProps<T>) => {
+  const map = (
+    <>
       {/* Header card */}
       <div className="relative bg-white rounded-[20px] border border-[#E2E5E9] shadow-2xs overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1E40AF] via-[#C9A227] to-slate-200" />
-        <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className={`flex flex-col justify-between gap-4 md:items-center ${wrapLayerControls ? 'p-2 sm:p-5 xl:flex-row' : 'p-5 md:flex-row'}`}>
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-[#C9A227] ring-4 ring-[#C9A227]/20" />
@@ -54,7 +59,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
           </div>
 
           {/* Map Layer switcher */}
-          <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 self-start md:self-auto">
+          <div className={`inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 self-start md:self-auto ${wrapLayerControls ? 'max-w-full flex-wrap [&_button]:max-sm:px-1' : ''}`}>
             <button
               type="button"
               onClick={() => setMapLayer('satellite')}
@@ -168,7 +173,10 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
         </details>
       )}
 
-      {/* Segments Table */}
+    </>
+  )
+
+  const segmentTable = (
       <div className="bg-white border border-[#E2E5E9] rounded-[20px] shadow-2xs overflow-hidden flex flex-col">
         <div className="p-4 border-b border-[#EDEFF2] flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -240,7 +248,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                         {s.chainage_display}
                       </td>
                       <td className="py-3 px-4 text-slate-700">
-                        {((s.end_km_num - s.start_km_num) * 1000).toLocaleString('vi-VN', {
+                        {(s.length ?? (s.end_km_num - s.start_km_num) * 1000).toLocaleString('vi-VN', {
                           maximumFractionDigits: 2
                         })}{' '}
                         m
@@ -273,6 +281,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
           </table>
         </div>
       </div>
-    </section>
   )
+
+  return renderLayout ? renderLayout(map, segmentTable) : <section className="space-y-4">{map}{segmentTable}</section>
 }

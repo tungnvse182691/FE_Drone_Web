@@ -41,7 +41,9 @@ import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
 import { AcceptanceList } from './pages/(sup)/AcceptanceList'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
+import { ReportingMenu } from './pages/(sup)/risk-analytics/ReportingMenu'
 import { ResearchValidation } from './pages/(sup)/ResearchValidation'
+import { ResearchWorkspace } from './pages/(sup)/research/ResearchWorkspace'
 import { AuditTrail } from './pages/(sup)/AuditTrail'
 import { SystemControl } from './pages/(sup)/SystemControl'
 import { PersonnelManagement } from './pages/(sup)/PersonnelManagement'
@@ -119,11 +121,11 @@ export const App: React.FC = () => {
             <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
             <Route path="acceptance" element={<AcceptanceList />} />
             <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
-            <Route path="research-validation" element={<ResearchValidation />} />
+            <Route path="research-validation" element={<ResearchWorkspace />} />
             <Route path="rpt-09" element={<ResearchValidation />} />
             <Route path="audit-trail" element={<AuditTrail />} />
             <Route path="rpt-10" element={<AuditTrail />} />
-            <Route path="reports" element={<RiskAnalytics />} />
+            <Route path="reports" element={<ReportingMenu />} />
             <Route path="risk-analytics" element={<RiskAnalytics />} />
             <Route path="retention" element={<SystemControl />} />
             <Route path="system-control" element={<SystemControl />} />
@@ -169,14 +171,14 @@ export const App: React.FC = () => {
             <Route path="acceptance" element={<AcceptanceList />} />
             <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
             <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />
-            <Route path="research-validation" element={<ResearchValidation />} />
+            <Route path="research-validation" element={<ResearchWorkspace />} />
             <Route path="rpt-09" element={<ResearchValidation />} />
             <Route path="audit-trail" element={<AuditTrail />} />
             <Route path="rpt-10" element={<AuditTrail />} />
             <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
             <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
             <Route path="reports" element={<RiskAnalytics />} />
-            <Route path="risk-analytics" element={<RiskAnalytics />} />
+            <Route path="risk-analytics" element={<ReportingMenu />} />
             <Route path="system-control" element={<SystemControl />} />
             <Route path="admin" element={<SystemControl />} />
             <Route path="retention" element={<SystemControl />} />
